@@ -51,3 +51,10 @@ func (p Packet) ClientId() string {
 	lcid := int(pay[2+l+1+2+1])<<8 + int(pay[2+l+1+2+2])
 	return string(pay[2+l+1+2+2+1 : 2+l+1+2+2+1+lcid])
 }
+
+func Connack() Packet {
+	p := make(Packet, 5)
+	p[0] = uint8(2) << 4
+	p[1] = uint8(3)
+	return p
+}
