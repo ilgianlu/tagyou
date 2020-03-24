@@ -28,3 +28,26 @@ func (p Packet) ProtocolName() []byte {
 	l := p.ProtocolNameLength()
 	return p.Payload()[2 : 2+l]
 }
+
+func (p Packet) ProtocolVersion() int {
+	l := p.ProtocolNameLength()
+	return int(p.Payload()[2+l])
+}
+
+func (p Packet) ConnectFlags() int {
+	l := p.ProtocolNameLength()
+	return int(p.Payload()[2+l+1])
+}
+
+func (p Packet) KeepAlive() int {
+	pay := p.Payload()
+	l := p.ProtocolNameLength()
+	return int(pay[2+l+1+1])<<8 + int(pay[2+l+1+2])
+}
+
+func (p Packet) ClientId() string {
+	pay := p.Payload()
+	l := p.ProtocolNameLength()
+	lcid := int(pay[2+l+1+2+1])<<8 + int(pay[2+l+1+2+2])
+	return string(pay[2+l+1+2+2+1 : 2+l+1+2+2+1+lcid])
+}

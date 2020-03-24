@@ -23,7 +23,11 @@ func handleConnection(conn net.Conn) {
 	fmt.Printf("remaining length %d\n", p.RemainingLength())
 	fmt.Println("payload", p.Payload())
 	if p.PacketType() == 1 {
-		fmt.Println(p.ProtocolName())
+		fmt.Println("protocolName", string(p.ProtocolName()))
+		fmt.Println("protocolVersion", p.ProtocolVersion())
+		fmt.Println("connectFlags", p.ConnectFlags())
+		fmt.Println("keepAlive", p.KeepAlive())
+		fmt.Println("clientId", p.ClientId())
 	}
 }
 
