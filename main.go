@@ -23,8 +23,18 @@ func handleConnection(conn net.Conn) {
 		fmt.Printf("read %d bytes\n", n)
 		// fmt.Println(bs)
 		p.PrettyLog()
+
 		if p.PacketType() == 1 {
-			werr := writePacket(conn, mqtt.Connack())
+			if p.ProtocolVersion() < 4 {
+				fmt.Println("unsupported protocol version err", p.ProtocolVersion())
+				werr := writePacket(conn, mqtt.Connack(UNSUPPORTED_PROTOCOL_VERSION))
+				if werr != nil {
+					fmt.Printf("err %s\n", err)
+				}
+				defer conn.Close()
+				break
+			}
+			werr := writePacket(conn, mqtt.Connack(CONNECT_OK))
 			if werr != nil {
 				fmt.Printf("err %s\n", err)
 				defer conn.Close()

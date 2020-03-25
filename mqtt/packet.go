@@ -88,9 +88,12 @@ func (p Packet) PrettyLog() {
 	}
 }
 
-func Connack() Packet {
+func Connack(reasonCode uint8) Packet {
 	p := make(Packet, 5)
 	p[0] = uint8(2) << 4
 	p[1] = uint8(3)
+	p[2] = uint8(0)
+	p[3] = reasonCode
+	fmt.Println(p)
 	return p
 }
