@@ -1,5 +1,7 @@
 package mqtt
 
+import "fmt"
+
 type Packet []byte
 
 func (p Packet) PacketType() uint8 {
@@ -50,6 +52,40 @@ func (p Packet) ClientId() string {
 	l := p.ProtocolNameLength()
 	lcid := int(pay[2+l+1+2+1])<<8 + int(pay[2+l+1+2+2])
 	return string(pay[2+l+1+2+2+1 : 2+l+1+2+2+1+lcid])
+}
+
+func (p Packet) PrettyLog() {
+	i := 0
+	t := (p[i] & 0xF0) >> 4
+	fmt.Printf("packet type %d\n", t)
+	fmt.Printf("flags %d\n", p[i]&0x0F)
+	i++
+	l := int(p[i])
+	fmt.Printf("remaining length %d\n", l)
+	i++
+	fmt.Println("payload", p[i:i+l])
+	if t == 1 {
+		pl := int(p[i]) << 8
+		i++
+		pl = pl + int(p[i])
+		i++
+		fmt.Println("protocolName", string(p[i:i+pl]))
+		i = i + pl
+		fmt.Println("protocolVersion", int(p[i]))
+		i++
+		fmt.Println("connectFlags", p[i])
+		i++
+		ka := int(p[i]) << 8
+		i++
+		ka = ka + int(p[i])
+		i++
+		fmt.Println("keepAlive", ka)
+		cil := int(p[i]) << 8
+		i++
+		cil = cil + int(p[i])
+		i++
+		fmt.Println("clientId", string(p[i:i+cil]))
+	}
 }
 
 func Connack() Packet {

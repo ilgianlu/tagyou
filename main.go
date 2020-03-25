@@ -22,16 +22,8 @@ func handleConnection(conn net.Conn) {
 		}
 		fmt.Printf("read %d bytes\n", n)
 		// fmt.Println(bs)
-		fmt.Printf("packet type %d\n", p.PacketType())
-		fmt.Printf("flags %d\n", p.Flags())
-		fmt.Printf("remaining length %d\n", p.RemainingLength())
-		fmt.Println("payload", p.Payload())
+		p.PrettyLog()
 		if p.PacketType() == 1 {
-			fmt.Println("protocolName", string(p.ProtocolName()))
-			fmt.Println("protocolVersion", p.ProtocolVersion())
-			fmt.Println("connectFlags", p.ConnectFlags())
-			fmt.Println("keepAlive", p.KeepAlive())
-			fmt.Println("clientId", p.ClientId())
 			werr := writePacket(conn, mqtt.Connack())
 			if werr != nil {
 				fmt.Printf("err %s\n", err)
