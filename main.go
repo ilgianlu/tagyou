@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
 	"time"
 
-	"github.com/ilgianlu/tagyou/mqtt"
+	mqtt "github.com/ilgianlu/tagyou/mqtt"
+	dotenv "github.com/joho/godotenv"
+	bolt "go.etcd.io/bbolt"
 )
 
 func handleConnection(conn net.Conn) {
@@ -27,14 +30,14 @@ func handleConnection(conn net.Conn) {
 		if p.PacketType() == 1 {
 			if p.ProtocolVersion() < 4 {
 				fmt.Println("unsupported protocol version err", p.ProtocolVersion())
-				werr := writePacket(conn, mqtt.Connack(UNSUPPORTED_PROTOCOL_VERSION))
+				werr := writePacket(conn, mqtt.Connack(mqtt.CONNECT_UNSUPPORTED_PROTOCOL_VERSION))
 				if werr != nil {
 					fmt.Printf("err %s\n", err)
 				}
 				defer conn.Close()
 				break
 			}
-			werr := writePacket(conn, mqtt.Connack(CONNECT_OK))
+			werr := writePacket(conn, mqtt.Connack(mqtt.CONNECT_OK))
 			if werr != nil {
 				fmt.Printf("err %s\n", err)
 				defer conn.Close()
@@ -63,7 +66,16 @@ func writePacket(conn net.Conn, p mqtt.Packet) error {
 }
 
 func main() {
-	ln, err := net.Listen("tcp", ":3000")
+	berr := dotenv.Load()
+	if berr != nil {
+		fmt.Println("error loading env", berr)
+	}
+	db, derr := bolt.Open(os.Getenv("DB_PATH"), 0666, nil)
+	if derr != nil {
+		fmt.Println("error opening bbolt", derr)
+	}
+	defer db.Close()
+	ln, err := net.Listen("tcp", os.Getenv("LISTEN_PORT"))
 	if err != nil {
 		// handle error
 		fmt.Println("error", err)
