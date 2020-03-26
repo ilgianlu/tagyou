@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -13,18 +14,13 @@ import (
 
 func handleConnection(conn net.Conn) {
 	for {
-		p := make(mqtt.Packet, 255)
-		n, err := conn.Read(p)
-		if err != nil {
-			fmt.Printf("err %s\n", err)
+		p, rerr := readPacket(conn)
+		if rerr != nil {
+			fmt.Printf("err %s\n", rerr)
 			defer conn.Close()
 			break
 		}
-		if n < 2 {
-			fmt.Printf("reading fewer bytes: %d\n", n)
-		}
-		fmt.Printf("read %d bytes\n", n)
-		// fmt.Println(bs)
+
 		p.PrettyLog()
 
 		if p.PacketType() == 1 {
@@ -32,14 +28,14 @@ func handleConnection(conn net.Conn) {
 				fmt.Println("unsupported protocol version err", p.ProtocolVersion())
 				werr := writePacket(conn, mqtt.Connack(mqtt.CONNECT_UNSUPPORTED_PROTOCOL_VERSION))
 				if werr != nil {
-					fmt.Printf("err %s\n", err)
+					fmt.Printf("err %s\n", werr)
 				}
 				defer conn.Close()
 				break
 			}
 			werr := writePacket(conn, mqtt.Connack(mqtt.CONNECT_OK))
 			if werr != nil {
-				fmt.Printf("err %s\n", err)
+				fmt.Printf("err %s\n", werr)
 				defer conn.Close()
 				break
 			}
@@ -47,7 +43,7 @@ func handleConnection(conn net.Conn) {
 
 		derr := conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		if derr != nil {
-			fmt.Printf("err %s\n", err)
+			fmt.Printf("err %s\n", derr)
 			defer conn.Close()
 			break
 		}
@@ -65,22 +61,41 @@ func writePacket(conn net.Conn, p mqtt.Packet) error {
 	}
 }
 
+func readPacket(conn net.Conn) (mqtt.Packet, error) {
+	p := make(mqtt.Packet, 255)
+	n, err := conn.Read(p)
+	if err != nil {
+		fmt.Printf("err %s\n", err)
+		return nil, err
+	}
+	if n < 2 {
+		fmt.Printf("reading fewer bytes: %d\n", n)
+		return nil, errors.New("read fewer than expected bytes")
+	}
+	return p, nil
+}
+
 func main() {
+	// load env vars
 	berr := dotenv.Load()
 	if berr != nil {
 		fmt.Println("error loading env", berr)
 	}
+
+	// open k/v store
 	db, derr := bolt.Open(os.Getenv("DB_PATH"), 0666, nil)
 	if derr != nil {
 		fmt.Println("error opening bbolt", derr)
 	}
 	defer db.Close()
+
+	// start tcp socket
 	ln, err := net.Listen("tcp", os.Getenv("LISTEN_PORT"))
 	if err != nil {
 		// handle error
 		fmt.Println("error", err)
 	}
-	fmt.Println("listen :3000")
+	fmt.Println("listen", os.Getenv("LISTEN_PORT"))
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
