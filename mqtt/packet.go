@@ -1,6 +1,8 @@
 package mqtt
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Packet []byte
 
@@ -52,6 +54,18 @@ func (p Packet) ClientId() string {
 	l := p.ProtocolNameLength()
 	lcid := int(pay[2+l+1+2+1])<<8 + int(pay[2+l+1+2+2])
 	return string(pay[2+l+1+2+2+1 : 2+l+1+2+2+1+lcid])
+}
+
+func (req Packet) Respond() (Packet, error) {
+	if req.PacketType() == 1 {
+		if req.ProtocolVersion() < 4 {
+			fmt.Println("unsupported protocol version err", req.ProtocolVersion())
+			return Connack(CONNECT_UNSUPPORTED_PROTOCOL_VERSION), nil
+		}
+		return Connack(CONNECT_OK), nil
+	} else {
+		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
+	}
 }
 
 func (p Packet) PrettyLog() {

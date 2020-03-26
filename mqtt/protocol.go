@@ -4,6 +4,10 @@ package mqtt
 // connect OK
 const CONNECT_OK = 0
 
+// 0x80
+// don't know what to do
+const CONNECT_UNSPECIFIED_ERROR = 128
+
 // 0x84
 // Unsupported Protocol Version
 // The Server does not support the version of the MQTT protocol requested by the Client

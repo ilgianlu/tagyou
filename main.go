@@ -23,22 +23,16 @@ func handleConnection(conn net.Conn) {
 
 		p.PrettyLog()
 
-		if p.PacketType() == 1 {
-			if p.ProtocolVersion() < 4 {
-				fmt.Println("unsupported protocol version err", p.ProtocolVersion())
-				werr := writePacket(conn, mqtt.Connack(mqtt.CONNECT_UNSUPPORTED_PROTOCOL_VERSION))
-				if werr != nil {
-					fmt.Printf("err %s\n", werr)
-				}
-				defer conn.Close()
-				break
-			}
-			werr := writePacket(conn, mqtt.Connack(mqtt.CONNECT_OK))
-			if werr != nil {
-				fmt.Printf("err %s\n", werr)
-				defer conn.Close()
-				break
-			}
+		resp, err := p.Respond()
+		if err != nil {
+			defer conn.Close()
+			break
+		}
+		werr := writePacket(conn, resp)
+		if werr != nil {
+			fmt.Printf("err %s\n", werr)
+			defer conn.Close()
+			break
 		}
 
 		derr := conn.SetReadDeadline(time.Now().Add(30 * time.Second))
