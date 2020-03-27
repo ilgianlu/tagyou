@@ -2,6 +2,8 @@ package mqtt
 
 import (
 	"fmt"
+
+	bolt "go.etcd.io/bbolt"
 )
 
 type Packet []byte
@@ -56,12 +58,13 @@ func (p Packet) ClientId() string {
 	return string(pay[2+l+1+2+2+1 : 2+l+1+2+2+1+lcid])
 }
 
-func (req Packet) Respond() (Packet, error) {
+func (req Packet) Respond(db *bolt.DB) (Packet, error) {
 	if req.PacketType() == 1 {
 		if req.ProtocolVersion() < 4 {
 			fmt.Println("unsupported protocol version err", req.ProtocolVersion())
 			return Connack(CONNECT_UNSUPPORTED_PROTOCOL_VERSION), nil
 		}
+
 		return Connack(CONNECT_OK), nil
 	} else {
 		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
