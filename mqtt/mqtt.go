@@ -14,6 +14,7 @@ type MQTT struct {
 }
 
 func New(db *bolt.DB) MQTT {
+	initBucket(db)
 	var m MQTT
 	m.db = db
 	return m

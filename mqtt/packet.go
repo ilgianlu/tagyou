@@ -59,13 +59,17 @@ func (p Packet) ClientId() string {
 }
 
 func (req Packet) Respond(db *bolt.DB) (Packet, error) {
-	if req.PacketType() == 1 {
+	pt := req.PacketType()
+	if 1 == pt {
 		if req.ProtocolVersion() < 4 {
 			fmt.Println("unsupported protocol version err", req.ProtocolVersion())
 			return Connack(CONNECT_UNSUPPORTED_PROTOCOL_VERSION), nil
 		}
-
+		newClient(db, req.ClientId())
 		return Connack(CONNECT_OK), nil
+	} else if 8 == pt {
+		fmt.Println("Subscribe message")
+		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
 	} else {
 		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
 	}
