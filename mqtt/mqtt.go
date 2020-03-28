@@ -29,8 +29,6 @@ func (m MQTT) HandleConnection(conn net.Conn) {
 			break
 		}
 
-		p.PrettyLog()
-
 		resp, err := p.Respond(m.db)
 		if err != nil {
 			defer conn.Close()
