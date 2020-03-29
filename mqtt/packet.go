@@ -1,7 +1,6 @@
 package mqtt
 
 import (
-	"errors"
 	"fmt"
 
 	bolt "go.etcd.io/bbolt"
@@ -32,7 +31,7 @@ func (req Packet) Respond(db *bolt.DB, connStatus *ConnStatus) (Packet, error) {
 
 func subscribeReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
 	i := 0
-	pi := read2BytesInt(req, i)
+	pi := Read2BytesInt(req, i)
 	i = i + 2
 	fmt.Println("packet identifier", pi)
 	if connStatus.protocolVersion == 5 {
@@ -41,7 +40,7 @@ func subscribeReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, erro
 		if pl > 0 {
 			props := req[i : i+pl]
 			fmt.Println("properties", props)
-			si, _, err := readVarInt(props)
+			si, _, err := ReadVarInt(props)
 			if err != nil {
 				fmt.Println("err decoding sub ident", err)
 				return Connack(CONNECT_UNSPECIFIED_ERROR), nil
@@ -56,10 +55,8 @@ func subscribeReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, erro
 	subs := make([]string, 10)
 	j := 0
 	for {
-		sl := int(req[i]) << 8
-		i++
-		sl = sl + int(req[i])
-		i++
+		sl := Read2BytesInt(req, i)
+		i = i + 2
 		subs[j] = string(req[i : i+sl])
 		fmt.Println(j, "subscribtion:", subs[j])
 		i = i + sl
@@ -85,35 +82,10 @@ func Suback(packetIdentifier int, acks []byte) Packet {
 	return p
 }
 
-func readVarInt(props []byte) (int, int, error) {
-	multiplier := 1
-	value := 0
-	i := 0
-	encodedByte := props[i]
-	for ok := true; ok; ok = int(encodedByte&128) != 0 {
-		value = value + int(encodedByte&127)*multiplier
-		if multiplier > 128*128*128 {
-			return 0, 0, errors.New("malformed value")
-		}
-		multiplier *= 128
-		i++
-		encodedByte = props[i]
-	}
-	return value, i - 1, nil
-}
-
-func read2BytesInt(a []byte, i int) int {
-	v := int(a[i]) << 8
-	i++
-	return v + int(a[i])
-}
-
 func connectReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
 	i := 0
-	pl := int(req[i]) << 8
-	i++
-	pl = pl + int(req[i])
-	i++
+	pl := Read2BytesInt(req, i)
+	i = i + 2
 	fmt.Println("protocolName", string(req[i:i+pl]))
 	i = i + pl
 	v := req[i]
@@ -128,15 +100,16 @@ func connectReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error)
 	connStatus.connectFlags = req[i]
 	i++
 	ka := req[i : i+2]
-	i = i + 2
-	fmt.Println("keepAlive", read2BytesInt(ka, 0))
+
+	fmt.Println("keepAlive", Read2BytesInt(ka, 0))
 	connStatus.keepAlive = ka
-	cil := read2BytesInt(req, i)
+	i = i + 2
+	cil := Read2BytesInt(req, i)
 	i = i + 2
 	clientId := string(req[i : i+cil])
 	fmt.Println("clientId", clientId)
 	connStatus.clientId = clientId
-	newClient(db, connStatus)
+	connStatus.persist(db)
 	return Connack(CONNECT_OK), nil
 }
 

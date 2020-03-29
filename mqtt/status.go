@@ -22,37 +22,23 @@ type ConnStatus struct {
 	keepAlive       []byte
 }
 
-func initBucket(db *bolt.DB) error {
-	uerr := db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(CLIENTS_BUCKET))
-		if err != nil {
-			return err
+func (c ConnStatus) persist(db *bolt.DB) error {
+	return db.Batch(func(tx *bolt.Tx) error {
+		clients, err0 := tx.CreateBucketIfNotExists([]byte(CLIENTS_BUCKET))
+		if err0 != nil {
+			fmt.Println(err0)
+			return err0
 		}
+		client, err1 := clients.CreateBucketIfNotExists([]byte(c.clientId))
+		if err1 != nil {
+			fmt.Println(err1)
+			return err1
+		}
+		client.Put([]byte(CONNECT_TIME), []byte(c.connectTime.Format(time.UnixDate)))
+		client.Put([]byte(CLIENTID), []byte(c.clientId))
+		client.Put([]byte(PROTOCOL_VERSION), []byte{c.protocolVersion})
+		client.Put([]byte(CONNECT_FLAGS), []byte{c.connectFlags})
+		client.Put([]byte(KEEP_ALIVE), []byte(c.keepAlive))
 		return nil
 	})
-	return uerr
-}
-
-func newClient(db *bolt.DB, connStatus *ConnStatus) {
-	c := make(chan string)
-	go db.Batch(func(tx *bolt.Tx) error {
-		clients := tx.Bucket([]byte(CLIENTS_BUCKET))
-		client, err := clients.CreateBucketIfNotExists([]byte(connStatus.clientId))
-		if err != nil {
-			c <- connStatus.clientId
-			return nil
-		}
-		client.Put([]byte(CONNECT_TIME), []byte(connStatus.connectTime.Format(time.UnixDate)))
-		client.Put([]byte(CLIENTID), []byte(connStatus.clientId))
-		client.Put([]byte(PROTOCOL_VERSION), []byte{connStatus.protocolVersion})
-		client.Put([]byte(CONNECT_FLAGS), []byte{connStatus.connectFlags})
-		client.Put([]byte(KEEP_ALIVE), []byte(connStatus.keepAlive))
-		if err != nil {
-			c <- connStatus.clientId
-			return nil
-		}
-		c <- "0"
-		return nil
-	})
-	fmt.Println(<-c)
 }
