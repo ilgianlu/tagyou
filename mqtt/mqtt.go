@@ -21,6 +21,7 @@ func New(db *bolt.DB) MQTT {
 }
 
 func (m MQTT) HandleConnection(conn net.Conn) {
+	var connStatus ConnStatus
 	for {
 		p, rerr := readPacket(conn)
 		if rerr != nil {
@@ -29,7 +30,7 @@ func (m MQTT) HandleConnection(conn net.Conn) {
 			break
 		}
 
-		resp, err := p.Respond(m.db)
+		resp, err := p.Respond(m.db, &connStatus)
 		if err != nil {
 			defer conn.Close()
 			break

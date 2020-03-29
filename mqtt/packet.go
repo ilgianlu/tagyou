@@ -9,57 +9,7 @@ import (
 
 type Packet []byte
 
-func (p Packet) PacketType() uint8 {
-	return (p[0] & 0xF0) >> 4
-}
-
-func (p Packet) Flags() uint8 {
-	return p[0] & 0x0F
-}
-
-func (p Packet) RemainingLength() uint8 {
-	return p[1]
-}
-
-func (p Packet) Payload() []byte {
-	l := p.RemainingLength()
-	return p[2 : 2+l]
-}
-
-func (p Packet) ProtocolNameLength() int {
-	pay := p.Payload()
-	return int(pay[0])<<8 + int(pay[1])
-}
-
-func (p Packet) ProtocolName() []byte {
-	l := p.ProtocolNameLength()
-	return p.Payload()[2 : 2+l]
-}
-
-func (p Packet) ProtocolVersion() int {
-	l := p.ProtocolNameLength()
-	return int(p.Payload()[2+l])
-}
-
-func (p Packet) ConnectFlags() int {
-	l := p.ProtocolNameLength()
-	return int(p.Payload()[2+l+1])
-}
-
-func (p Packet) KeepAlive() int {
-	pay := p.Payload()
-	l := p.ProtocolNameLength()
-	return int(pay[2+l+1+1])<<8 + int(pay[2+l+1+2])
-}
-
-func (p Packet) ClientId() string {
-	pay := p.Payload()
-	l := p.ProtocolNameLength()
-	lcid := int(pay[2+l+1+2+1])<<8 + int(pay[2+l+1+2+2])
-	return string(pay[2+l+1+2+2+1 : 2+l+1+2+2+1+lcid])
-}
-
-func (req Packet) Respond(db *bolt.DB) (Packet, error) {
+func (req Packet) Respond(db *bolt.DB, connStatus *ConnStatus) (Packet, error) {
 	i := 0
 	t := (req[i] & 0xF0) >> 4
 	fmt.Printf("packet type %d\n", t)
@@ -70,42 +20,72 @@ func (req Packet) Respond(db *bolt.DB) (Packet, error) {
 	i++
 	fmt.Println("payload", req[i:i+l])
 	if 1 == t {
-		return connectReq(db, req[i:i+l])
+		fmt.Println("Connect message")
+		return connectReq(db, connStatus, req[i:i+l])
 	} else if 8 == t {
 		fmt.Println("Subscribe message")
-		return subscribeReq(db, req[i:i+l])
+		return subscribeReq(db, connStatus, req[i:i+l])
 	} else {
 		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
 	}
 }
 
-func subscribeReq(db *bolt.DB, req Packet) (Packet, error) {
+func subscribeReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
 	i := 0
-	pi := int(req[i]) << 8
-	i++
-	pi = pi + int(req[i])
+	pi := read2BytesInt(req, i)
+	i = i + 2
 	fmt.Println("packet identifier", pi)
-	i++
-	pl := int(req[i])
-	fmt.Println("property length", pl)
-	if pl > 0 {
-		props := req[i : i+pl]
-		fmt.Println("properties", props)
-		si, _, err := decodeSubscriptionIdentifier(props)
-		if err != nil {
-			fmt.Println("err decoding sub ident", err)
-			return Connack(CONNECT_UNSPECIFIED_ERROR), nil
+	if connStatus.protocolVersion == 5 {
+		pl := int(req[i])
+		fmt.Println("property length", pl)
+		if pl > 0 {
+			props := req[i : i+pl]
+			fmt.Println("properties", props)
+			si, _, err := readVarInt(props)
+			if err != nil {
+				fmt.Println("err decoding sub ident", err)
+				return Connack(CONNECT_UNSPECIFIED_ERROR), nil
+			}
+			fmt.Println("subscription identifier", si)
+			i = i + pl
 		}
-		fmt.Println("subscription identifier", si)
-		i = i + pl
+		i++
 	}
-	i++
-	pay := req[i:len(req)]
+	pay := req[i:]
 	fmt.Println("subscribe payload", pay)
-	return Suback(pi), nil
+	subs := make([]string, 10)
+	j := 0
+	for {
+		sl := int(req[i]) << 8
+		i++
+		sl = sl + int(req[i])
+		i++
+		subs[j] = string(req[i : i+sl])
+		fmt.Println(j, "subscribtion:", subs[j])
+		i = i + sl
+		if i >= len(req)-1 {
+			break
+		}
+		j++
+		if j > 10 {
+			break
+		}
+	}
+	subacks := make([]byte, j)
+	return Suback(pi, subacks), nil
 }
 
-func decodeSubscriptionIdentifier(props []byte) (int, int, error) {
+func Suback(packetIdentifier int, acks []byte) Packet {
+	p := make(Packet, 4+len(acks))
+	p[0] = uint8(9) << 4
+	p[1] = uint8(0)
+	p[2] = byte(packetIdentifier & 0xFF >> 8)
+	p[3] = byte(packetIdentifier & 0xFF)
+	fmt.Println(p)
+	return p
+}
+
+func readVarInt(props []byte) (int, int, error) {
 	multiplier := 1
 	value := 0
 	i := 0
@@ -122,7 +102,13 @@ func decodeSubscriptionIdentifier(props []byte) (int, int, error) {
 	return value, i - 1, nil
 }
 
-func connectReq(db *bolt.DB, req Packet) (Packet, error) {
+func read2BytesInt(a []byte, i int) int {
+	v := int(a[i]) << 8
+	i++
+	return v + int(a[i])
+}
+
+func connectReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
 	i := 0
 	pl := int(req[i]) << 8
 	i++
@@ -130,38 +116,28 @@ func connectReq(db *bolt.DB, req Packet) (Packet, error) {
 	i++
 	fmt.Println("protocolName", string(req[i:i+pl]))
 	i = i + pl
-	v := int(req[i])
+	v := req[i]
 	fmt.Println("protocolVersion", v)
+	connStatus.protocolVersion = v
 	i++
-	if v < 4 {
+	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
 		fmt.Println("unsupported protocol version err", v)
 		return Connack(CONNECT_UNSUPPORTED_PROTOCOL_VERSION), nil
 	}
 	fmt.Println("connectFlags", req[i])
+	connStatus.connectFlags = req[i]
 	i++
-	ka := int(req[i]) << 8
-	i++
-	ka = ka + int(req[i])
-	i++
-	fmt.Println("keepAlive", ka)
-	cil := int(req[i]) << 8
-	i++
-	cil = cil + int(req[i])
-	i++
+	ka := req[i : i+2]
+	i = i + 2
+	fmt.Println("keepAlive", read2BytesInt(ka, 0))
+	connStatus.keepAlive = ka
+	cil := read2BytesInt(req, i)
+	i = i + 2
 	clientId := string(req[i : i+cil])
 	fmt.Println("clientId", clientId)
-	newClient(db, clientId)
+	connStatus.clientId = clientId
+	newClient(db, connStatus)
 	return Connack(CONNECT_OK), nil
-}
-
-func Suback(packetIdentifier int) Packet {
-	p := make(Packet, 5)
-	p[0] = uint8(2) << 4
-	p[1] = uint8(3)
-	p[2] = byte(packetIdentifier & 0xFF >> 8)
-	p[3] = byte(packetIdentifier & 0xFF)
-	fmt.Println(p)
-	return p
 }
 
 func Connack(reasonCode uint8) Packet {

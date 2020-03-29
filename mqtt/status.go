@@ -8,6 +8,19 @@ import (
 )
 
 const CLIENTS_BUCKET = "clients"
+const CONNECT_TIME = "connectTime"
+const CLIENTID = "clientId"
+const PROTOCOL_VERSION = "protocolVersion"
+const CONNECT_FLAGS = "connectFlags"
+const KEEP_ALIVE = "keepAlive"
+
+type ConnStatus struct {
+	connectTime     time.Time
+	clientId        string
+	protocolVersion uint8
+	connectFlags    uint8
+	keepAlive       []byte
+}
 
 func initBucket(db *bolt.DB) error {
 	uerr := db.Update(func(tx *bolt.Tx) error {
@@ -20,28 +33,22 @@ func initBucket(db *bolt.DB) error {
 	return uerr
 }
 
-func newClient(db *bolt.DB, clientId string) {
+func newClient(db *bolt.DB, connStatus *ConnStatus) {
 	c := make(chan string)
-	go db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(CLIENTS_BUCKET))
-		err := b.Put([]byte(clientId), []byte(time.Now().Format(time.UnixDate)))
+	go db.Batch(func(tx *bolt.Tx) error {
+		clients := tx.Bucket([]byte(CLIENTS_BUCKET))
+		client, err := clients.CreateBucketIfNotExists([]byte(connStatus.clientId))
 		if err != nil {
-			c <- clientId
+			c <- connStatus.clientId
 			return nil
 		}
-		c <- "0"
-		return nil
-	})
-	fmt.Println(<-c)
-}
-
-func clientOk(db *bolt.DB, clientId string) {
-	c := make(chan string)
-	go db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(CLIENTS_BUCKET))
-		v := b.Get([]byte(clientId))
-		if v != nil {
-			c <- clientId
+		client.Put([]byte(CONNECT_TIME), []byte(connStatus.connectTime.Format(time.UnixDate)))
+		client.Put([]byte(CLIENTID), []byte(connStatus.clientId))
+		client.Put([]byte(PROTOCOL_VERSION), []byte{connStatus.protocolVersion})
+		client.Put([]byte(CONNECT_FLAGS), []byte{connStatus.connectFlags})
+		client.Put([]byte(KEEP_ALIVE), []byte(connStatus.keepAlive))
+		if err != nil {
+			c <- connStatus.clientId
 			return nil
 		}
 		c <- "0"

@@ -1,5 +1,7 @@
 package mqtt
 
+const MINIMUM_SUPPORTED_PROTOCOL = 4
+
 // 0x00
 // connect OK
 const CONNECT_OK = 0
