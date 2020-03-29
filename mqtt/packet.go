@@ -68,16 +68,15 @@ func subscribeReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, erro
 			break
 		}
 	}
-	subacks := make([]byte, j)
-	return Suback(pi, subacks), nil
+	return Suback(pi, j+1), nil
 }
 
-func Suback(packetIdentifier int, acks []byte) Packet {
-	p := make(Packet, 4+len(acks))
+func Suback(packetIdentifier int, subscribed int) Packet {
+	p := make(Packet, 4+subscribed)
 	p[0] = uint8(9) << 4
-	p[1] = uint8(0)
-	p[2] = byte(packetIdentifier & 0xFF >> 8)
-	p[3] = byte(packetIdentifier & 0xFF)
+	p[1] = uint8(2 + subscribed)
+	p[2] = byte(packetIdentifier & 0xFF00 >> 8)
+	p[3] = byte(packetIdentifier & 0x00FF)
 	fmt.Println(p)
 	return p
 }
