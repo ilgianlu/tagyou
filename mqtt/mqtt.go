@@ -34,11 +34,14 @@ func (m MQTT) HandleConnection(conn net.Conn) {
 			defer conn.Close()
 			break
 		}
-		werr := writePacket(conn, resp)
-		if werr != nil {
-			fmt.Printf("err %s\n", werr)
-			defer conn.Close()
-			break
+
+		if resp != nil {
+			werr := writePacket(conn, resp)
+			if werr != nil {
+				fmt.Printf("err %s\n", werr)
+				defer conn.Close()
+				break
+			}
 		}
 
 		derr := conn.SetReadDeadline(time.Now().Add(30 * time.Second))

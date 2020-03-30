@@ -24,9 +24,27 @@ func (req Packet) Respond(db *bolt.DB, connStatus *ConnStatus) (Packet, error) {
 	} else if 8 == t {
 		fmt.Println("Subscribe message")
 		return subscribeReq(db, connStatus, req[i:i+l])
+	} else if 3 == t {
+		fmt.Println("Publish message")
+		return publishReq(db, connStatus, req[i:i+l])
 	} else {
 		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
 	}
+}
+
+func publishReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
+	i := 0
+	tl := Read2BytesInt(req, i)
+	fmt.Println("topic length", tl)
+	i = i + 2
+	topic := string(req[i : i+tl])
+	fmt.Println("pub topic", topic)
+	pi := Read2BytesInt(req, i)
+	fmt.Println("packet identifier", pi)
+	i = i + 2
+	pay := req[i:]
+	fmt.Println("payload", pay)
+	return nil, nil
 }
 
 func subscribeReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
@@ -77,7 +95,6 @@ func Suback(packetIdentifier int, subscribed int) Packet {
 	p[1] = uint8(2 + subscribed)
 	p[2] = byte(packetIdentifier & 0xFF00 >> 8)
 	p[3] = byte(packetIdentifier & 0x00FF)
-	fmt.Println(p)
 	return p
 }
 
