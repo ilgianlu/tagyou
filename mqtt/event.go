@@ -5,14 +5,16 @@ import (
 	"time"
 )
 
+const EVENT_CONNECT = 0
+const EVENT_SUBSCRIBE = 1
+const EVENT_PUBLISH = 2
+
 type Event struct {
-	eventType       int
-	clientId        string
-	protocolVersion uint8
-	connectFlags    uint8
-	keepAlive       []byte
-	topic           string
-	message         string
-	conn            net.Conn
-	timestamp       time.Time
+	eventType int
+	clientId  string
+	topic     string
+	message   string
+	packt     *Packet
+	conn      net.Conn
+	timestamp time.Time
 }

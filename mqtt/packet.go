@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"fmt"
+	"time"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -18,24 +19,27 @@ func (req Packet) Respond(db *bolt.DB, e chan<- Event, connStatus *ConnStatus) (
 	fmt.Printf("remaining length %d\n", l)
 	i++
 	fmt.Println("payload", req[i:i+l])
-	if 1 == t {
+	switch t {
+	case 1:
 		fmt.Println("Connect message")
 		return connectReq(db, e, connStatus, req[i:i+l])
-	} else if 8 == t {
+	case 8:
 		fmt.Println("Subscribe message")
 		return subscribeReq(db, e, connStatus, req[i:i+l])
-	} else if 3 == t {
+	case 3:
 		fmt.Println("Publish message")
-		return publishReq(db, e, connStatus, req[i:i+l])
-	} else {
+		var event Event
+		event.timestamp = time.Now()
+		event.packt = &req
+		return publishReq(db, e, connStatus, req[i:i+l], event)
+	default:
 		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
 	}
 }
 
-func publishReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet) (Packet, error) {
-	var event Event
-	event.eventType = 2
+func publishReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet, event Event) (Packet, error) {
 	i := 0
+	event.eventType = 2
 	tl := Read2BytesInt(req, i)
 	fmt.Println("topic length", tl)
 	i = i + 2

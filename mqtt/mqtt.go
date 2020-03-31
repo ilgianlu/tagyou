@@ -20,6 +20,11 @@ func New(db *bolt.DB) MQTT {
 	m.db = db
 	m.e = make(chan Event)
 	m.conns = make(map[string]net.Conn)
+	db.Update(func(tx *bolt.Tx) error {
+		tx.CreateBucketIfNotExists([]byte(SUBSCRIPTION_BUCKET))
+		tx.CreateBucketIfNotExists([]byte(CLIENTS_BUCKET))
+		return nil
+	})
 	return m
 }
 
@@ -32,6 +37,32 @@ func (m MQTT) Start(port string) {
 			fmt.Println("topic:", e.topic)
 			fmt.Println("message:", e.message)
 			fmt.Println("/////////////")
+			switch e.eventType {
+			case EVENT_CONNECT:
+				fmt.Println("new conn for :", e.clientId)
+				m.conns[e.clientId] = e.conn
+			case EVENT_SUBSCRIBE:
+				var s Subscription
+				s.topic = e.topic
+				s.clientId = e.clientId
+				err := s.persist(m.db)
+				if err != nil {
+					fmt.Println(err)
+				}
+			case EVENT_PUBLISH:
+				dests := findSubs(m.db, e.topic)
+				for i := 0; i < len(dests); i++ {
+					c := m.conns[dests[i]]
+					if c != nil {
+						n, err := c.Write(*e.packt)
+						if err != nil {
+							fmt.Println(err)
+						}
+						fmt.Println("published", n, "bytes to", dests[i])
+					}
+					i++
+				}
+			}
 		}
 	}(m.e)
 
