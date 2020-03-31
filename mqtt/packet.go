@@ -8,7 +8,7 @@ import (
 
 type Packet []byte
 
-func (req Packet) Respond(db *bolt.DB, connStatus *ConnStatus) (Packet, error) {
+func (req Packet) Respond(db *bolt.DB, e chan<- Event, connStatus *ConnStatus) (Packet, error) {
 	i := 0
 	t := (req[i] & 0xF0) >> 4
 	fmt.Printf("packet type %d\n", t)
@@ -20,34 +20,41 @@ func (req Packet) Respond(db *bolt.DB, connStatus *ConnStatus) (Packet, error) {
 	fmt.Println("payload", req[i:i+l])
 	if 1 == t {
 		fmt.Println("Connect message")
-		return connectReq(db, connStatus, req[i:i+l])
+		return connectReq(db, e, connStatus, req[i:i+l])
 	} else if 8 == t {
 		fmt.Println("Subscribe message")
-		return subscribeReq(db, connStatus, req[i:i+l])
+		return subscribeReq(db, e, connStatus, req[i:i+l])
 	} else if 3 == t {
 		fmt.Println("Publish message")
-		return publishReq(db, connStatus, req[i:i+l])
+		return publishReq(db, e, connStatus, req[i:i+l])
 	} else {
 		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
 	}
 }
 
-func publishReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
+func publishReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet) (Packet, error) {
+	var event Event
+	event.eventType = 2
 	i := 0
 	tl := Read2BytesInt(req, i)
 	fmt.Println("topic length", tl)
 	i = i + 2
 	topic := string(req[i : i+tl])
 	fmt.Println("pub topic", topic)
-	pi := Read2BytesInt(req, i)
-	fmt.Println("packet identifier", pi)
-	i = i + 2
+	event.topic = topic
+	i = i + tl
+	// pi := Read2BytesInt(req, i)
+	// fmt.Println("packet identifier", pi)
+	// i = i + 2
 	pay := req[i:]
 	fmt.Println("payload", pay)
+	event.message = string(pay)
+	event.clientId = connStatus.clientId
+	e <- event
 	return nil, nil
 }
 
-func subscribeReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
+func subscribeReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet) (Packet, error) {
 	i := 0
 	pi := Read2BytesInt(req, i)
 	i = i + 2
@@ -73,10 +80,15 @@ func subscribeReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, erro
 	subs := make([]string, 10)
 	j := 0
 	for {
+		var event Event
+		event.eventType = 1
 		sl := Read2BytesInt(req, i)
 		i = i + 2
 		subs[j] = string(req[i : i+sl])
 		fmt.Println(j, "subscribtion:", subs[j])
+		event.clientId = connStatus.clientId
+		event.topic = subs[j]
+		e <- event
 		i = i + sl
 		if i >= len(req)-1 {
 			break
@@ -98,7 +110,9 @@ func Suback(packetIdentifier int, subscribed int) Packet {
 	return p
 }
 
-func connectReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error) {
+func connectReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet) (Packet, error) {
+	var event Event
+	event.eventType = 0
 	i := 0
 	pl := Read2BytesInt(req, i)
 	i = i + 2
@@ -125,7 +139,9 @@ func connectReq(db *bolt.DB, connStatus *ConnStatus, req Packet) (Packet, error)
 	clientId := string(req[i : i+cil])
 	fmt.Println("clientId", clientId)
 	connStatus.clientId = clientId
-	connStatus.persist(db)
+	event.clientId = clientId
+	// connStatus.persist(db)
+	e <- event
 	return Connack(CONNECT_OK), nil
 }
 

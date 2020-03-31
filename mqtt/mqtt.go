@@ -10,16 +10,31 @@ import (
 )
 
 type MQTT struct {
-	db *bolt.DB
+	db    *bolt.DB
+	e     chan Event
+	conns map[string]net.Conn
 }
 
 func New(db *bolt.DB) MQTT {
 	var m MQTT
 	m.db = db
+	m.e = make(chan Event)
+	m.conns = make(map[string]net.Conn)
 	return m
 }
 
 func (m MQTT) Start(port string) {
+	go func(events <-chan Event) {
+		for e := range events {
+			fmt.Println("///////////// EVENT START")
+			fmt.Println("new event type:", e.eventType)
+			fmt.Println("clientId:", e.clientId)
+			fmt.Println("topic:", e.topic)
+			fmt.Println("message:", e.message)
+			fmt.Println("/////////////")
+		}
+	}(m.e)
+
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
@@ -48,7 +63,7 @@ func (m MQTT) handleConnection(conn net.Conn) {
 			break
 		}
 
-		resp, err := p.Respond(m.db, &connStatus)
+		resp, err := p.Respond(m.db, m.e, &connStatus)
 		if err != nil {
 			defer conn.Close()
 			break
