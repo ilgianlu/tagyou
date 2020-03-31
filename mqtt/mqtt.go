@@ -19,7 +19,26 @@ func New(db *bolt.DB) MQTT {
 	return m
 }
 
-func (m MQTT) HandleConnection(conn net.Conn) {
+func (m MQTT) Start(port string) {
+	// start tcp socket
+	ln, err := net.Listen("tcp", port)
+	if err != nil {
+		// handle error
+		fmt.Println("error", err)
+		return
+	}
+	fmt.Println("mqtt listening on", port)
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			// handle error
+			fmt.Println("error", err)
+		}
+		go m.handleConnection(conn)
+	}
+}
+
+func (m MQTT) handleConnection(conn net.Conn) {
 	var connStatus ConnStatus
 	for {
 		p, rerr := readPacket(conn)
