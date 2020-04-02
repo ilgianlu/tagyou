@@ -3,6 +3,7 @@ package mqtt
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"time"
 
@@ -47,7 +48,7 @@ func (m MQTT) Start(port string) {
 				s.clientId = e.clientId
 				err := s.persist(m.db)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Println("cannot persist subscription:", err)
 				}
 			case EVENT_PUBLISH:
 				dests := findSubs(m.db, e.topic)
@@ -57,7 +58,7 @@ func (m MQTT) Start(port string) {
 						fmt.Println(dests[i], "is connected", c)
 						n, err := c.Write(*e.packt)
 						if err != nil {
-							fmt.Println(err)
+							fmt.Println("cannot write to", dests[i], ":", err)
 						}
 						fmt.Println("published", n, "bytes to", dests[i])
 					} else {
@@ -66,12 +67,12 @@ func (m MQTT) Start(port string) {
 					}
 				}
 			case EVENT_DISCONNECT:
-				if c, ok := m.conns[e.clientId]; ok {
-					fmt.Println(e.clientId, "wants to disconnect")
-					delete(m.conns, e.clientId)
-					fmt.Println(e.clientId, "cleaned")
-					c.Close()
-				}
+				// if c, ok := m.conns[e.clientId]; ok {
+				fmt.Println(e.clientId, "wants to disconnect")
+				delete(m.conns, e.clientId)
+				fmt.Println(e.clientId, "cleaned")
+				// c.Close()
+				// }
 			}
 		}
 	}(m.e)
@@ -79,16 +80,14 @@ func (m MQTT) Start(port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
-		// handle error
-		fmt.Println("error", err)
+		fmt.Println("tcp listen error", err)
 		return
 	}
 	fmt.Println("mqtt listening on", port)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			// handle error
-			fmt.Println("error", err)
+			fmt.Println("tcp accept error", err)
 		}
 		go m.handleConnection(conn)
 	}
@@ -99,7 +98,10 @@ func (m MQTT) handleConnection(conn net.Conn) {
 	for {
 		p, rerr := readPacket(conn)
 		if rerr != nil {
-			fmt.Printf("err %s\n", rerr)
+			fmt.Println("read packet error ", rerr)
+			if rerr == io.EOF {
+				fmt.Println("connection closed!")
+			}
 			defer conn.Close()
 			break
 		}
@@ -117,7 +119,7 @@ func (m MQTT) handleConnection(conn net.Conn) {
 		if resp != nil {
 			werr := writePacket(conn, resp)
 			if werr != nil {
-				fmt.Printf("err %s\n", werr)
+				fmt.Println("cannot respond", werr)
 				defer conn.Close()
 				break
 			}
@@ -125,7 +127,7 @@ func (m MQTT) handleConnection(conn net.Conn) {
 
 		derr := conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		if derr != nil {
-			fmt.Printf("err %s\n", derr)
+			fmt.Println("cannot set read deadline", derr)
 			defer conn.Close()
 			break
 		}
@@ -135,7 +137,6 @@ func (m MQTT) handleConnection(conn net.Conn) {
 func writePacket(conn net.Conn, p Packet) error {
 	n, err := conn.Write(p)
 	if err != nil {
-		fmt.Printf("err %s\n", err)
 		return err
 	} else {
 		fmt.Printf("wrote %d bytes\n", n)
@@ -147,7 +148,6 @@ func readPacket(conn net.Conn) (Packet, error) {
 	p := make(Packet, 255)
 	n, err := conn.Read(p)
 	if err != nil {
-		fmt.Printf("err %s\n", err)
 		return nil, err
 	}
 	if n < 2 {
