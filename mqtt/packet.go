@@ -2,14 +2,13 @@ package mqtt
 
 import (
 	"fmt"
-	"time"
 
 	bolt "go.etcd.io/bbolt"
 )
 
 type Packet []byte
 
-func (req Packet) Respond(db *bolt.DB, e chan<- Event, connStatus *ConnStatus) (Packet, error) {
+func (req Packet) Respond(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, event *Event) (Packet, error) {
 	i := 0
 	t := (req[i] & 0xF0) >> 4
 	fmt.Printf("packet type %d\n", t)
@@ -22,22 +21,19 @@ func (req Packet) Respond(db *bolt.DB, e chan<- Event, connStatus *ConnStatus) (
 	switch t {
 	case 1:
 		fmt.Println("Connect message")
-		return connectReq(db, e, connStatus, req[i:i+l])
+		return connectReq(db, e, connStatus, req[i:i+l], event)
 	case 8:
 		fmt.Println("Subscribe message")
 		return subscribeReq(db, e, connStatus, req[i:i+l])
 	case 3:
 		fmt.Println("Publish message")
-		var event Event
-		event.timestamp = time.Now()
-		event.packt = &req
 		return publishReq(db, e, connStatus, req[i:i+l], event)
 	default:
 		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
 	}
 }
 
-func publishReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet, event Event) (Packet, error) {
+func publishReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet, event *Event) (Packet, error) {
 	i := 0
 	event.eventType = 2
 	tl := Read2BytesInt(req, i)
@@ -54,7 +50,7 @@ func publishReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet,
 	fmt.Println("payload", pay)
 	event.message = string(pay)
 	event.clientId = connStatus.clientId
-	e <- event
+	e <- *event
 	return nil, nil
 }
 
@@ -84,15 +80,15 @@ func subscribeReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packe
 	subs := make([]string, 10)
 	j := 0
 	for {
-		var event Event
-		event.eventType = 1
+		var subevent Event
+		subevent.eventType = 1
 		sl := Read2BytesInt(req, i)
 		i = i + 2
 		subs[j] = string(req[i : i+sl])
 		fmt.Println(j, "subscribtion:", subs[j])
-		event.clientId = connStatus.clientId
-		event.topic = subs[j]
-		e <- event
+		subevent.clientId = connStatus.clientId
+		subevent.topic = subs[j]
+		e <- subevent
 		i = i + sl
 		if i >= len(req)-1 {
 			break
@@ -114,8 +110,7 @@ func Suback(packetIdentifier int, subscribed int) Packet {
 	return p
 }
 
-func connectReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet) (Packet, error) {
-	var event Event
+func connectReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet, event *Event) (Packet, error) {
 	event.eventType = 0
 	i := 0
 	pl := Read2BytesInt(req, i)
@@ -145,7 +140,7 @@ func connectReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet)
 	connStatus.clientId = clientId
 	event.clientId = clientId
 	// connStatus.persist(db)
-	e <- event
+	e <- *event
 	return Connack(CONNECT_OK), nil
 }
 

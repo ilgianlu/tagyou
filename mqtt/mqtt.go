@@ -51,16 +51,18 @@ func (m MQTT) Start(port string) {
 				}
 			case EVENT_PUBLISH:
 				dests := findSubs(m.db, e.topic)
+				fmt.Println("clients subscribed :", dests)
 				for i := 0; i < len(dests); i++ {
-					c := m.conns[dests[i]]
-					if c != nil {
+					if c, ok := m.conns[dests[i]]; ok {
+						fmt.Println(dests[i], "is connected", c)
 						n, err := c.Write(*e.packt)
 						if err != nil {
 							fmt.Println(err)
 						}
 						fmt.Println("published", n, "bytes to", dests[i])
+					} else {
+						fmt.Println(dests[i], "is not connected")
 					}
-					i++
 				}
 			}
 		}
@@ -94,7 +96,12 @@ func (m MQTT) handleConnection(conn net.Conn) {
 			break
 		}
 
-		resp, err := p.Respond(m.db, m.e, &connStatus)
+		var event Event
+		event.conn = conn
+		event.packt = &p
+		event.timestamp = time.Now()
+
+		resp, err := p.Respond(m.db, m.e, &connStatus, &event)
 		if err != nil {
 			defer conn.Close()
 			break

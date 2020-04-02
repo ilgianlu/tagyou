@@ -26,7 +26,7 @@ func (s Subscription) persist(db *bolt.DB) error {
 }
 
 func findSubs(db *bolt.DB, topic string) []string {
-	clientIds := make([]string, 1)
+	clientIds := make([]string, 0)
 	ss := make(chan string)
 	go db.View(func(tx *bolt.Tx) error {
 		subscriptions := tx.Bucket([]byte(SUBSCRIPTION_BUCKET))
