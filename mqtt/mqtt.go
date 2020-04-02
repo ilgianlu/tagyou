@@ -62,7 +62,15 @@ func (m MQTT) Start(port string) {
 						fmt.Println("published", n, "bytes to", dests[i])
 					} else {
 						fmt.Println(dests[i], "is not connected")
+						// clear subs
 					}
+				}
+			case EVENT_DISCONNECT:
+				if c, ok := m.conns[e.clientId]; ok {
+					fmt.Println(e.clientId, "wants to disconnect")
+					delete(m.conns, e.clientId)
+					fmt.Println(e.clientId, "cleaned")
+					c.Close()
 				}
 			}
 		}
@@ -98,7 +106,6 @@ func (m MQTT) handleConnection(conn net.Conn) {
 
 		var event Event
 		event.conn = conn
-		event.packt = &p
 		event.timestamp = time.Now()
 
 		resp, err := p.Respond(m.db, m.e, &connStatus, &event)

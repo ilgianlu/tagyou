@@ -18,6 +18,8 @@ func (req Packet) Respond(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, e
 	fmt.Printf("remaining length %d\n", l)
 	i++
 	fmt.Println("payload", req[i:i+l])
+	tPack := trimPacket(req, i+l)
+	event.packt = &tPack
 	switch t {
 	case 1:
 		fmt.Println("Connect message")
@@ -28,9 +30,21 @@ func (req Packet) Respond(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, e
 	case 3:
 		fmt.Println("Publish message")
 		return publishReq(db, e, connStatus, req[i:i+l], event)
+	case 14:
+		fmt.Println("Disconnect message")
+		event.eventType = 100
+		event.clientId = connStatus.clientId
+		e <- *event
+		return nil, nil
 	default:
 		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
 	}
+}
+
+func trimPacket(req []byte, end int) Packet {
+	trimmedPacket := make(Packet, end)
+	copy(trimmedPacket, req[:end])
+	return trimmedPacket
 }
 
 func publishReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet, event *Event) (Packet, error) {
