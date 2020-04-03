@@ -32,46 +32,73 @@ func initDb(db *bolt.DB) error {
 
 func rangeEvents(db *bolt.DB, events <-chan Event, connections map[string]net.Conn) {
 	for e := range events {
-		fmt.Println("//!! EVENT type", e.eventType, "clientId", e.clientId)
 		switch e.eventType {
 		case EVENT_CONNECT:
-			connections[e.clientId] = e.conn
-			if e.err != 0 {
-				e.conn.Write(Connack(e.err))
-			}
-			e.conn.Write(Connack(0))
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "connected clientId")
+			clientConnection(connections, e)
 		case EVENT_SUBSCRIBED:
-			e.conn.Write(Suback(e.packetIdentifier, e.subscribedCount))
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
+			clientSubscribed(e)
 		case EVENT_SUBSCRIPTION:
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed", e.topic)
+			clientSubscription(db, e)
+		case EVENT_PUBLISH:
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published", e.topic)
+			clientPublish(db, connections, e)
+		case EVENT_DISCONNECT:
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconencts")
+			clientDisconnect(connections, e)
+		}
+	}
+}
+
+func clientConnection(connections map[string]net.Conn, e Event) {
+	connections[e.clientId] = e.conn
+	if e.err != 0 {
+		e.conn.Write(Connack(e.err))
+	}
+	e.conn.Write(Connack(0))
+}
+
+func clientSubscribed(e Event) {
+	e.conn.Write(Suback(e.packetIdentifier, e.subscribedCount))
+}
+
+func clientSubscription(db *bolt.DB, e Event) {
+	var s Subscription
+	s.topic = e.topic
+	s.clientId = e.clientId
+	err := s.persist(db)
+	if err != nil {
+		fmt.Println("cannot persist subscription:", err)
+	}
+}
+
+func clientPublish(db *bolt.DB, connections map[string]net.Conn, e Event) {
+	dests := findSubs(db, e.topic)
+	for i := 0; i < len(dests); i++ {
+		if c, ok := connections[dests[i]]; ok {
+			n, err := c.Write(append(e.header, e.remainingBytes...))
+			if err != nil {
+				fmt.Println("cannot write to", dests[i], ":", err)
+			}
+			fmt.Println("published", n, "bytes to", dests[i])
+		} else {
+			fmt.Println(dests[i], "is not connected")
 			var s Subscription
 			s.topic = e.topic
 			s.clientId = e.clientId
-			err := s.persist(db)
-			if err != nil {
-				fmt.Println("cannot persist subscription:", err)
-			}
-		case EVENT_PUBLISH:
-			dests := findSubs(db, e.topic)
-			for i := 0; i < len(dests); i++ {
-				if c, ok := connections[dests[i]]; ok {
-					n, err := c.Write(append(e.header, e.remainingBytes...))
-					if err != nil {
-						fmt.Println("cannot write to", dests[i], ":", err)
-					}
-					fmt.Println("published", n, "bytes to", dests[i])
-				} else {
-					fmt.Println(dests[i], "is not connected")
-					// clear subs
-				}
-			}
-		case EVENT_DISCONNECT:
-			if c, ok := connections[e.clientId]; ok {
-				delete(connections, e.clientId)
-				err := c.Close()
-				if err != nil {
-					fmt.Println("could not close conn", err)
-				}
-			}
+			s.remove(db)
+		}
+	}
+}
+
+func clientDisconnect(connections map[string]net.Conn, e Event) {
+	if c, ok := connections[e.clientId]; ok {
+		delete(connections, e.clientId)
+		err := c.Close()
+		if err != nil {
+			fmt.Println("could not close conn", err)
 		}
 	}
 }

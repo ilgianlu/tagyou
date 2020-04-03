@@ -63,10 +63,10 @@ func connectReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
 	i := 0
 	pl := Read2BytesInt(event.remainingBytes, i)
 	i = i + 2
-	fmt.Println("protocolName", string(event.remainingBytes[i:i+pl]))
+	// fmt.Println("protocolName", string(event.remainingBytes[i:i+pl]))
 	i = i + pl
 	v := event.remainingBytes[i]
-	fmt.Println("protocolVersion", v)
+	// fmt.Println("protocolVersion", v)
 	connStatus.protocolVersion = v
 	i++
 	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
@@ -75,18 +75,18 @@ func connectReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
 		e <- *event
 		return nil
 	}
-	fmt.Println("connectFlags", event.remainingBytes[i])
+	// fmt.Println("connectFlags", event.remainingBytes[i])
 	connStatus.connectFlags = event.remainingBytes[i]
 	i++
 	ka := event.remainingBytes[i : i+2]
 
-	fmt.Println("keepAlive", Read2BytesInt(ka, 0))
+	// fmt.Println("keepAlive", Read2BytesInt(ka, 0))
 	connStatus.keepAlive = ka
 	i = i + 2
 	cil := Read2BytesInt(event.remainingBytes, i)
 	i = i + 2
 	clientId := string(event.remainingBytes[i : i+cil])
-	fmt.Println("clientId", clientId)
+	// fmt.Println("clientId", clientId)
 	connStatus.clientId = clientId
 	event.clientId = clientId
 	e <- *event
@@ -134,7 +134,6 @@ func subscribeReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
 		sl := Read2BytesInt(event.remainingBytes, i)
 		i = i + 2
 		subs[j] = string(event.remainingBytes[i : i+sl])
-		fmt.Println(j, "subscription:", subs[j])
 		subevent.clientId = connStatus.clientId
 		subevent.topic = subs[j]
 		e <- subevent
@@ -167,6 +166,5 @@ func Connack(reasonCode uint8) Packet {
 	p[1] = uint8(3)
 	p[2] = uint8(0)
 	p[3] = reasonCode
-	fmt.Println(p)
 	return p
 }
