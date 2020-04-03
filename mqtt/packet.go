@@ -2,109 +2,144 @@ package mqtt
 
 import (
 	"fmt"
-
-	bolt "go.etcd.io/bbolt"
+	"net"
 )
 
 type Packet []byte
 
-func (req Packet) Respond(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, event *Event) (Packet, error) {
+func readHeader(conn net.Conn, event *Event) error {
+	event.header = make([]byte, 2)
+	n, err := conn.Read(event.header)
+	if err != nil {
+		return err
+	}
+	if n < 2 {
+		return fmt.Errorf("header: read %d bytes, expected 2 bytes.. discarding", n)
+	}
+	return decodeHeader(event)
+}
+
+func decodeHeader(event *Event) error {
 	i := 0
-	t := (req[i] & 0xF0) >> 4
-	fmt.Printf("packet type %d\n", t)
-	fmt.Printf("flags %d\n", req[i]&0x0F)
+	event.packetType = (event.header[i] & 0xF0) >> 4
+	event.flags = event.header[i] & 0x0F
 	i++
-	l := int(req[i])
-	fmt.Printf("remaining length %d\n", l)
-	i++
-	fmt.Println("payload", req[i:i+l])
-	tPack := trimPacket(req, i+l)
-	event.packt = &tPack
-	switch t {
-	case 1:
-		fmt.Println("Connect message")
-		return connectReq(db, e, connStatus, req[i:i+l], event)
-	case 8:
-		fmt.Println("Subscribe message")
-		return subscribeReq(db, e, connStatus, req[i:i+l])
-	case 3:
-		fmt.Println("Publish message")
-		return publishReq(db, e, connStatus, req[i:i+l], event)
-	case 14:
-		fmt.Println("Disconnect message")
+	event.remainingLength = uint8(event.header[i])
+	return nil
+}
+
+func readRemainingBytes(conn net.Conn, event *Event) error {
+	event.remainingBytes = make([]byte, event.remainingLength)
+	n, err := conn.Read(event.remainingBytes)
+	if err != nil {
+		return err
+	}
+	if n < int(event.remainingLength) {
+		return fmt.Errorf("remainingBytes: read %d bytes, expected %d bytes.. discarding", n, event.remainingLength)
+	}
+	return nil
+}
+
+func manageEvent(e chan<- Event, connStatus *ConnStatus, event *Event) error {
+	switch event.packetType {
+	case PACKET_TYPE_CONNECT:
+		return connectReq(e, connStatus, event)
+	case PACKET_TYPE_PUBLISH:
+		return publishReq(e, connStatus, event)
+	case PACKET_TYPE_SUBSCRIBE:
+		return subscribeReq(e, connStatus, event)
+	case PACKET_TYPE_DISCONNECT:
 		event.eventType = 100
 		event.clientId = connStatus.clientId
 		e <- *event
-		return nil, nil
+		return nil
 	default:
-		return Connack(CONNECT_UNSPECIFIED_ERROR), nil
+		return fmt.Errorf("Unknown message type %d", event.packetType)
 	}
 }
 
-func trimPacket(req []byte, end int) Packet {
-	trimmedPacket := make(Packet, end)
-	copy(trimmedPacket, req[:end])
-	return trimmedPacket
-}
-
-func publishReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet, event *Event) (Packet, error) {
+func connectReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
+	event.eventType = EVENT_CONNECT
 	i := 0
-	event.eventType = 2
-	tl := Read2BytesInt(req, i)
-	fmt.Println("topic length", tl)
+	pl := Read2BytesInt(event.remainingBytes, i)
 	i = i + 2
-	topic := string(req[i : i+tl])
-	fmt.Println("pub topic", topic)
-	event.topic = topic
-	i = i + tl
-	// pi := Read2BytesInt(req, i)
-	// fmt.Println("packet identifier", pi)
-	// i = i + 2
-	pay := req[i:]
-	fmt.Println("payload", pay)
-	event.message = string(pay)
-	event.clientId = connStatus.clientId
+	fmt.Println("protocolName", string(event.remainingBytes[i:i+pl]))
+	i = i + pl
+	v := event.remainingBytes[i]
+	fmt.Println("protocolVersion", v)
+	connStatus.protocolVersion = v
+	i++
+	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
+		fmt.Println("unsupported protocol version err", v)
+		event.err = CONNECT_UNSUPPORTED_PROTOCOL_VERSION
+		e <- *event
+		return nil
+	}
+	fmt.Println("connectFlags", event.remainingBytes[i])
+	connStatus.connectFlags = event.remainingBytes[i]
+	i++
+	ka := event.remainingBytes[i : i+2]
+
+	fmt.Println("keepAlive", Read2BytesInt(ka, 0))
+	connStatus.keepAlive = ka
+	i = i + 2
+	cil := Read2BytesInt(event.remainingBytes, i)
+	i = i + 2
+	clientId := string(event.remainingBytes[i : i+cil])
+	fmt.Println("clientId", clientId)
+	connStatus.clientId = clientId
+	event.clientId = clientId
 	e <- *event
-	return nil, nil
+	return nil
 }
 
-func subscribeReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet) (Packet, error) {
+func publishReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
+	event.eventType = EVENT_PUBLISH
 	i := 0
-	pi := Read2BytesInt(req, i)
+	tl := Read2BytesInt(event.remainingBytes, i)
 	i = i + 2
-	fmt.Println("packet identifier", pi)
+	topic := string(event.remainingBytes[i : i+tl])
+	event.topic = topic
+	e <- *event
+	return nil
+}
+
+func subscribeReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
+	event.eventType = EVENT_SUBSCRIBED
+	i := 0
+	pi := Read2BytesInt(event.remainingBytes, i)
+	event.packetIdentifier = pi
+	i = i + 2
 	if connStatus.protocolVersion == 5 {
-		pl := int(req[i])
+		pl := int(event.remainingBytes[i])
 		fmt.Println("property length", pl)
 		if pl > 0 {
-			props := req[i : i+pl]
+			props := event.remainingBytes[i : i+pl]
 			fmt.Println("properties", props)
 			si, _, err := ReadVarInt(props)
 			if err != nil {
 				fmt.Println("err decoding sub ident", err)
-				return Connack(CONNECT_UNSPECIFIED_ERROR), nil
+				return nil
 			}
 			fmt.Println("subscription identifier", si)
 			i = i + pl
 		}
 		i++
 	}
-	pay := req[i:]
-	fmt.Println("subscribe payload", pay)
 	subs := make([]string, 10)
 	j := 0
 	for {
 		var subevent Event
-		subevent.eventType = 1
-		sl := Read2BytesInt(req, i)
+		subevent.eventType = EVENT_SUBSCRIPTION
+		sl := Read2BytesInt(event.remainingBytes, i)
 		i = i + 2
-		subs[j] = string(req[i : i+sl])
-		fmt.Println(j, "subscribtion:", subs[j])
+		subs[j] = string(event.remainingBytes[i : i+sl])
+		fmt.Println(j, "subscription:", subs[j])
 		subevent.clientId = connStatus.clientId
 		subevent.topic = subs[j]
 		e <- subevent
 		i = i + sl
-		if i >= len(req)-1 {
+		if i >= len(event.remainingBytes)-1 {
 			break
 		}
 		j++
@@ -112,7 +147,9 @@ func subscribeReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packe
 			break
 		}
 	}
-	return Suback(pi, j+1), nil
+	event.subscribedCount = j
+	e <- *event
+	return nil
 }
 
 func Suback(packetIdentifier int, subscribed int) Packet {
@@ -122,40 +159,6 @@ func Suback(packetIdentifier int, subscribed int) Packet {
 	p[2] = byte(packetIdentifier & 0xFF00 >> 8)
 	p[3] = byte(packetIdentifier & 0x00FF)
 	return p
-}
-
-func connectReq(db *bolt.DB, e chan<- Event, connStatus *ConnStatus, req Packet, event *Event) (Packet, error) {
-	event.eventType = 0
-	i := 0
-	pl := Read2BytesInt(req, i)
-	i = i + 2
-	fmt.Println("protocolName", string(req[i:i+pl]))
-	i = i + pl
-	v := req[i]
-	fmt.Println("protocolVersion", v)
-	connStatus.protocolVersion = v
-	i++
-	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
-		fmt.Println("unsupported protocol version err", v)
-		return Connack(CONNECT_UNSUPPORTED_PROTOCOL_VERSION), nil
-	}
-	fmt.Println("connectFlags", req[i])
-	connStatus.connectFlags = req[i]
-	i++
-	ka := req[i : i+2]
-
-	fmt.Println("keepAlive", Read2BytesInt(ka, 0))
-	connStatus.keepAlive = ka
-	i = i + 2
-	cil := Read2BytesInt(req, i)
-	i = i + 2
-	clientId := string(req[i : i+cil])
-	fmt.Println("clientId", clientId)
-	connStatus.clientId = clientId
-	event.clientId = clientId
-	// connStatus.persist(db)
-	e <- *event
-	return Connack(CONNECT_OK), nil
 }
 
 func Connack(reasonCode uint8) Packet {

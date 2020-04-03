@@ -1,7 +1,6 @@
 package mqtt
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -10,73 +9,74 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-type MQTT struct {
-	db    *bolt.DB
-	e     chan Event
-	conns map[string]net.Conn
+func StartMQTT(port string, db *bolt.DB) {
+	connections := make(map[string]net.Conn)
+	events := make(chan Event, 2)
+	dberr := initDb(db)
+	if dberr != nil {
+		fmt.Println("init db error", dberr)
+	}
+
+	go rangeEvents(db, events, connections)
+
+	startTCP(db, events, port)
 }
 
-func New(db *bolt.DB) MQTT {
-	var m MQTT
-	m.db = db
-	m.e = make(chan Event)
-	m.conns = make(map[string]net.Conn)
-	db.Update(func(tx *bolt.Tx) error {
+func initDb(db *bolt.DB) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		tx.CreateBucketIfNotExists([]byte(SUBSCRIPTION_BUCKET))
 		tx.CreateBucketIfNotExists([]byte(CLIENTS_BUCKET))
 		return nil
 	})
-	return m
 }
 
-func (m MQTT) Start(port string) {
-	go func(events <-chan Event) {
-		for e := range events {
-			fmt.Println("///////////// EVENT START")
-			fmt.Println("new event type:", e.eventType)
-			fmt.Println("clientId:", e.clientId)
-			fmt.Println("topic:", e.topic)
-			fmt.Println("message:", e.message)
-			fmt.Println("/////////////")
-			switch e.eventType {
-			case EVENT_CONNECT:
-				fmt.Println("new conn for :", e.clientId)
-				m.conns[e.clientId] = e.conn
-			case EVENT_SUBSCRIBE:
-				var s Subscription
-				s.topic = e.topic
-				s.clientId = e.clientId
-				err := s.persist(m.db)
-				if err != nil {
-					fmt.Println("cannot persist subscription:", err)
-				}
-			case EVENT_PUBLISH:
-				dests := findSubs(m.db, e.topic)
-				fmt.Println("clients subscribed :", dests)
-				for i := 0; i < len(dests); i++ {
-					if c, ok := m.conns[dests[i]]; ok {
-						fmt.Println(dests[i], "is connected", c)
-						n, err := c.Write(*e.packt)
-						if err != nil {
-							fmt.Println("cannot write to", dests[i], ":", err)
-						}
-						fmt.Println("published", n, "bytes to", dests[i])
-					} else {
-						fmt.Println(dests[i], "is not connected")
-						// clear subs
+func rangeEvents(db *bolt.DB, events <-chan Event, connections map[string]net.Conn) {
+	for e := range events {
+		fmt.Println("//!! EVENT type", e.eventType, "clientId", e.clientId)
+		switch e.eventType {
+		case EVENT_CONNECT:
+			connections[e.clientId] = e.conn
+			if e.err != 0 {
+				e.conn.Write(Connack(e.err))
+			}
+			e.conn.Write(Connack(0))
+		case EVENT_SUBSCRIBED:
+			e.conn.Write(Suback(e.packetIdentifier, e.subscribedCount))
+		case EVENT_SUBSCRIPTION:
+			var s Subscription
+			s.topic = e.topic
+			s.clientId = e.clientId
+			err := s.persist(db)
+			if err != nil {
+				fmt.Println("cannot persist subscription:", err)
+			}
+		case EVENT_PUBLISH:
+			dests := findSubs(db, e.topic)
+			for i := 0; i < len(dests); i++ {
+				if c, ok := connections[dests[i]]; ok {
+					n, err := c.Write(append(e.header, e.remainingBytes...))
+					if err != nil {
+						fmt.Println("cannot write to", dests[i], ":", err)
 					}
+					fmt.Println("published", n, "bytes to", dests[i])
+				} else {
+					fmt.Println(dests[i], "is not connected")
+					// clear subs
 				}
-			case EVENT_DISCONNECT:
-				// if c, ok := m.conns[e.clientId]; ok {
-				fmt.Println(e.clientId, "wants to disconnect")
-				delete(m.conns, e.clientId)
-				fmt.Println(e.clientId, "cleaned")
-				// c.Close()
-				// }
+			}
+		case EVENT_DISCONNECT:
+			if c, ok := connections[e.clientId]; ok {
+				delete(connections, e.clientId)
+				err := c.Close()
+				if err != nil {
+					fmt.Println("could not close conn", err)
+				}
 			}
 		}
-	}(m.e)
+	}
+}
 
+func startTCP(db *bolt.DB, events chan<- Event, port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
@@ -89,40 +89,43 @@ func (m MQTT) Start(port string) {
 		if err != nil {
 			fmt.Println("tcp accept error", err)
 		}
-		go m.handleConnection(conn)
+		go handleConnection(events, conn)
 	}
 }
 
-func (m MQTT) handleConnection(conn net.Conn) {
+func handleConnection(events chan<- Event, conn net.Conn) {
 	var connStatus ConnStatus
 	for {
-		p, rerr := readPacket(conn)
-		if rerr != nil {
-			fmt.Println("read packet error ", rerr)
-			if rerr == io.EOF {
+		var event Event
+		event.conn = conn
+		event.clientId = connStatus.clientId
+		event.timestamp = time.Now()
+
+		rErr := readHeader(conn, &event)
+		if rErr != nil {
+			fmt.Println("read header error ", rErr)
+			if rErr == io.EOF {
 				fmt.Println("connection closed!")
 			}
 			defer conn.Close()
 			break
 		}
 
-		var event Event
-		event.conn = conn
-		event.timestamp = time.Now()
-
-		resp, err := p.Respond(m.db, m.e, &connStatus, &event)
-		if err != nil {
+		rbErr := readRemainingBytes(conn, &event)
+		if rbErr != nil {
+			fmt.Println("read remaining bytes error ", rbErr)
+			if rbErr == io.EOF {
+				fmt.Println("connection closed!")
+			}
 			defer conn.Close()
 			break
 		}
 
-		if resp != nil {
-			werr := writePacket(conn, resp)
-			if werr != nil {
-				fmt.Println("cannot respond", werr)
-				defer conn.Close()
-				break
-			}
+		mErr := manageEvent(events, &connStatus, &event)
+		if mErr != nil {
+			fmt.Println("error managing event", mErr)
+			defer conn.Close()
+			break
 		}
 
 		derr := conn.SetReadDeadline(time.Now().Add(30 * time.Second))
@@ -132,27 +135,5 @@ func (m MQTT) handleConnection(conn net.Conn) {
 			break
 		}
 	}
-}
-
-func writePacket(conn net.Conn, p Packet) error {
-	n, err := conn.Write(p)
-	if err != nil {
-		return err
-	} else {
-		fmt.Printf("wrote %d bytes\n", n)
-		return nil
-	}
-}
-
-func readPacket(conn net.Conn) (Packet, error) {
-	p := make(Packet, 255)
-	n, err := conn.Read(p)
-	if err != nil {
-		return nil, err
-	}
-	if n < 2 {
-		fmt.Printf("reading fewer bytes: %d\n", n)
-		return nil, errors.New("read fewer than expected bytes")
-	}
-	return p, nil
+	fmt.Println("abandon closed connection!")
 }

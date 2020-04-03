@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ilgianlu/tagyou/mqtt"
+	mq "github.com/ilgianlu/tagyou/mqtt"
 	dotenv "github.com/joho/godotenv"
 	bolt "go.etcd.io/bbolt"
 )
@@ -23,6 +23,5 @@ func main() {
 	}
 	defer db.Close()
 
-	mq := mqtt.New(db)
-	mq.Start(os.Getenv("LISTEN_PORT"))
+	mq.StartMQTT(os.Getenv("LISTEN_PORT"), db)
 }

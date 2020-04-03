@@ -14,6 +14,7 @@ type Subscription struct {
 }
 
 func (s Subscription) persist(db *bolt.DB) error {
+	fmt.Println("persisting...")
 	return db.Update(func(tx *bolt.Tx) error {
 		subscriptions := tx.Bucket([]byte(SUBSCRIPTION_BUCKET))
 		serr := subscriptions.Put([]byte(s.topic), []byte(s.clientId))
