@@ -69,7 +69,7 @@ func clientPublish(subs Subscriptions, connections map[string]net.Conn, e Event)
 			fmt.Println("published", n, "bytes to", dests[i])
 		} else {
 			fmt.Println(dests[i], "is not connected")
-			subs.remSub(e.topic, e.clientId)
+			subs.remSub(e.topic, dests[i])
 		}
 	}
 }
