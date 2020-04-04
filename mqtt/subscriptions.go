@@ -22,15 +22,15 @@ func (is inMemorySubscriptions) remSub(topic string, clientId string) error {
 	subs := is.findSubs(topic)
 	var toRem int = -1
 	for i, c := range subs {
-		fmt.Println(c, "is equal", clientId)
 		if c == clientId {
 			toRem = i
 		}
 	}
 	if toRem != -1 {
 		is[topic] = append(is[topic][:toRem], is[topic][toRem+1:]...)
+		return nil
 	}
-	return nil
+	return fmt.Errorf("could not find %s in %s\n", clientId, topic)
 }
 
 func (is inMemorySubscriptions) findSubs(topic string) []string {

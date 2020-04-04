@@ -42,13 +42,23 @@ func rangeEvents(subs Subscriptions, events <-chan Event, connections map[string
 func clientConnection(connections map[string]net.Conn, e Event) {
 	connections[e.clientId] = e.conn
 	if e.err != 0 {
-		e.conn.Write(Connack(e.err))
+		_, werr := e.conn.Write(Connack(e.err))
+		if werr != nil {
+			fmt.Println("could not write to", e.clientId)
+		}
+	} else {
+		_, werr := e.conn.Write(Connack(0))
+		if werr != nil {
+			fmt.Println("could not write to", e.clientId)
+		}
 	}
-	e.conn.Write(Connack(0))
 }
 
 func clientSubscribed(e Event) {
-	e.conn.Write(Suback(e.packetIdentifier, e.subscribedCount))
+	_, werr := e.conn.Write(Suback(e.packetIdentifier, e.subscribedCount))
+	if werr != nil {
+		fmt.Println("could not write to", e.clientId)
+	}
 }
 
 func clientSubscription(subs Subscriptions, e Event) {
@@ -69,7 +79,10 @@ func clientPublish(subs Subscriptions, connections map[string]net.Conn, e Event)
 			fmt.Println("published", n, "bytes to", dests[i])
 		} else {
 			fmt.Println(dests[i], "is not connected")
-			subs.remSub(e.topic, dests[i])
+			err := subs.remSub(e.topic, dests[i])
+			if err != nil {
+				fmt.Println("could not remove subscription :", err)
+			}
 		}
 	}
 }
