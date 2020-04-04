@@ -5,32 +5,19 @@ import (
 	"io"
 	"net"
 	"time"
-
-	bolt "go.etcd.io/bbolt"
 )
 
-func StartMQTT(port string, db *bolt.DB) {
+func StartMQTT(port string) {
 	connections := make(map[string]net.Conn)
+	subs := make(inMemorySubscriptions)
 	events := make(chan Event, 2)
-	dberr := initDb(db)
-	if dberr != nil {
-		fmt.Println("init db error", dberr)
-	}
 
-	go rangeEvents(db, events, connections)
+	go rangeEvents(subs, events, connections)
 
-	startTCP(db, events, port)
+	startTCP(subs, events, port)
 }
 
-func initDb(db *bolt.DB) error {
-	return db.Update(func(tx *bolt.Tx) error {
-		tx.CreateBucketIfNotExists([]byte(SUBSCRIPTION_BUCKET))
-		tx.CreateBucketIfNotExists([]byte(CLIENTS_BUCKET))
-		return nil
-	})
-}
-
-func rangeEvents(db *bolt.DB, events <-chan Event, connections map[string]net.Conn) {
+func rangeEvents(subs Subscriptions, events <-chan Event, connections map[string]net.Conn) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
@@ -41,10 +28,10 @@ func rangeEvents(db *bolt.DB, events <-chan Event, connections map[string]net.Co
 			clientSubscribed(e)
 		case EVENT_SUBSCRIPTION:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed", e.topic)
-			clientSubscription(db, e)
+			clientSubscription(subs, e)
 		case EVENT_PUBLISH:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published", e.topic)
-			clientPublish(db, connections, e)
+			clientPublish(subs, connections, e)
 		case EVENT_DISCONNECT:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconencts")
 			clientDisconnect(connections, e)
@@ -64,18 +51,15 @@ func clientSubscribed(e Event) {
 	e.conn.Write(Suback(e.packetIdentifier, e.subscribedCount))
 }
 
-func clientSubscription(db *bolt.DB, e Event) {
-	var s Subscription
-	s.topic = e.topic
-	s.clientId = e.clientId
-	err := s.persist(db)
+func clientSubscription(subs Subscriptions, e Event) {
+	err := subs.addSub(e.topic, e.clientId)
 	if err != nil {
 		fmt.Println("cannot persist subscription:", err)
 	}
 }
 
-func clientPublish(db *bolt.DB, connections map[string]net.Conn, e Event) {
-	dests := findSubs(db, e.topic)
+func clientPublish(subs Subscriptions, connections map[string]net.Conn, e Event) {
+	dests := subs.findSubs(e.topic)
 	for i := 0; i < len(dests); i++ {
 		if c, ok := connections[dests[i]]; ok {
 			n, err := c.Write(append(e.header, e.remainingBytes...))
@@ -85,10 +69,7 @@ func clientPublish(db *bolt.DB, connections map[string]net.Conn, e Event) {
 			fmt.Println("published", n, "bytes to", dests[i])
 		} else {
 			fmt.Println(dests[i], "is not connected")
-			var s Subscription
-			s.topic = e.topic
-			s.clientId = e.clientId
-			s.remove(db)
+			subs.remSub(e.topic, e.clientId)
 		}
 	}
 }
@@ -103,7 +84,7 @@ func clientDisconnect(connections map[string]net.Conn, e Event) {
 	}
 }
 
-func startTCP(db *bolt.DB, events chan<- Event, port string) {
+func startTCP(subs Subscriptions, events chan<- Event, port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
