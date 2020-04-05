@@ -33,7 +33,7 @@ func rangeEvents(subs Subscriptions, events <-chan Event, connections map[string
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published", e.topic)
 			clientPublish(subs, connections, e)
 		case EVENT_DISCONNECT:
-			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconencts")
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnects")
 			clientDisconnect(connections, e)
 		}
 	}

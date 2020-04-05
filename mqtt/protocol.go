@@ -7,6 +7,9 @@ const PACKET_TYPE_PUBLISH = 3
 const PACKET_TYPE_SUBSCRIBE = 8
 const PACKET_TYPE_DISCONNECT = 14
 
+const TOPIC_SEPARATOR = "/"
+const TOPIC_WILDCARD = "#"
+
 // 0x00
 // connect OK
 const CONNECT_OK = 0
