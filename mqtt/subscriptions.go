@@ -15,10 +15,13 @@ type Subscriptions interface {
 type inMemorySubscriptions map[string][]string
 
 func (is inMemorySubscriptions) addSub(topic string, clientId string) error {
-	if _, ok := is[topic]; !ok {
-		is[topic] = make([]string, 0)
+	if subs, ok := is[topic]; ok {
+		if i := findClientid(subs, clientId); i == -1 {
+			is[topic] = append(is[topic], clientId)
+		}
+	} else {
+		is[topic] = []string{clientId}
 	}
-	is[topic] = append(is[topic], clientId)
 	return nil
 }
 
@@ -67,10 +70,8 @@ func (is inMemorySubscriptions) multiSegmentSubs(topicSegments []string) []strin
 			subT = append(subT, TOPIC_WILDCARD)
 		}
 		t := strings.Join(subT, TOPIC_SEPARATOR)
-		fmt.Println(t)
 		ss := is.findSub(t)
 		subs = append(subs, ss...)
 	}
-	fmt.Println("ss", subs)
 	return subs
 }
