@@ -14,31 +14,31 @@ type Subscriptions interface {
 
 type inMemorySubscriptions map[string][]string
 
-func (is inMemorySubscriptions) addSub(topic string, clientId string) error {
-	if subs, ok := is[topic]; ok {
-		if i := findClientid(subs, clientId); i == -1 {
-			is[topic] = append(is[topic], clientId)
+func (is inMemorySubscriptions) addSub(subscribed string, subscriber string) error {
+	if subs, ok := is[subscribed]; ok {
+		if i := findSubscriber(subs, subscriber); i == -1 {
+			is[subscribed] = append(is[subscribed], subscriber)
 		}
 	} else {
-		is[topic] = []string{clientId}
+		is[subscribed] = []string{subscriber}
 	}
 	return nil
 }
 
-func (is inMemorySubscriptions) remSub(topic string, clientId string) error {
-	subs := is.findSubs(topic)
-	toRem := findClientid(subs, clientId)
+func (is inMemorySubscriptions) remSub(subscribed string, subscriber string) error {
+	subs := is.findSubs(subscribed)
+	toRem := findSubscriber(subs, subscriber)
 	if toRem != -1 {
-		is[topic] = append(is[topic][:toRem], is[topic][toRem+1:]...)
+		is[subscribed] = append(is[subscribed][:toRem], is[subscribed][toRem+1:]...)
 		return nil
 	}
-	return fmt.Errorf("could not find %s in %s\n", clientId, topic)
+	return fmt.Errorf("could not find %s in %s\n", subscriber, subscribed)
 }
 
-func findClientid(subs []string, clientId string) int {
-	if len(subs) > 0 {
-		for i, c := range subs {
-			if c == clientId {
+func findSubscriber(subscribers []string, subscriber string) int {
+	if len(subscribers) > 0 {
+		for i, c := range subscribers {
+			if c == subscriber {
 				return i
 			}
 		}
@@ -46,17 +46,18 @@ func findClientid(subs []string, clientId string) int {
 	return -1
 }
 
-func (is inMemorySubscriptions) findSubs(topic string) []string {
-	topicSegments := strings.Split(topic, TOPIC_SEPARATOR)
+func (is inMemorySubscriptions) findSubs(subscribed string) []string {
+	// only topics have topic separator in name
+	topicSegments := strings.Split(subscribed, TOPIC_SEPARATOR)
 	if len(topicSegments) == 1 {
-		return is.findSub(topic)
+		return is.findSub(subscribed)
 	} else {
 		return is.multiSegmentSubs(topicSegments)
 	}
 }
 
-func (is inMemorySubscriptions) findSub(topic string) []string {
-	if s, ok := is[topic]; ok {
+func (is inMemorySubscriptions) findSub(subscribed string) []string {
+	if s, ok := is[subscribed]; ok {
 		return s
 	}
 	return nil
