@@ -8,16 +8,17 @@ import (
 )
 
 func StartMQTT(port string) {
-	connections := make(map[string]net.Conn)
-	subs := make(inMemorySubscriptions)
+	connections := make(inMemoryConnections)
+	topicSubscriptions := make(inMemorySubscriptions)
+	clientSubscriptions := make(inMemorySubscriptions)
 	events := make(chan Event, 2)
 
-	go rangeEvents(subs, events, connections)
+	go rangeEvents(topicSubscriptions, clientSubscriptions, events, connections)
 
-	startTCP(subs, events, port)
+	startTCP(topicSubscriptions, events, port)
 }
 
-func rangeEvents(subs Subscriptions, events <-chan Event, connections map[string]net.Conn) {
+func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, events <-chan Event, connections Connections) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
@@ -28,10 +29,10 @@ func rangeEvents(subs Subscriptions, events <-chan Event, connections map[string
 			clientSubscribed(e)
 		case EVENT_SUBSCRIPTION:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed", e.topic)
-			clientSubscription(subs, e)
+			clientSubscription(topicSubs, clientSubs, e)
 		case EVENT_PUBLISH:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published", e.topic)
-			clientPublish(subs, connections, e)
+			clientPublish(topicSubs, connections, e)
 		case EVENT_DISCONNECT:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnects")
 			clientDisconnect(connections, e)
@@ -39,8 +40,11 @@ func rangeEvents(subs Subscriptions, events <-chan Event, connections map[string
 	}
 }
 
-func clientConnection(connections map[string]net.Conn, e Event) {
-	connections[e.clientId] = e.conn
+func clientConnection(connections Connections, e Event) {
+	aerr := connections.addConn(e.clientId, e.conn)
+	if aerr != nil {
+		fmt.Println("could not add connection", aerr)
+	}
 	if e.err != 0 {
 		_, werr := e.conn.Write(Connack(e.err))
 		if werr != nil {
@@ -61,17 +65,22 @@ func clientSubscribed(e Event) {
 	}
 }
 
-func clientSubscription(subs Subscriptions, e Event) {
-	err := subs.addSub(e.topic, e.clientId)
+func clientSubscription(topicSubs Subscriptions, clientSubs Subscriptions, e Event) {
+	err := topicSubs.addSub(e.topic, e.clientId)
 	if err != nil {
 		fmt.Println("cannot persist subscription:", err)
 	}
+	err0 := clientSubs.addSub(e.clientId, e.topic)
+	if err != nil {
+		fmt.Println("cannot persist subscription:", err0)
+	}
 }
 
-func clientPublish(subs Subscriptions, connections map[string]net.Conn, e Event) {
+func clientPublish(subs Subscriptions, connections Connections, e Event) {
 	dests := subs.findSubs(e.topic)
 	for i := 0; i < len(dests); i++ {
-		if c, ok := connections[dests[i]]; ok {
+		c := connections.findConn(dests[i])
+		if c != nil {
 			n, err := c.Write(append(e.header, e.remainingBytes...))
 			if err != nil {
 				fmt.Println("cannot write to", dests[i], ":", err)
@@ -87,9 +96,13 @@ func clientPublish(subs Subscriptions, connections map[string]net.Conn, e Event)
 	}
 }
 
-func clientDisconnect(connections map[string]net.Conn, e Event) {
-	if c, ok := connections[e.clientId]; ok {
-		delete(connections, e.clientId)
+func clientDisconnect(connections Connections, e Event) {
+	c := connections.findConn(e.clientId)
+	if c != nil {
+		err0 := connections.remConn(e.clientId)
+		if err0 != nil {
+			fmt.Println("could not remove connection from connections")
+		}
 		err := c.Close()
 		if err != nil {
 			fmt.Println("could not close conn", err)

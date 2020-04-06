@@ -26,7 +26,11 @@ func (is inMemorySubscriptions) addSub(subscribed string, subscriber string) err
 }
 
 func (is inMemorySubscriptions) remSub(subscribed string, subscriber string) error {
-	subs := is.findSubs(subscribed)
+	fmt.Println("remSub")
+	subs := is.findSub(subscribed)
+	if subs != nil {
+		return fmt.Errorf("could not find %s in %s\n", subscriber, subscribed)
+	}
 	toRem := findSubscriber(subs, subscriber)
 	if toRem != -1 {
 		is[subscribed] = append(is[subscribed][:toRem], is[subscribed][toRem+1:]...)

@@ -13,7 +13,7 @@ func TestMultiSegmentSubs(t *testing.T) {
 	}
 }
 
-func TestfindSubscriber(t *testing.T) {
+func TestFindSubscriber(t *testing.T) {
 	subs := []string{"client0", "client1"}
 	a := findSubscriber(subs, "client0")
 	if a != 0 {
@@ -61,4 +61,23 @@ func TestAddSub(t *testing.T) {
 	if j != 0 {
 		t.Errorf("expected client3 in subscribers position 0, %d found", j)
 	}
+}
+
+func TestRemSub(t *testing.T) {
+	var is0 inMemorySubscriptions = make(map[string][]string)
+	err0 := is0.remSub("anna/#", "client0")
+	if err0 != nil {
+		t.Error("did not expect any error")
+	}
+	var is inMemorySubscriptions = make(map[string][]string)
+	is["anna/#"] = []string{"client0", "client1"}
+	is["barbara/#"] = []string{"client0", "client1"}
+	err := is.remSub("anna/#", "client0")
+	if err != nil {
+		t.Error("did not expect any error")
+	}
+	if len(is["anna/#"]) != 1 {
+		t.Errorf("expected 1 subscribers, %d found", len(is["anna/#"]))
+	}
+
 }
