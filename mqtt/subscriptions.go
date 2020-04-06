@@ -1,13 +1,12 @@
 package mqtt
 
 import (
-	"fmt"
 	"strings"
 )
 
 type Subscriptions interface {
 	addSub(string, string) error
-	remSub(string, string) error
+	remSub(string, string) int
 	findSubs(string) []string
 	findSub(string) []string
 }
@@ -25,18 +24,16 @@ func (is inMemorySubscriptions) addSub(subscribed string, subscriber string) err
 	return nil
 }
 
-func (is inMemorySubscriptions) remSub(subscribed string, subscriber string) error {
-	fmt.Println("remSub")
+func (is inMemorySubscriptions) remSub(subscribed string, subscriber string) int {
 	subs := is.findSub(subscribed)
 	if subs != nil {
-		return fmt.Errorf("could not find %s in %s\n", subscriber, subscribed)
+		toRem := findSubscriber(subs, subscriber)
+		if toRem != -1 {
+			is[subscribed] = append(is[subscribed][:toRem], is[subscribed][toRem+1:]...)
+			return toRem
+		}
 	}
-	toRem := findSubscriber(subs, subscriber)
-	if toRem != -1 {
-		is[subscribed] = append(is[subscribed][:toRem], is[subscribed][toRem+1:]...)
-		return nil
-	}
-	return fmt.Errorf("could not find %s in %s\n", subscriber, subscribed)
+	return -1
 }
 
 func findSubscriber(subscribers []string, subscriber string) int {

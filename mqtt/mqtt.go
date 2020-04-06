@@ -89,7 +89,7 @@ func clientPublish(subs Subscriptions, connections Connections, e Event) {
 		} else {
 			fmt.Println(dests[i], "is not connected")
 			err := subs.remSub(e.topic, dests[i])
-			if err != nil {
+			if err == -1 {
 				fmt.Println("could not remove subscription :", err)
 			}
 		}

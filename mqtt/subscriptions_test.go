@@ -1,6 +1,8 @@
 package mqtt
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestMultiSegmentSubs(t *testing.T) {
 	var is inMemorySubscriptions = make(map[string][]string)
@@ -65,16 +67,16 @@ func TestAddSub(t *testing.T) {
 
 func TestRemSub(t *testing.T) {
 	var is0 inMemorySubscriptions = make(map[string][]string)
-	err0 := is0.remSub("anna/#", "client0")
-	if err0 != nil {
-		t.Error("did not expect any error")
+	pos0 := is0.remSub("anna/#", "client0")
+	if pos0 != -1 {
+		t.Errorf("expecting -1, found %d\n", pos0)
 	}
 	var is inMemorySubscriptions = make(map[string][]string)
 	is["anna/#"] = []string{"client0", "client1"}
 	is["barbara/#"] = []string{"client0", "client1"}
-	err := is.remSub("anna/#", "client0")
-	if err != nil {
-		t.Error("did not expect any error")
+	pos1 := is.remSub("anna/#", "client0")
+	if pos1 != 0 {
+		t.Errorf("expecting 0, found %d\n", pos1)
 	}
 	if len(is["anna/#"]) != 1 {
 		t.Errorf("expected 1 subscribers, %d found", len(is["anna/#"]))

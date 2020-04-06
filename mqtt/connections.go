@@ -1,8 +1,6 @@
 package mqtt
 
-import (
-	"net"
-)
+import "net"
 
 type Connections interface {
 	addConn(string, net.Conn) error
