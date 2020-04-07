@@ -81,5 +81,16 @@ func TestRemSub(t *testing.T) {
 	if len(is["anna/#"]) != 1 {
 		t.Errorf("expected 1 subscribers, %d found", len(is["anna/#"]))
 	}
-
+	pos2 := is.remSub("anna/#", "client2")
+	if pos2 != -1 {
+		t.Errorf("expecting -1, found %d\n", pos2)
+	}
+	pos3 := is.remSub("carlo", "client0")
+	if pos3 != -1 {
+		t.Errorf("expecting -1, found %d\n", pos3)
+	}
+	pos4 := is.remSub("barbara/#", "client1")
+	if pos4 != 1 {
+		t.Errorf("expecting 1, found %d\n", pos4)
+	}
 }

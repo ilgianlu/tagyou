@@ -1,14 +1,15 @@
 package mqtt
 
 import (
+	"fmt"
 	"strings"
 )
 
 type Subscriptions interface {
 	addSub(string, string) error
 	remSub(string, string) int
-	findSubs(string) []string
-	findSub(string) []string
+	findSubscribers(string) []string
+	findSubscribed(string) []string
 }
 
 type inMemorySubscriptions map[string][]string
@@ -25,7 +26,8 @@ func (is inMemorySubscriptions) addSub(subscribed string, subscriber string) err
 }
 
 func (is inMemorySubscriptions) remSub(subscribed string, subscriber string) int {
-	subs := is.findSub(subscribed)
+	subs := is.findSubscribed(subscribed)
+	fmt.Println("removing", subscriber, "from", subs)
 	if subs != nil {
 		toRem := findSubscriber(subs, subscriber)
 		if toRem != -1 {
@@ -47,17 +49,17 @@ func findSubscriber(subscribers []string, subscriber string) int {
 	return -1
 }
 
-func (is inMemorySubscriptions) findSubs(subscribed string) []string {
+func (is inMemorySubscriptions) findSubscribers(subscribed string) []string {
 	// only topics have topic separator in name
 	topicSegments := strings.Split(subscribed, TOPIC_SEPARATOR)
 	if len(topicSegments) == 1 {
-		return is.findSub(subscribed)
+		return is.findSubscribed(subscribed)
 	} else {
 		return is.multiSegmentSubs(topicSegments)
 	}
 }
 
-func (is inMemorySubscriptions) findSub(subscribed string) []string {
+func (is inMemorySubscriptions) findSubscribed(subscribed string) []string {
 	if s, ok := is[subscribed]; ok {
 		return s
 	}
@@ -72,7 +74,7 @@ func (is inMemorySubscriptions) multiSegmentSubs(topicSegments []string) []strin
 			subT = append(subT, TOPIC_WILDCARD)
 		}
 		t := strings.Join(subT, TOPIC_SEPARATOR)
-		ss := is.findSub(t)
+		ss := is.findSubscribed(t)
 		subs = append(subs, ss...)
 	}
 	return subs

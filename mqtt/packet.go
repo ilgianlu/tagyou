@@ -75,10 +75,10 @@ func connectReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
 		e <- *event
 		return nil
 	}
-	// fmt.Println("connectFlags", event.remainingBytes[i])
 	connStatus.connectFlags = event.remainingBytes[i]
 	i++
 	ka := event.remainingBytes[i : i+2]
+	fmt.Println("clean session", connStatus.cleanSession())
 
 	// fmt.Println("keepAlive", Read2BytesInt(ka, 0))
 	connStatus.keepAlive = ka

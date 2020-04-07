@@ -77,7 +77,7 @@ func clientSubscription(topicSubs Subscriptions, clientSubs Subscriptions, e Eve
 }
 
 func clientPublish(subs Subscriptions, connections Connections, e Event) {
-	dests := subs.findSubs(e.topic)
+	dests := subs.findSubscribers(e.topic)
 	for i := 0; i < len(dests); i++ {
 		c := connections.findConn(dests[i])
 		if c != nil {
@@ -88,10 +88,6 @@ func clientPublish(subs Subscriptions, connections Connections, e Event) {
 			fmt.Println("published", n, "bytes to", dests[i])
 		} else {
 			fmt.Println(dests[i], "is not connected")
-			err := subs.remSub(e.topic, dests[i])
-			if err == -1 {
-				fmt.Println("could not remove subscription :", err)
-			}
 		}
 	}
 }
