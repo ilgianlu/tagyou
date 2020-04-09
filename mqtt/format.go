@@ -3,18 +3,25 @@ package mqtt
 import "errors"
 
 func ReadVarInt(props []byte) (int, int, error) {
+	if len(props) == 0 {
+		return 0, 0, errors.New("empty slice, malformed value")
+	}
 	multiplier := 1
 	value := 0
 	i := 0
 	encodedByte := props[i]
-	for ok := true; ok; ok = int(encodedByte&128) != 0 {
+	for {
 		value = value + int(encodedByte&127)*multiplier
-		if multiplier > 128*128*128 {
-			return 0, 0, errors.New("malformed value")
-		}
 		multiplier *= 128
 		i++
-		encodedByte = props[i]
+		if encodedByte&128 != 0 {
+			if i == 5 {
+				return 0, 0, errors.New("malformed value, last byte says to continue")
+			}
+			encodedByte = props[i]
+		} else {
+			break
+		}
 	}
 	return value, i, nil
 }
