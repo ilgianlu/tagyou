@@ -28,10 +28,10 @@ func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections 
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
 			clientSubscribed(connections, e)
 		case EVENT_SUBSCRIPTION:
-			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed", e.topic)
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscription", e.topic)
 			clientSubscription(topicSubs, clientSubs, e)
 		case EVENT_PUBLISH:
-			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published", e.topic)
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
 			clientPublish(topicSubs, connections, e)
 		case EVENT_DISCONNECT:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
@@ -60,7 +60,8 @@ func clientConnection(connections Connections, e Event) {
 
 func clientSubscribed(connections Connections, e Event) {
 	if c, ok := connections.findConn(e.clientId); ok {
-		_, werr := c.publish(Suback(e.packet.packetIdentifier, e.packet.subscribedCount))
+		p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount)
+		_, werr := c.publish(p)
 		if werr != nil {
 			fmt.Println("could not write to", c.clientId)
 		}
@@ -127,7 +128,7 @@ func handleConnection(events chan<- Event, conn net.Conn) {
 	var connection Connection
 	connection.conn = conn
 	for {
-		p, rErr := ReadPacket(conn, &connection, events)
+		_, rErr := ReadPacket(conn, &connection, events)
 		if rErr != nil {
 			fmt.Println("could not elaborate packet ", rErr)
 			if rErr == io.EOF {
@@ -136,7 +137,6 @@ func handleConnection(events chan<- Event, conn net.Conn) {
 			defer conn.Close()
 			break
 		}
-		fmt.Println(p)
 
 		derr := conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		if derr != nil {

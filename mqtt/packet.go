@@ -52,9 +52,7 @@ func (p *Packet) read(conn net.Conn) error {
 		fmt.Printf("oversize packet %d > %d, discarding...\n", remainingLength, PACKET_MAX_SIZE)
 	}
 	p.header = buffer[:1+k]
-	fmt.Println("header", p.header)
 	p.remainingBytes = buffer[1+k : bytesCount]
-	fmt.Println("remainingbytes", p.remainingBytes)
 	bytesCount = bytesCount - k
 	for bytesCount < remainingLength {
 		buffer = make([]byte, 1024)
@@ -66,11 +64,11 @@ func (p *Packet) read(conn net.Conn) error {
 		}
 		p.remainingBytes = append(p.remainingBytes, buffer[:n]...)
 	}
+	fmt.Printf("read %d bytes packet\n", bytesCount)
 	return nil
 }
 
 func (p *Packet) emit(connection *Connection, e chan<- Event) error {
-	fmt.Printf("emitting %d\n", p.packetType)
 	switch p.packetType {
 	case PACKET_TYPE_CONNECT:
 		return p.connectReq(e, connection)
@@ -189,6 +187,7 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 		}
 	}
 	p.subscribedCount = j
+	event.packet = p
 	e <- event
 	return nil
 }
