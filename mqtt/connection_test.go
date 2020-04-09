@@ -3,7 +3,7 @@ package mqtt
 import "testing"
 
 func TestCleanSession(t *testing.T) {
-	var c ConnStatus
+	var c Connection
 	c.connectFlags = 0x02
 	if !c.cleanSession() {
 		t.Error("expected clean session true")

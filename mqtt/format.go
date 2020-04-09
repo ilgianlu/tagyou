@@ -16,7 +16,7 @@ func ReadVarInt(props []byte) (int, int, error) {
 		i++
 		encodedByte = props[i]
 	}
-	return value, i - 1, nil
+	return value, i, nil
 }
 
 func Read2BytesInt(a []byte, i int) int {

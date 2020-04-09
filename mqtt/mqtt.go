@@ -11,22 +11,22 @@ func StartMQTT(port string) {
 	connections := make(inMemoryConnections)
 	topicSubscriptions := make(inMemorySubscriptions)
 	clientSubscriptions := make(inMemorySubscriptions)
-	events := make(chan Event, 2)
+	events := make(chan Event, 1)
 
-	go rangeEvents(topicSubscriptions, clientSubscriptions, events, connections)
+	go rangeEvents(topicSubscriptions, clientSubscriptions, connections, events)
 
 	startTCP(topicSubscriptions, events, port)
 }
 
-func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, events <-chan Event, connections Connections) {
+func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections Connections, events <-chan Event) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
-			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "connected clientId")
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client connect")
 			clientConnection(connections, e)
 		case EVENT_SUBSCRIBED:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
-			clientSubscribed(e)
+			clientSubscribed(connections, e)
 		case EVENT_SUBSCRIPTION:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed", e.topic)
 			clientSubscription(topicSubs, clientSubs, e)
@@ -34,34 +34,36 @@ func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, events <-cha
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published", e.topic)
 			clientPublish(topicSubs, connections, e)
 		case EVENT_DISCONNECT:
-			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnects")
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
 			clientDisconnect(connections, e)
 		}
 	}
 }
 
 func clientConnection(connections Connections, e Event) {
-	aerr := connections.addConn(e.clientId, e.conn)
+	aerr := connections.addConn(e.clientId, *e.connection)
 	if aerr != nil {
 		fmt.Println("could not add connection", aerr)
 	}
 	if e.err != 0 {
-		_, werr := e.conn.Write(Connack(e.err))
+		_, werr := e.connection.conn.Write(Connack(e.err))
 		if werr != nil {
 			fmt.Println("could not write to", e.clientId)
 		}
 	} else {
-		_, werr := e.conn.Write(Connack(0))
+		_, werr := e.connection.conn.Write(Connack(0))
 		if werr != nil {
 			fmt.Println("could not write to", e.clientId)
 		}
 	}
 }
 
-func clientSubscribed(e Event) {
-	_, werr := e.conn.Write(Suback(e.packetIdentifier, e.subscribedCount))
-	if werr != nil {
-		fmt.Println("could not write to", e.clientId)
+func clientSubscribed(connections Connections, e Event) {
+	if c, ok := connections.findConn(e.clientId); ok {
+		_, werr := c.publish(Suback(e.packet.packetIdentifier, e.packet.subscribedCount))
+		if werr != nil {
+			fmt.Println("could not write to", c.clientId)
+		}
 	}
 }
 
@@ -79,9 +81,8 @@ func clientSubscription(topicSubs Subscriptions, clientSubs Subscriptions, e Eve
 func clientPublish(subs Subscriptions, connections Connections, e Event) {
 	dests := subs.findSubscribers(e.topic)
 	for i := 0; i < len(dests); i++ {
-		c := connections.findConn(dests[i])
-		if c != nil {
-			n, err := c.Write(append(e.header, e.remainingBytes...))
+		if c, ok := connections.findConn(dests[i]); ok {
+			n, err := c.publish(append(e.packet.header, e.packet.remainingBytes...))
 			if err != nil {
 				fmt.Println("cannot write to", dests[i], ":", err)
 			}
@@ -93,13 +94,12 @@ func clientPublish(subs Subscriptions, connections Connections, e Event) {
 }
 
 func clientDisconnect(connections Connections, e Event) {
-	c := connections.findConn(e.clientId)
-	if c != nil {
-		err0 := connections.remConn(e.clientId)
+	if toRem, ok := connections.findConn(e.clientId); ok {
+		err0 := connections.remConn(toRem.clientId)
 		if err0 != nil {
 			fmt.Println("could not remove connection from connections")
 		}
-		err := c.Close()
+		err := toRem.conn.Close()
 		if err != nil {
 			fmt.Println("could not close conn", err)
 		}
@@ -124,39 +124,19 @@ func startTCP(subs Subscriptions, events chan<- Event, port string) {
 }
 
 func handleConnection(events chan<- Event, conn net.Conn) {
-	var connStatus ConnStatus
+	var connection Connection
+	connection.conn = conn
 	for {
-		var event Event
-		event.conn = conn
-		event.clientId = connStatus.clientId
-		event.timestamp = time.Now()
-
-		rErr := readHeader(conn, &event)
+		p, rErr := ReadPacket(conn, &connection, events)
 		if rErr != nil {
-			fmt.Println("read header error ", rErr)
+			fmt.Println("could not elaborate packet ", rErr)
 			if rErr == io.EOF {
 				fmt.Println("connection closed!")
 			}
 			defer conn.Close()
 			break
 		}
-
-		rbErr := readRemainingBytes(conn, &event)
-		if rbErr != nil {
-			fmt.Println("read remaining bytes error ", rbErr)
-			if rbErr == io.EOF {
-				fmt.Println("connection closed!")
-			}
-			defer conn.Close()
-			break
-		}
-
-		mErr := manageEvent(events, &connStatus, &event)
-		if mErr != nil {
-			fmt.Println("error managing event", mErr)
-			defer conn.Close()
-			break
-		}
+		fmt.Println(p)
 
 		derr := conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		if derr != nil {

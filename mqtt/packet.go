@@ -5,116 +5,158 @@ import (
 	"net"
 )
 
-type Packet []byte
-
-func readHeader(conn net.Conn, event *Event) error {
-	event.header = make([]byte, 2)
-	n, err := conn.Read(event.header)
-	if err != nil {
-		return err
-	}
-	if n < 2 {
-		return fmt.Errorf("header: read %d bytes, expected 2 bytes.. discarding", n)
-	}
-	return decodeHeader(event)
+type Packet struct {
+	header           []byte
+	packetType       uint8
+	flags            uint8
+	remainingBytes   []byte
+	packetIdentifier int
+	subscribedCount  int
 }
 
-func decodeHeader(event *Event) error {
-	i := 0
-	event.packetType = (event.header[i] & 0xF0) >> 4
-	event.flags = event.header[i] & 0x0F
-	i++
-	event.remainingLength = uint8(event.header[i])
+func ReadPacket(conn net.Conn, connection *Connection, e chan<- Event) (Packet, error) {
+	var p Packet
+	err0 := p.read(conn)
+	if err0 != nil {
+		return p, err0
+	}
+
+	err1 := p.emit(connection, e)
+	if err1 != nil {
+		return p, err1
+	}
+	return p, nil
+}
+
+func (p *Packet) read(conn net.Conn) error {
+	buffer := make([]byte, 1024)
+	bytesCount, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Printf("error after first byte read: %s\n", err)
+		return err
+	}
+	if bytesCount < 1 {
+		return fmt.Errorf("header: read %d bytes, expected more than 1 byte.. discarding", bytesCount)
+	}
+	if bytesCount > PACKET_MAX_SIZE {
+		fmt.Printf("oversize packet %d > %d, discarding...\n", bytesCount, PACKET_MAX_SIZE)
+	}
+	p.packetType = (buffer[0] & 0xF0) >> 4
+	p.flags = buffer[0] & 0x0F
+	remainingLength, k, err0 := ReadVarInt(buffer[1:])
+	if err0 != nil {
+		fmt.Printf("malformed remainingLength format: %s\n", err0)
+		return err0
+	}
+	if remainingLength > PACKET_MAX_SIZE {
+		fmt.Printf("oversize packet %d > %d, discarding...\n", remainingLength, PACKET_MAX_SIZE)
+	}
+	p.header = buffer[:1+k]
+	fmt.Println("header", p.header)
+	p.remainingBytes = buffer[1+k : bytesCount]
+	fmt.Println("remainingbytes", p.remainingBytes)
+	bytesCount = bytesCount - k
+	for bytesCount < remainingLength {
+		buffer = make([]byte, 1024)
+		n, err := conn.Read(buffer)
+		bytesCount = bytesCount + n
+		if err != nil {
+			fmt.Printf("error after %d byte read: %s\n", bytesCount, err)
+			return err
+		}
+		p.remainingBytes = append(p.remainingBytes, buffer[:n]...)
+	}
 	return nil
 }
 
-func readRemainingBytes(conn net.Conn, event *Event) error {
-	event.remainingBytes = make([]byte, event.remainingLength)
-	n, err := conn.Read(event.remainingBytes)
-	if err != nil {
-		return err
-	}
-	if n < int(event.remainingLength) {
-		return fmt.Errorf("remainingBytes: read %d bytes, expected %d bytes.. discarding", n, event.remainingLength)
-	}
-	return nil
-}
-
-func manageEvent(e chan<- Event, connStatus *ConnStatus, event *Event) error {
-	switch event.packetType {
+func (p *Packet) emit(connection *Connection, e chan<- Event) error {
+	fmt.Printf("emitting %d\n", p.packetType)
+	switch p.packetType {
 	case PACKET_TYPE_CONNECT:
-		return connectReq(e, connStatus, event)
+		return p.connectReq(e, connection)
 	case PACKET_TYPE_PUBLISH:
-		return publishReq(e, connStatus, event)
+		return p.publishReq(e)
 	case PACKET_TYPE_SUBSCRIBE:
-		return subscribeReq(e, connStatus, event)
+		return p.subscribeReq(e, connection)
 	case PACKET_TYPE_DISCONNECT:
-		event.eventType = 100
-		event.clientId = connStatus.clientId
-		e <- *event
-		return nil
+		return p.disconnectReq(e, connection)
 	default:
-		return fmt.Errorf("Unknown message type %d", event.packetType)
+		return fmt.Errorf("Unknown packet type %d", p.packetType)
 	}
 }
 
-func connectReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
+func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
+	var event Event
 	event.eventType = EVENT_CONNECT
+	event.connection = connection
 	i := 0
-	pl := Read2BytesInt(event.remainingBytes, i)
+	pl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
-	// fmt.Println("protocolName", string(event.remainingBytes[i:i+pl]))
+	// fmt.Printf("%d bytes, protocolName %s\n", pl, string(p.remainingBytes[i:i+pl]))
 	i = i + pl
-	v := event.remainingBytes[i]
+	v := p.remainingBytes[i]
 	// fmt.Println("protocolVersion", v)
-	connStatus.protocolVersion = v
+	connection.protocolVersion = v
 	i++
 	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
 		fmt.Println("unsupported protocol version err", v)
 		event.err = CONNECT_UNSUPPORTED_PROTOCOL_VERSION
-		e <- *event
+		e <- event
 		return nil
 	}
-	connStatus.connectFlags = event.remainingBytes[i]
+	connection.connectFlags = p.remainingBytes[i]
 	i++
-	ka := event.remainingBytes[i : i+2]
-	fmt.Println("clean session", connStatus.cleanSession())
+	ka := p.remainingBytes[i : i+2]
+	// fmt.Println("clean session", connection.cleanSession())
 
 	// fmt.Println("keepAlive", Read2BytesInt(ka, 0))
-	connStatus.keepAlive = ka
+	connection.keepAlive = ka
 	i = i + 2
-	cil := Read2BytesInt(event.remainingBytes, i)
+	cil := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
-	clientId := string(event.remainingBytes[i : i+cil])
-	// fmt.Println("clientId", clientId)
-	connStatus.clientId = clientId
+	clientId := string(p.remainingBytes[i : i+cil])
+	// fmt.Printf("%d bytes, clientId %s\n", cil, string(p.remainingBytes[i:i+cil]))
 	event.clientId = clientId
-	e <- *event
+	connection.clientId = clientId
+	e <- event
 	return nil
 }
 
-func publishReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
+func (p *Packet) disconnectReq(e chan<- Event, connection *Connection) error {
+	var event Event
+	event.eventType = EVENT_DISCONNECT
+	event.clientId = connection.clientId
+	event.connection = connection
+	e <- event
+	return nil
+}
+
+func (p *Packet) publishReq(e chan<- Event) error {
+	var event Event
 	event.eventType = EVENT_PUBLISH
 	i := 0
-	tl := Read2BytesInt(event.remainingBytes, i)
+	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
-	topic := string(event.remainingBytes[i : i+tl])
+	topic := string(p.remainingBytes[i : i+tl])
 	event.topic = topic
-	e <- *event
+	event.packet = p
+	e <- event
 	return nil
 }
 
-func subscribeReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
+func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
+	var event Event
 	event.eventType = EVENT_SUBSCRIBED
+	event.clientId = c.clientId
 	i := 0
-	pi := Read2BytesInt(event.remainingBytes, i)
-	event.packetIdentifier = pi
+	pi := Read2BytesInt(p.remainingBytes, i)
+	p.packetIdentifier = pi
 	i = i + 2
-	if connStatus.protocolVersion == 5 {
-		pl := int(event.remainingBytes[i])
+	if c.protocolVersion == 5 {
+		pl := int(p.remainingBytes[i])
 		fmt.Println("property length", pl)
 		if pl > 0 {
-			props := event.remainingBytes[i : i+pl]
+			props := p.remainingBytes[i : i+pl]
 			fmt.Println("properties", props)
 			si, _, err := ReadVarInt(props)
 			if err != nil {
@@ -131,14 +173,14 @@ func subscribeReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
 	for {
 		var subevent Event
 		subevent.eventType = EVENT_SUBSCRIPTION
-		sl := Read2BytesInt(event.remainingBytes, i)
+		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		subs[j] = string(event.remainingBytes[i : i+sl])
-		subevent.clientId = connStatus.clientId
+		subs[j] = string(p.remainingBytes[i : i+sl])
+		subevent.clientId = c.clientId
 		subevent.topic = subs[j]
 		e <- subevent
 		i = i + sl
-		if i >= len(event.remainingBytes)-1 {
+		if i >= len(p.remainingBytes)-1 {
 			break
 		}
 		j++
@@ -146,13 +188,13 @@ func subscribeReq(e chan<- Event, connStatus *ConnStatus, event *Event) error {
 			break
 		}
 	}
-	event.subscribedCount = j
-	e <- *event
+	p.subscribedCount = j
+	e <- event
 	return nil
 }
 
-func Suback(packetIdentifier int, subscribed int) Packet {
-	p := make(Packet, 4+subscribed)
+func Suback(packetIdentifier int, subscribed int) []byte {
+	p := make([]byte, 4+subscribed)
 	p[0] = uint8(9) << 4
 	p[1] = uint8(2 + subscribed)
 	p[2] = byte(packetIdentifier & 0xFF00 >> 8)
@@ -160,8 +202,8 @@ func Suback(packetIdentifier int, subscribed int) Packet {
 	return p
 }
 
-func Connack(reasonCode uint8) Packet {
-	p := make(Packet, 5)
+func Connack(reasonCode uint8) []byte {
+	p := make([]byte, 5)
 	p[0] = uint8(2) << 4
 	p[1] = uint8(3)
 	p[2] = uint8(0)
