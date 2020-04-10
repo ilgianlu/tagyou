@@ -8,7 +8,7 @@ type Connection struct {
 	clientId        string
 	protocolVersion uint8
 	connectFlags    uint8
-	keepAlive       []byte
+	keepAlive       int
 	conn            net.Conn
 }
 

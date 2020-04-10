@@ -76,6 +76,8 @@ func (p *Packet) emit(connection *Connection, e chan<- Event) error {
 		return p.publishReq(e)
 	case PACKET_TYPE_SUBSCRIBE:
 		return p.subscribeReq(e, connection)
+	case PACKET_TYPE_PINGREQ:
+		return p.pingReq(e, connection)
 	case PACKET_TYPE_DISCONNECT:
 		return p.disconnectReq(e, connection)
 	default:
@@ -105,10 +107,8 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 	connection.connectFlags = p.remainingBytes[i]
 	i++
 	ka := p.remainingBytes[i : i+2]
-	// fmt.Println("clean session", connection.cleanSession())
-
-	// fmt.Println("keepAlive", Read2BytesInt(ka, 0))
-	connection.keepAlive = ka
+	connection.keepAlive = Read2BytesInt(ka, 0)
+	fmt.Println("keepAlive", Read2BytesInt(ka, 0))
 	i = i + 2
 	cil := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
@@ -192,6 +192,15 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 	return nil
 }
 
+func (p *Packet) pingReq(e chan<- Event, c *Connection) error {
+	var event Event
+	event.eventType = EVENT_PING
+	event.clientId = c.clientId
+	event.connection = c
+	e <- event
+	return nil
+}
+
 func Suback(packetIdentifier int, subscribed int) []byte {
 	p := make([]byte, 4+subscribed)
 	p[0] = uint8(9) << 4
@@ -202,10 +211,17 @@ func Suback(packetIdentifier int, subscribed int) []byte {
 }
 
 func Connack(reasonCode uint8) []byte {
-	p := make([]byte, 5)
+	p := make([]byte, 4)
 	p[0] = uint8(2) << 4
-	p[1] = uint8(3)
+	p[1] = uint8(2)
 	p[2] = uint8(0)
 	p[3] = reasonCode
+	return p
+}
+
+func PingResp() []byte {
+	p := make([]byte, 2)
+	p[0] = uint8(13) << 4
+	p[1] = uint8(0)
 	return p
 }

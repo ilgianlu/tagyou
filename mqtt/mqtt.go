@@ -33,6 +33,9 @@ func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections 
 		case EVENT_PUBLISH:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
 			clientPublish(topicSubs, connections, e)
+		case EVENT_PING:
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
+			clientPing(e)
 		case EVENT_DISCONNECT:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
 			clientDisconnect(connections, e)
@@ -103,6 +106,13 @@ func clientPublish(subs Subscriptions, connections Connections, e Event) {
 	}
 }
 
+func clientPing(e Event) {
+	_, werr := e.connection.conn.Write(PingResp())
+	if werr != nil {
+		fmt.Println("could not write to", e.clientId)
+	}
+}
+
 func clientDisconnect(connections Connections, e Event) {
 	if toRem, ok := connections.findConn(e.clientId); ok {
 		err0 := connections.remConn(toRem.clientId)
@@ -136,6 +146,7 @@ func startTCP(subs Subscriptions, events chan<- Event, port string) {
 func handleConnection(events chan<- Event, conn net.Conn) {
 	var connection Connection
 	connection.conn = conn
+	connection.keepAlive = DEFAULT_KEEPALIVE
 	for {
 		_, rErr := ReadPacket(conn, &connection, events)
 		if rErr != nil {
@@ -147,7 +158,7 @@ func handleConnection(events chan<- Event, conn net.Conn) {
 			break
 		}
 
-		derr := conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(connection.keepAlive*2) * time.Second))
 		if derr != nil {
 			fmt.Println("cannot set read deadline", derr)
 			defer conn.Close()
