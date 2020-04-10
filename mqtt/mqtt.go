@@ -30,6 +30,10 @@ func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections 
 		case EVENT_SUBSCRIPTION:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscription", e.topic)
 			clientSubscription(topicSubs, clientSubs, e)
+		case EVENT_UNSUBSCRIBED:
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
+		case EVENT_UNSUBSCRIPTION:
+			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscription", e.topic)
 		case EVENT_PUBLISH:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
 			clientPublish(topicSubs, connections, e)
@@ -71,12 +75,10 @@ func clientConnection(connections Connections, topicSubs Subscriptions, clientSu
 }
 
 func clientSubscribed(connections Connections, e Event) {
-	if c, ok := connections.findConn(e.clientId); ok {
-		p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount)
-		_, werr := c.publish(p)
-		if werr != nil {
-			fmt.Println("could not write to", c.clientId)
-		}
+	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount)
+	_, werr := e.connection.conn.Write(p)
+	if werr != nil {
+		fmt.Println("could not write to", e.clientId)
 	}
 }
 

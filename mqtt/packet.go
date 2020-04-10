@@ -76,6 +76,8 @@ func (p *Packet) emit(connection *Connection, e chan<- Event) error {
 		return p.publishReq(e)
 	case PACKET_TYPE_SUBSCRIBE:
 		return p.subscribeReq(e, connection)
+	case PACKET_TYPE_UNSUBSCRIBE:
+		return p.unsubscribeReq(e, connection)
 	case PACKET_TYPE_PINGREQ:
 		return p.pingReq(e, connection)
 	case PACKET_TYPE_DISCONNECT:
@@ -146,6 +148,7 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 	var event Event
 	event.eventType = EVENT_SUBSCRIBED
 	event.clientId = c.clientId
+	event.connection = c
 	i := 0
 	pi := Read2BytesInt(p.remainingBytes, i)
 	p.packetIdentifier = pi
@@ -192,6 +195,40 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 	return nil
 }
 
+func (p *Packet) unsubscribeReq(e chan<- Event, c *Connection) error {
+	var event Event
+	event.eventType = EVENT_UNSUBSCRIBED
+	event.clientId = c.clientId
+	event.connection = c
+	i := 0
+	pi := Read2BytesInt(p.remainingBytes, i)
+	p.packetIdentifier = pi
+	i = i + 2
+	unsubs := make([]string, 10)
+	j := 0
+	for {
+		var unsubevent Event
+		unsubevent.eventType = EVENT_UNSUBSCRIPTION
+		sl := Read2BytesInt(p.remainingBytes, i)
+		i = i + 2
+		unsubs[j] = string(p.remainingBytes[i : i+sl])
+		unsubevent.clientId = c.clientId
+		unsubevent.topic = unsubs[j]
+		e <- unsubevent
+		i = i + sl
+		if i >= len(p.remainingBytes)-1 {
+			break
+		}
+		j++
+		if j > 10 {
+			break
+		}
+	}
+	p.subscribedCount = j
+	e <- event
+	return nil
+}
+
 func (p *Packet) pingReq(e chan<- Event, c *Connection) error {
 	var event Event
 	event.eventType = EVENT_PING
@@ -203,7 +240,7 @@ func (p *Packet) pingReq(e chan<- Event, c *Connection) error {
 
 func Suback(packetIdentifier int, subscribed int) []byte {
 	p := make([]byte, 4+subscribed)
-	p[0] = uint8(9) << 4
+	p[0] = uint8(PACKET_TYPE_SUBACK) << 4
 	p[1] = uint8(2 + subscribed)
 	p[2] = byte(packetIdentifier & 0xFF00 >> 8)
 	p[3] = byte(packetIdentifier & 0x00FF)
@@ -212,7 +249,7 @@ func Suback(packetIdentifier int, subscribed int) []byte {
 
 func Connack(reasonCode uint8) []byte {
 	p := make([]byte, 4)
-	p[0] = uint8(2) << 4
+	p[0] = uint8(PACKET_TYPE_CONNACK) << 4
 	p[1] = uint8(2)
 	p[2] = uint8(0)
 	p[3] = reasonCode
@@ -221,7 +258,7 @@ func Connack(reasonCode uint8) []byte {
 
 func PingResp() []byte {
 	p := make([]byte, 2)
-	p[0] = uint8(13) << 4
+	p[0] = uint8(PACKET_TYPE_PINGRES) << 4
 	p[1] = uint8(0)
 	return p
 }
