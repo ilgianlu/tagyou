@@ -36,17 +36,17 @@ func TestFindSubscriber(t *testing.T) {
 	}
 }
 
-func TestAddSub(t *testing.T) {
+func TestAddSubscription(t *testing.T) {
 	var is inMemorySubscriptions = make(map[string][]string)
 	is["anna/#"] = []string{"client0", "client1"}
-	err := is.addSub("anna/#", "client0")
+	err := is.addSubscription("anna/#", "client0")
 	if err != nil {
 		t.Error("did not expect any error")
 	}
 	if len(is["anna/#"]) != 2 {
 		t.Errorf("expected 2 subscribers, %d found", len(is["anna/#"]))
 	}
-	err0 := is.addSub("anna/#", "client2")
+	err0 := is.addSubscription("anna/#", "client2")
 	if err0 != nil {
 		t.Error("did not expect any error")
 	}
@@ -55,7 +55,7 @@ func TestAddSub(t *testing.T) {
 		t.Errorf("expected client2 in subscribers position 2, %d found", i)
 	}
 	is["barbara"] = []string{}
-	err1 := is.addSub("barbara", "client3")
+	err1 := is.addSubscription("barbara", "client3")
 	if err1 != nil {
 		t.Error("did not expect any error")
 	}
@@ -65,31 +65,31 @@ func TestAddSub(t *testing.T) {
 	}
 }
 
-func TestRemSub(t *testing.T) {
+func TestRemSubscription(t *testing.T) {
 	var is0 inMemorySubscriptions = make(map[string][]string)
-	pos0 := is0.remSub("anna/#", "client0")
+	pos0 := is0.remSubscription("anna/#", "client0")
 	if pos0 != -1 {
 		t.Errorf("expecting -1, found %d\n", pos0)
 	}
 	var is inMemorySubscriptions = make(map[string][]string)
 	is["anna/#"] = []string{"client0", "client1"}
 	is["barbara/#"] = []string{"client0", "client1"}
-	pos1 := is.remSub("anna/#", "client0")
+	pos1 := is.remSubscription("anna/#", "client0")
 	if pos1 != 0 {
 		t.Errorf("expecting 0, found %d\n", pos1)
 	}
 	if len(is["anna/#"]) != 1 {
 		t.Errorf("expected 1 subscribers, %d found", len(is["anna/#"]))
 	}
-	pos2 := is.remSub("anna/#", "client2")
+	pos2 := is.remSubscription("anna/#", "client2")
 	if pos2 != -1 {
 		t.Errorf("expecting -1, found %d\n", pos2)
 	}
-	pos3 := is.remSub("carlo", "client0")
+	pos3 := is.remSubscription("carlo", "client0")
 	if pos3 != -1 {
 		t.Errorf("expecting -1, found %d\n", pos3)
 	}
-	pos4 := is.remSub("barbara/#", "client1")
+	pos4 := is.remSubscription("barbara/#", "client1")
 	if pos4 != 1 {
 		t.Errorf("expecting 1, found %d\n", pos4)
 	}

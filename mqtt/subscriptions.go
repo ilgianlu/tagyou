@@ -6,15 +6,16 @@ import (
 )
 
 type Subscriptions interface {
-	addSub(string, string) error
-	remSub(string, string) int
+	addSubscription(string, string) error
+	remSubscription(string, string) int
 	findSubscribers(string) []string
-	findSubscribed(string) []string
+	findSubscribed(string) ([]string, bool)
+	remSubscribed(string)
 }
 
 type inMemorySubscriptions map[string][]string
 
-func (is inMemorySubscriptions) addSub(subscribed string, subscriber string) error {
+func (is inMemorySubscriptions) addSubscription(subscribed string, subscriber string) error {
 	if subs, ok := is[subscribed]; ok {
 		if i := findSubscriber(subs, subscriber); i == -1 {
 			is[subscribed] = append(is[subscribed], subscriber)
@@ -25,17 +26,18 @@ func (is inMemorySubscriptions) addSub(subscribed string, subscriber string) err
 	return nil
 }
 
-func (is inMemorySubscriptions) remSub(subscribed string, subscriber string) int {
-	subs := is.findSubscribed(subscribed)
-	fmt.Println("removing", subscriber, "from", subs)
-	if subs != nil {
+func (is inMemorySubscriptions) remSubscription(subscribed string, subscriber string) int {
+	if subs, ok := is.findSubscribed(subscribed); ok {
+		fmt.Println("removing", subscriber, "from", subs)
 		toRem := findSubscriber(subs, subscriber)
 		if toRem != -1 {
 			is[subscribed] = append(is[subscribed][:toRem], is[subscribed][toRem+1:]...)
-			return toRem
 		}
+		return toRem
+	} else {
+		fmt.Println("could not remove", subscriber, "from", subs, "not present")
+		return -1
 	}
-	return -1
 }
 
 func findSubscriber(subscribers []string, subscriber string) int {
@@ -53,17 +55,23 @@ func (is inMemorySubscriptions) findSubscribers(subscribed string) []string {
 	// only topics have topic separator in name
 	topicSegments := strings.Split(subscribed, TOPIC_SEPARATOR)
 	if len(topicSegments) == 1 {
-		return is.findSubscribed(subscribed)
+		if s, ok := is.findSubscribed(subscribed); ok {
+			return s
+		} else {
+			return []string{}
+		}
 	} else {
 		return is.multiSegmentSubs(topicSegments)
 	}
 }
 
-func (is inMemorySubscriptions) findSubscribed(subscribed string) []string {
-	if s, ok := is[subscribed]; ok {
-		return s
-	}
-	return nil
+func (is inMemorySubscriptions) findSubscribed(subscribed string) ([]string, bool) {
+	s, ok := is[subscribed]
+	return s, ok
+}
+
+func (is inMemorySubscriptions) remSubscribed(subscribed string) {
+	delete(is, subscribed)
 }
 
 func (is inMemorySubscriptions) multiSegmentSubs(topicSegments []string) []string {
@@ -74,8 +82,9 @@ func (is inMemorySubscriptions) multiSegmentSubs(topicSegments []string) []strin
 			subT = append(subT, TOPIC_WILDCARD)
 		}
 		t := strings.Join(subT, TOPIC_SEPARATOR)
-		ss := is.findSubscribed(t)
-		subs = append(subs, ss...)
+		if ss, ok := is.findSubscribed(t); ok {
+			subs = append(subs, ss...)
+		}
 	}
 	return subs
 }

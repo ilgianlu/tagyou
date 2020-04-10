@@ -23,7 +23,7 @@ func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections 
 		switch e.eventType {
 		case EVENT_CONNECT:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client connect")
-			clientConnection(connections, e)
+			clientConnection(connections, topicSubs, clientSubs, e)
 		case EVENT_SUBSCRIBED:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
 			clientSubscribed(connections, e)
@@ -40,10 +40,19 @@ func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections 
 	}
 }
 
-func clientConnection(connections Connections, e Event) {
+func clientConnection(connections Connections, topicSubs Subscriptions, clientSubs Subscriptions, e Event) {
 	aerr := connections.addConn(e.clientId, *e.connection)
 	if aerr != nil {
 		fmt.Println("could not add connection", aerr)
+	}
+	if e.connection.cleanStart() {
+		clientSubs.remSubscribed(e.clientId)
+	} else {
+		if s, ok := clientSubs.findSubscribed(e.clientId); ok {
+			for i := 0; i < len(s); i++ {
+				topicSubs.remSubscription(e.clientId, s[i])
+			}
+		}
 	}
 	if e.err != 0 {
 		_, werr := e.connection.conn.Write(Connack(e.err))
@@ -69,11 +78,11 @@ func clientSubscribed(connections Connections, e Event) {
 }
 
 func clientSubscription(topicSubs Subscriptions, clientSubs Subscriptions, e Event) {
-	err := topicSubs.addSub(e.topic, e.clientId)
+	err := topicSubs.addSubscription(e.topic, e.clientId)
 	if err != nil {
 		fmt.Println("cannot persist subscription:", err)
 	}
-	err0 := clientSubs.addSub(e.clientId, e.topic)
+	err0 := clientSubs.addSubscription(e.clientId, e.topic)
 	if err != nil {
 		fmt.Println("cannot persist subscription:", err0)
 	}
