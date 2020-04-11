@@ -26,14 +26,16 @@ func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections 
 			clientConnection(connections, topicSubs, clientSubs, e)
 		case EVENT_SUBSCRIBED:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
-			clientSubscribed(connections, e)
+			clientSubscribed(e)
 		case EVENT_SUBSCRIPTION:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client subscription", e.topic)
 			clientSubscription(topicSubs, clientSubs, e)
 		case EVENT_UNSUBSCRIBED:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
+			clientUnsubscribed(e)
 		case EVENT_UNSUBSCRIPTION:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscription", e.topic)
+			clientUnsubscription(topicSubs, clientSubs, e)
 		case EVENT_PUBLISH:
 			fmt.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
 			clientPublish(topicSubs, connections, e)
@@ -74,7 +76,7 @@ func clientConnection(connections Connections, topicSubs Subscriptions, clientSu
 	}
 }
 
-func clientSubscribed(connections Connections, e Event) {
+func clientSubscribed(e Event) {
 	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount)
 	_, werr := e.connection.conn.Write(p)
 	if werr != nil {
@@ -88,8 +90,27 @@ func clientSubscription(topicSubs Subscriptions, clientSubs Subscriptions, e Eve
 		fmt.Println("cannot persist subscription:", err)
 	}
 	err0 := clientSubs.addSubscription(e.clientId, e.topic)
-	if err != nil {
+	if err0 != nil {
 		fmt.Println("cannot persist subscription:", err0)
+	}
+}
+
+func clientUnsubscribed(e Event) {
+	p := Unsuback(e.packet.packetIdentifier, e.packet.subscribedCount)
+	_, werr := e.connection.conn.Write(p)
+	if werr != nil {
+		fmt.Println("could not write to", e.clientId)
+	}
+}
+
+func clientUnsubscription(topicSubs Subscriptions, clientSubs Subscriptions, e Event) {
+	pos0 := topicSubs.remSubscription(e.topic, e.clientId)
+	if pos0 < 0 {
+		fmt.Println("could not remove topic subscription")
+	}
+	pos1 := clientSubs.remSubscription(e.clientId, e.topic)
+	if pos1 < 0 {
+		fmt.Println("could not remove client subscription")
 	}
 }
 

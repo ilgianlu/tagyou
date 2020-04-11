@@ -149,6 +149,7 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 	event.eventType = EVENT_SUBSCRIBED
 	event.clientId = c.clientId
 	event.connection = c
+	event.packet = p
 	i := 0
 	pi := Read2BytesInt(p.remainingBytes, i)
 	p.packetIdentifier = pi
@@ -190,7 +191,6 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 		}
 	}
 	p.subscribedCount = j
-	event.packet = p
 	e <- event
 	return nil
 }
@@ -200,6 +200,7 @@ func (p *Packet) unsubscribeReq(e chan<- Event, c *Connection) error {
 	event.eventType = EVENT_UNSUBSCRIBED
 	event.clientId = c.clientId
 	event.connection = c
+	event.packet = p
 	i := 0
 	pi := Read2BytesInt(p.remainingBytes, i)
 	p.packetIdentifier = pi
@@ -242,6 +243,15 @@ func Suback(packetIdentifier int, subscribed int) []byte {
 	p := make([]byte, 4+subscribed)
 	p[0] = uint8(PACKET_TYPE_SUBACK) << 4
 	p[1] = uint8(2 + subscribed)
+	p[2] = byte(packetIdentifier & 0xFF00 >> 8)
+	p[3] = byte(packetIdentifier & 0x00FF)
+	return p
+}
+
+func Unsuback(packetIdentifier int, unsubscribed int) []byte {
+	p := make([]byte, 4+unsubscribed)
+	p[0] = uint8(PACKET_TYPE_UNSUBACK) << 4
+	p[1] = uint8(2 + unsubscribed)
 	p[2] = byte(packetIdentifier & 0xFF00 >> 8)
 	p[3] = byte(packetIdentifier & 0x00FF)
 	return p
