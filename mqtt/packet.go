@@ -110,14 +110,40 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 	i++
 	ka := p.remainingBytes[i : i+2]
 	connection.keepAlive = Read2BytesInt(ka, 0)
-	fmt.Println("keepAlive", Read2BytesInt(ka, 0))
+	// fmt.Println("keepAlive", Read2BytesInt(ka, 0))
 	i = i + 2
 	cil := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	clientId := string(p.remainingBytes[i : i+cil])
-	// fmt.Printf("%d bytes, clientId %s\n", cil, string(p.remainingBytes[i:i+cil]))
+	fmt.Printf("%d bytes, clientId %s\n", cil, string(p.remainingBytes[i:i+cil]))
 	event.clientId = clientId
 	connection.clientId = clientId
+	i = i + cil
+	if connection.willFlag() {
+		// read will topic
+		wtl := Read2BytesInt(p.remainingBytes, i)
+		i = i + 2
+		connection.willTopic = string(p.remainingBytes[i : i+wtl])
+		i = i + wtl
+		// will message
+		wml := Read2BytesInt(p.remainingBytes, i)
+		i = i + 2
+		connection.willMessage = p.remainingBytes[i : i+wml]
+		fmt.Printf("will topic \"%s\"\nwith message \"%s\"\n", connection.willTopic, connection.willMessage)
+		i = i + wml
+	}
+	if connection.haveUser() {
+		// read username
+		unl := Read2BytesInt(p.remainingBytes, i)
+		i = i + 2
+		username := string(p.remainingBytes[i : i+unl])
+		i = i + unl
+		// read password
+		pwdl := Read2BytesInt(p.remainingBytes, i)
+		i = i + 2
+		password := string(p.remainingBytes[i : i+pwdl])
+		fmt.Printf("username \"%s\"\nlogging with password \"%s\"\n", username, password)
+	}
 	e <- event
 	return nil
 }

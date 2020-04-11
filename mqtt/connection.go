@@ -9,6 +9,8 @@ type Connection struct {
 	protocolVersion uint8
 	connectFlags    uint8
 	keepAlive       int
+	willTopic       string
+	willMessage     []byte
 	conn            net.Conn
 }
 
