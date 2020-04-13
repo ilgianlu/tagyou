@@ -298,3 +298,24 @@ func PingResp() []byte {
 	p[1] = uint8(0)
 	return p
 }
+
+func Publish(qos uint8, retain bool, topic string, payload []byte) []byte {
+	p := make([]byte, 1)
+	p[0] = uint8(PACKET_TYPE_PUBLISH) << 4
+	p[0] = p[0] | qos<<1
+	if retain {
+		p[0] = p[0] | 1
+	}
+	// write var int length 2 + len(topic) + len(payload)
+	p = append(p, WriteVarInt(2+len(topic)+len(payload))...)
+	// write topic length
+	tl := Write2BytesInt(len(topic))
+	p = append(p, tl...)
+	// write topic string
+	p = append(p, []byte(topic)...)
+	// write packet identifier only if qos > 0
+
+	// write payload
+	p = append(p, payload...)
+	return p
+}

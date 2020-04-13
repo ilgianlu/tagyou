@@ -45,3 +45,35 @@ func TestReadVarInt(t *testing.T) {
 	}
 
 }
+
+func TestWriteVarInt(t *testing.T) {
+	b0 := WriteVarInt(0)
+	if len(b0) > 1 || b0[0] != 0 {
+		t.Errorf("expect [0], received [%d]", b0[0])
+	}
+
+	b1 := WriteVarInt(2097152)
+	if len(b1) != 4 || b1[3] != 128 || b1[2] != 128 || b1[1] != 128 || b1[0] != 1 {
+		t.Errorf("expect [128, 128, 128, 1], received [%d,%d,%d,%d]", b1[3], b1[2], b1[1], b1[0])
+	}
+}
+
+func TestWrite2BytesInt(t *testing.T) {
+	i0 := 0
+	v0 := Write2BytesInt(i0)
+	if v0[0] != 0 || v0[1] != 0 {
+		t.Errorf("expected [0, 0] received [%d, %d]", v0[1], v0[0])
+	}
+
+	i1 := 1024
+	v1 := Write2BytesInt(i1)
+	if v1[0] != 0 || v1[1] != 4 {
+		t.Errorf("expected [4, 0] received [%d, %d]", v1[1], v1[0])
+	}
+
+	i2 := 1025
+	v2 := Write2BytesInt(i2)
+	if v2[0] != 1 || v2[1] != 4 {
+		t.Errorf("expected [4, 1] received [%d, %d]", v2[1], v2[0])
+	}
+}
