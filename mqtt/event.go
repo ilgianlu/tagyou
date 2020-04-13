@@ -8,6 +8,7 @@ const EVENT_PING = 12
 const EVENT_UNSUBSCRIBED = 20
 const EVENT_UNSUBSCRIPTION = 21
 const EVENT_DISCONNECT = 100
+const EVENT_KEEPALIVE_TIMEOUT = 101
 
 type Event struct {
 	eventType  int

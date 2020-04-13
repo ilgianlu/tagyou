@@ -299,23 +299,28 @@ func PingResp() []byte {
 	return p
 }
 
-func Publish(qos uint8, retain bool, topic string, payload []byte) []byte {
-	p := make([]byte, 1)
-	p[0] = uint8(PACKET_TYPE_PUBLISH) << 4
-	p[0] = p[0] | qos<<1
+func Publish(qos uint8, retain bool, topic string, payload []byte) Packet {
+	var p Packet
+	h := make([]byte, 1)
+	h[0] = uint8(PACKET_TYPE_PUBLISH) << 4
+	h[0] = h[0] | qos<<1
 	if retain {
-		p[0] = p[0] | 1
+		h[0] = h[0] | 1
 	}
 	// write var int length 2 + len(topic) + len(payload)
-	p = append(p, WriteVarInt(2+len(topic)+len(payload))...)
+	h = append(h, WriteVarInt(2+len(topic)+len(payload))...)
+	p.header = h
+
+	rl := make([]byte, 1)
 	// write topic length
 	tl := Write2BytesInt(len(topic))
-	p = append(p, tl...)
+	rl = append(rl, tl...)
 	// write topic string
-	p = append(p, []byte(topic)...)
+	rl = append(rl, []byte(topic)...)
 	// write packet identifier only if qos > 0
 
 	// write payload
-	p = append(p, payload...)
+	rl = append(rl, payload...)
+	p.remainingBytes = rl
 	return p
 }

@@ -138,6 +138,7 @@ func clientPing(e Event) {
 
 func clientDisconnect(connections Connections, e Event) {
 	if toRem, ok := connections.findConn(e.clientId); ok {
+
 		err0 := connections.remConn(toRem.clientId)
 		if err0 != nil {
 			fmt.Println("could not remove connection from connections")
@@ -167,18 +168,24 @@ func startTCP(subs Subscriptions, events chan<- Event, port string) {
 }
 
 func handleConnection(events chan<- Event, conn net.Conn) {
+	defer conn.Close()
 	var connection Connection
 	connection.conn = conn
 	connection.keepAlive = DEFAULT_KEEPALIVE
 	for {
 		_, rErr := ReadPacket(conn, &connection, events)
 		if rErr != nil {
-			fmt.Println("could not elaborate packet ", rErr)
+			fmt.Println("could read packet", rErr)
+			if err, ok := rErr.(net.Error); ok && err.Timeout() {
+				fmt.Println("keepalive not respected!")
+				sendWill(conn, &connection, events)
+				break
+			}
 			if rErr == io.EOF {
 				fmt.Println("connection closed!")
+				sendWill(conn, &connection, events)
+				break
 			}
-			defer conn.Close()
-			break
 		}
 
 		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(connection.keepAlive*2) * time.Second))
@@ -189,4 +196,16 @@ func handleConnection(events chan<- Event, conn net.Conn) {
 		}
 	}
 	fmt.Println("abandon closed connection!")
+}
+
+func sendWill(conn net.Conn, connection *Connection, e chan<- Event) {
+	// publish will message event
+	if connection.willTopic != "" {
+		willPacket := Publish(connection.willQoS(), false, connection.willTopic, connection.willMessage)
+		var event Event
+		event.eventType = EVENT_PUBLISH
+		event.topic = connection.willTopic
+		event.packet = &willPacket
+		e <- event
+	}
 }
