@@ -308,19 +308,18 @@ func Publish(qos uint8, retain bool, topic string, payload []byte) Packet {
 		h[0] = h[0] | 1
 	}
 	// write var int length 2 + len(topic) + len(payload)
-	h = append(h, WriteVarInt(2+len(topic)+len(payload))...)
+	remainingLength := 2 + len(topic) + len(payload)
+	h = append(h, WriteVarInt(remainingLength)...)
 	p.header = h
 
-	rl := make([]byte, 1)
 	// write topic length
-	tl := Write2BytesInt(len(topic))
-	rl = append(rl, tl...)
+	rb := Write2BytesInt(len(topic))
 	// write topic string
-	rl = append(rl, []byte(topic)...)
+	rb = append(rb, []byte(topic)...)
 	// write packet identifier only if qos > 0
 
 	// write payload
-	rl = append(rl, payload...)
-	p.remainingBytes = rl
+	rb = append(rb, payload...)
+	p.remainingBytes = rb
 	return p
 }

@@ -55,7 +55,7 @@ func Read2BytesInt(a []byte, i int) int {
 
 func Write2BytesInt(i int) []byte {
 	b := make([]byte, 2)
-	b[1] = byte(i & 0xFF00 >> 8)
-	b[0] = byte(i & 0x00FF)
+	b[0] = byte(i & 0xFF00 >> 8)
+	b[1] = byte(i & 0x00FF)
 	return b
 }
