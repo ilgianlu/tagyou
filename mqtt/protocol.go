@@ -25,9 +25,11 @@ const CONNECT_OK = 0
 
 // 0x80
 // don't know what to do
-const CONNECT_UNSPECIFIED_ERROR = 128
+const UNSPECIFIED_ERROR = 0x80
+
+const MALFORMED_PACKET = 0x81
 
 // 0x84
 // Unsupported Protocol Version
 // The Server does not support the version of the MQTT protocol requested by the Client
-const CONNECT_UNSUPPORTED_PROTOCOL_VERSION = 132
+const UNSUPPORTED_PROTOCOL_VERSION = 132

@@ -201,7 +201,7 @@ func handleConnection(events chan<- Event, conn net.Conn) {
 func sendWill(conn net.Conn, connection *Connection, e chan<- Event) {
 	// publish will message event
 	if connection.willTopic != "" {
-		willPacket := Publish(connection.willQoS(), false, connection.willTopic, connection.willMessage)
+		willPacket := Publish(connection.willQoS(), connection.willRetain(), connection.willTopic, connection.willMessage)
 		var event Event
 		event.eventType = EVENT_PUBLISH
 		event.topic = connection.willTopic

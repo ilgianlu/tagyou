@@ -91,6 +91,12 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 	var event Event
 	event.eventType = EVENT_CONNECT
 	event.connection = connection
+	if p.flags != 0 {
+		fmt.Println("malformed packet")
+		event.err = MALFORMED_PACKET
+		e <- event
+		return nil
+	}
 	i := 0
 	pl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
@@ -102,7 +108,7 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 	i++
 	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
 		fmt.Println("unsupported protocol version err", v)
-		event.err = CONNECT_UNSUPPORTED_PROTOCOL_VERSION
+		event.err = UNSUPPORTED_PROTOCOL_VERSION
 		e <- event
 		return nil
 	}
