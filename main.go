@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	mq "github.com/ilgianlu/tagyou/mqtt"
@@ -9,11 +9,19 @@ import (
 )
 
 func main() {
-	// load env vars
-	berr := dotenv.Load()
-	if berr != nil {
-		fmt.Println("error loading env", berr)
+	err := loadEnv()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	mq.StartMQTT(os.Getenv("LISTEN_PORT"))
+}
+
+func loadEnv() error {
+	env := os.Getenv("TAGYOU_ENV")
+	if "" == env {
+		env = "development"
 	}
 
-	mq.StartMQTT(os.Getenv("LISTEN_PORT"))
+	return dotenv.Load(".env." + env + ".local")
 }
