@@ -1,6 +1,7 @@
 package mqtt
 
 import (
+	"log"
 	"fmt"
 	"net"
 )
@@ -32,24 +33,24 @@ func (p *Packet) read(conn net.Conn) error {
 	buffer := make([]byte, 1024)
 	bytesCount, err := conn.Read(buffer)
 	if err != nil {
-		fmt.Printf("error after first byte read: %s\n", err)
+		log.Printf("error after first byte read: %s\n", err)
 		return err
 	}
 	if bytesCount < 1 {
 		return fmt.Errorf("header: read %d bytes, expected more than 1 byte.. discarding", bytesCount)
 	}
 	if bytesCount > PACKET_MAX_SIZE {
-		fmt.Printf("oversize packet %d > %d, discarding...\n", bytesCount, PACKET_MAX_SIZE)
+		log.Printf("oversize packet %d > %d, discarding...\n", bytesCount, PACKET_MAX_SIZE)
 	}
 	p.packetType = (buffer[0] & 0xF0) >> 4
 	p.flags = buffer[0] & 0x0F
 	remainingLength, k, err0 := ReadVarInt(buffer[1:])
 	if err0 != nil {
-		fmt.Printf("malformed remainingLength format: %s\n", err0)
+		log.Printf("malformed remainingLength format: %s\n", err0)
 		return err0
 	}
 	if remainingLength > PACKET_MAX_SIZE {
-		fmt.Printf("oversize packet %d > %d, discarding...\n", remainingLength, PACKET_MAX_SIZE)
+		log.Printf("oversize packet %d > %d, discarding...\n", remainingLength, PACKET_MAX_SIZE)
 	}
 	p.header = buffer[:1+k]
 	p.remainingBytes = buffer[1+k : bytesCount]
@@ -59,12 +60,12 @@ func (p *Packet) read(conn net.Conn) error {
 		n, err := conn.Read(buffer)
 		bytesCount = bytesCount + n
 		if err != nil {
-			fmt.Printf("error after %d byte read: %s\n", bytesCount, err)
+			log.Printf("error after %d byte read: %s\n", bytesCount, err)
 			return err
 		}
 		p.remainingBytes = append(p.remainingBytes, buffer[:n]...)
 	}
-	fmt.Printf("read %d bytes packet\n", bytesCount)
+	log.Printf("read %d bytes packet\n", bytesCount)
 	return nil
 }
 
@@ -92,7 +93,7 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 	event.eventType = EVENT_CONNECT
 	event.connection = connection
 	if p.flags != 0 {
-		fmt.Println("malformed packet")
+		log.Println("malformed packet")
 		event.err = MALFORMED_PACKET
 		e <- event
 		return nil
@@ -100,14 +101,14 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 	i := 0
 	pl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
-	// fmt.Printf("%d bytes, protocolName %s\n", pl, string(p.remainingBytes[i:i+pl]))
+	// log.Printf("%d bytes, protocolName %s\n", pl, string(p.remainingBytes[i:i+pl]))
 	i = i + pl
 	v := p.remainingBytes[i]
-	// fmt.Println("protocolVersion", v)
+	// log.Println("protocolVersion", v)
 	connection.protocolVersion = v
 	i++
 	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
-		fmt.Println("unsupported protocol version err", v)
+		log.Println("unsupported protocol version err", v)
 		event.err = UNSUPPORTED_PROTOCOL_VERSION
 		e <- event
 		return nil
@@ -116,12 +117,12 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 	i++
 	ka := p.remainingBytes[i : i+2]
 	connection.keepAlive = Read2BytesInt(ka, 0)
-	// fmt.Println("keepAlive", Read2BytesInt(ka, 0))
+	// log.Println("keepAlive", Read2BytesInt(ka, 0))
 	i = i + 2
 	cil := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	clientId := string(p.remainingBytes[i : i+cil])
-	fmt.Printf("%d bytes, clientId %s\n", cil, string(p.remainingBytes[i:i+cil]))
+	log.Printf("%d bytes, clientId %s\n", cil, string(p.remainingBytes[i:i+cil]))
 	event.clientId = clientId
 	connection.clientId = clientId
 	i = i + cil
@@ -135,7 +136,7 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 		wml := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		connection.willMessage = p.remainingBytes[i : i+wml]
-		fmt.Printf("will topic \"%s\"\nwith message \"%s\"\n", connection.willTopic, connection.willMessage)
+		log.Printf("will topic \"%s\"\nwith message \"%s\"\n", connection.willTopic, connection.willMessage)
 		i = i + wml
 	}
 	if connection.haveUser() {
@@ -148,7 +149,7 @@ func (p *Packet) connectReq(e chan<- Event, connection *Connection) error {
 		pwdl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		password := string(p.remainingBytes[i : i+pwdl])
-		fmt.Printf("username \"%s\"\nlogging with password \"%s\"\n", username, password)
+		log.Printf("username \"%s\"\nlogging with password \"%s\"\n", username, password)
 	}
 	e <- event
 	return nil
@@ -188,16 +189,16 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 	i = i + 2
 	if c.protocolVersion == 5 {
 		pl := int(p.remainingBytes[i])
-		fmt.Println("property length", pl)
+		log.Println("property length", pl)
 		if pl > 0 {
 			props := p.remainingBytes[i : i+pl]
-			fmt.Println("properties", props)
+			log.Println("properties", props)
 			si, _, err := ReadVarInt(props)
 			if err != nil {
-				fmt.Println("err decoding sub ident", err)
+				log.Println("err decoding sub ident", err)
 				return nil
 			}
-			fmt.Println("subscription identifier", si)
+			log.Println("subscription identifier", si)
 			i = i + pl
 		}
 		i++

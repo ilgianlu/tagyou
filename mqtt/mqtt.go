@@ -12,20 +12,23 @@ import (
 )
 
 func StartMQTT(port string) {
-	connections := make(inMemoryConnections)
-	topicSubscriptions := make(inMemorySubscriptions)
-	clientSubscriptions := make(inMemorySubscriptions)
-	events := make(chan Event, 1)
-
 	db, err := openDb()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	go rangeEvents(topicSubscriptions, clientSubscriptions, connections, events)
+	connections := make(inMemoryConnections)
+	// subscriptions := SqliteSubscriptions{db: db}
+	subscriptions := inMemorySubscriptions{
+		topicSubscriptions:  make(map[string][]string),
+		clientSubscriptions: make(map[string][]string),
+	}
+	events := make(chan Event, 1)
 
-	startTCP(topicSubscriptions, events, port)
+	go rangeEvents(subscriptions, connections, events)
+
+	startTCP(subscriptions, events, port)
 }
 
 func openDb() (*sql.DB, error) {
@@ -39,27 +42,27 @@ func openDb() (*sql.DB, error) {
 	return sql.Open("sqlite3", os.Getenv("DB_FILE"))
 }
 
-func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections Connections, events <-chan Event) {
+func rangeEvents(subscriptions Subscriptions, connections Connections, events <-chan Event) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client connect")
-			clientConnection(connections, topicSubs, clientSubs, e)
+			clientConnection(connections, subscriptions, e)
 		case EVENT_SUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
 			clientSubscribed(e)
 		case EVENT_SUBSCRIPTION:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscription", e.topic)
-			clientSubscription(topicSubs, clientSubs, e)
+			clientSubscription(subscriptions, e)
 		case EVENT_UNSUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
 			clientUnsubscribed(e)
 		case EVENT_UNSUBSCRIPTION:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscription", e.topic)
-			clientUnsubscription(topicSubs, clientSubs, e)
+			clientUnsubscription(subscriptions, e)
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
-			clientPublish(topicSubs, connections, e)
+			clientPublish(subscriptions, connections, e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
 			clientPing(e)
@@ -70,17 +73,17 @@ func rangeEvents(topicSubs Subscriptions, clientSubs Subscriptions, connections 
 	}
 }
 
-func clientConnection(connections Connections, topicSubs Subscriptions, clientSubs Subscriptions, e Event) {
+func clientConnection(connections Connections, subscriptions Subscriptions, e Event) {
 	aerr := connections.addConn(e.clientId, *e.connection)
 	if aerr != nil {
 		log.Println("could not add connection", aerr)
 	}
 	if e.connection.cleanStart() {
-		clientSubs.remSubscribed(e.clientId)
+		subscriptions.remSubscribed(e.clientId)
 	} else {
-		if s, ok := clientSubs.findSubscribed(e.clientId); ok {
+		if s, ok := subscriptions.findSubscribed(e.clientId); ok {
 			for i := 0; i < len(s); i++ {
-				topicSubs.remSubscription(e.clientId, s[i])
+				subscriptions.remSubscription(e.clientId, s[i])
 			}
 		}
 	}
@@ -105,14 +108,10 @@ func clientSubscribed(e Event) {
 	}
 }
 
-func clientSubscription(topicSubs Subscriptions, clientSubs Subscriptions, e Event) {
-	err := topicSubs.addSubscription(e.topic, e.clientId)
+func clientSubscription(subscriptions Subscriptions, e Event) {
+	err := subscriptions.addSubscription(e.topic, e.clientId)
 	if err != nil {
 		log.Println("cannot persist subscription:", err)
-	}
-	err0 := clientSubs.addSubscription(e.clientId, e.topic)
-	if err0 != nil {
-		log.Println("cannot persist subscription:", err0)
 	}
 }
 
@@ -124,14 +123,10 @@ func clientUnsubscribed(e Event) {
 	}
 }
 
-func clientUnsubscription(topicSubs Subscriptions, clientSubs Subscriptions, e Event) {
-	pos0 := topicSubs.remSubscription(e.topic, e.clientId)
-	if pos0 < 0 {
+func clientUnsubscription(subscriptions Subscriptions, e Event) {
+	err := subscriptions.remSubscription(e.topic, e.clientId)
+	if err != nil {
 		log.Println("could not remove topic subscription")
-	}
-	pos1 := clientSubs.remSubscription(e.clientId, e.topic)
-	if pos1 < 0 {
-		log.Println("could not remove client subscription")
 	}
 }
 
