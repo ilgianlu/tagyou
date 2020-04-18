@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+const TABLE_SUBSCRIPTIONS = "subscriptions"
+
 func Seed() {
 	os.Remove(os.Getenv("DB_FILE"))
 

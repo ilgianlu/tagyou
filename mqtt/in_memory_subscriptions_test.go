@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestMultiSegmentSubs(t *testing.T) {
+func TestInMemoryMultiSegmentSubs(t *testing.T) {
 	var is inMemorySubscriptions
 	is.topicSubscriptions = make(map[string][]string)
 	is.topicSubscriptions["anna/#"] = []string{"client0", "client1"}
@@ -16,7 +16,7 @@ func TestMultiSegmentSubs(t *testing.T) {
 	}
 }
 
-func TestFindSubscriber(t *testing.T) {
+func TestInMemoryFindSubscriber(t *testing.T) {
 	subs := []string{"client0", "client1"}
 	a := findIn(subs, "client0")
 	if a != 0 {
@@ -37,7 +37,7 @@ func TestFindSubscriber(t *testing.T) {
 	}
 }
 
-func TestAddSubscription(t *testing.T) {
+func TestInMemoryAddSubscription(t *testing.T) {
 	var is inMemorySubscriptions
 	is.clientSubscriptions = make(map[string][]string)
 	is.topicSubscriptions = make(map[string][]string)
@@ -70,7 +70,7 @@ func TestAddSubscription(t *testing.T) {
 	}
 }
 
-func TestRemSubscription(t *testing.T) {
+func TestInMemoryRemSubscription(t *testing.T) {
 	var is inMemorySubscriptions
 	is.clientSubscriptions = make(map[string][]string)
 	is.topicSubscriptions = make(map[string][]string)
