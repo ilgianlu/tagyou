@@ -84,7 +84,6 @@ func (is sqliteSubscriptions) findSubscribed(topic string) ([]string, bool) {
 			log.Fatal(err)
 			return subscribers, false
 		}
-		fmt.Println(topic, clientid)
 		subscribers = append(subscribers, clientid)
 	}
 	err = rows.Err()
