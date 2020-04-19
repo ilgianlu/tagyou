@@ -43,7 +43,7 @@ func (is SqliteSubscriptions) addSubscription(s Subscription) error {
 		log.Println(err)
 		return err
 	}
-	tx.Commit()
+	_ = tx.Commit()
 	return nil
 }
 
@@ -64,7 +64,7 @@ func (is SqliteSubscriptions) remSubscription(topic string, clientId string) err
 		log.Println(err)
 		return err
 	}
-	tx.Commit()
+	_ = tx.Commit()
 	return nil
 }
 
@@ -165,7 +165,7 @@ func (is SqliteSubscriptions) remSubscriptionsByTopic(topic string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tx.Commit()
+	_ = tx.Commit()
 }
 
 func (is SqliteSubscriptions) remSubscriptionsByClientId(clientId string) {
@@ -182,7 +182,7 @@ func (is SqliteSubscriptions) remSubscriptionsByClientId(clientId string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tx.Commit()
+	_ = tx.Commit()
 }
 
 func (is SqliteSubscriptions) disableClientSubscriptions(clientId string) {
@@ -199,7 +199,7 @@ func (is SqliteSubscriptions) disableClientSubscriptions(clientId string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tx.Commit()
+	_ = tx.Commit()
 }
 
 func (is SqliteSubscriptions) enableClientSubscriptions(clientId string) {
@@ -216,5 +216,5 @@ func (is SqliteSubscriptions) enableClientSubscriptions(clientId string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tx.Commit()
+	_ = tx.Commit()
 }

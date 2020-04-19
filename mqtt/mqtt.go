@@ -24,7 +24,7 @@ func StartMQTT(port string) {
 
 	go rangeEvents(subscriptions, connections, events)
 
-	startTCP(subscriptions, events, port)
+	startTCP(events, port)
 }
 
 func openDb() (*sql.DB, error) {
@@ -123,7 +123,7 @@ func clientUnsubscription(subscriptions Subscriptions, e Event) {
 }
 
 func clientPublish(subs Subscriptions, connections Connections, e Event) {
-	dests := subs.findSubscriptionsByTopic(e.topic)
+	dests := subs.findTopicSubscribers(e.topic)
 	for i := 0; i < len(dests); i++ {
 		if c, ok := connections.findConn(dests[i].clientId); ok {
 			n, err := c.publish(append(e.packet.header, e.packet.remainingBytes...))
@@ -159,7 +159,7 @@ func clientDisconnect(subscriptions Subscriptions, connections Connections, e Ev
 	}
 }
 
-func startTCP(subs Subscriptions, events chan<- Event, port string) {
+func startTCP(events chan<- Event, port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
@@ -188,11 +188,13 @@ func handleConnection(events chan<- Event, conn net.Conn) {
 			if err, ok := rErr.(net.Error); ok && err.Timeout() {
 				log.Println("keepalive not respected!")
 				sendWill(conn, &connection, events)
+				disconnectClient(&connection, events)
 				break
 			}
 			if rErr == io.EOF {
 				log.Println("connection closed!")
 				sendWill(conn, &connection, events)
+				disconnectClient(&connection, events)
 				break
 			}
 		}
@@ -217,4 +219,12 @@ func sendWill(conn net.Conn, connection *Connection, e chan<- Event) {
 		event.packet = &willPacket
 		e <- event
 	}
+}
+
+func disconnectClient(connection *Connection, e chan<- Event) {
+	var event Event
+	event.eventType = EVENT_DISCONNECT
+	event.clientId = connection.clientId
+	event.connection = connection
+	e <- event
 }
