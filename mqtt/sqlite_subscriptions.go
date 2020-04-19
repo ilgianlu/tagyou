@@ -8,7 +8,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const SQL_INSERT = "insert into subscriptions(topic, clientid, enabled, created_at) values(?, ?, ?, ?)"
+const SQL_INSERT = `insert into subscriptions(
+	topic, clientid, enabled, created_at,
+	qos, retain_handling, retain_as_published, no_local)
+	values(?, ?, ?, ?, ?, ?, ?, ?)`
 const SQL_DELETE = "delete from subscriptions where topic = ? and clientid = ?"
 const SQL_DELETE_TOPIC = "delete from subscriptions where topic = ?"
 const SQL_DELETE_CLIENTID = "delete from subscriptions where clientid = ?"
@@ -32,7 +35,10 @@ func (is SqliteSubscriptions) addSubscription(s Subscription) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(s.topic, s.clientId, s.enabled, s.createdAt.Unix())
+	_, err = stmt.Exec(
+		s.topic, s.clientId, s.enabled, s.createdAt.Unix(),
+		s.QoS, s.RetainHandling, s.RetainAsPublished, s.NoLocal,
+	)
 	if err != nil {
 		log.Println(err)
 		return err

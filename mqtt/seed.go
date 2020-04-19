@@ -21,7 +21,7 @@ func Seed(filename string) {
 		clientid text,
 		qos integer,
 		retain_handling integer,
-		retain_as_published integer
+		retain_as_published integer,
 		no_local integer,
 		enabled integer,
 		created_at integer

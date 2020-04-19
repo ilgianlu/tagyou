@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 )
 
 type Packet struct {
@@ -218,16 +219,18 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 		s := string(p.remainingBytes[i : i+sl])
 		subevent.subscription.clientId = c.clientId
 		subevent.subscription.topic = s
-		e <- subevent
 		i = i + sl
 		if p.remainingBytes[i]&0x12 != 0 {
 			log.Println("ignore this subscription & stop")
 			break
 		}
-		subevent.subscription.subRetainHandling = p.remainingBytes[i] & 0x30 >> 4
-		subevent.subscription.subRetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
-		subevent.subscription.subNoLocal = p.remainingBytes[i] & 0x04 >> 2
-		subevent.subscription.subQoS = p.remainingBytes[i] & 0x03
+		subevent.subscription.RetainHandling = p.remainingBytes[i] & 0x30 >> 4
+		subevent.subscription.RetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
+		subevent.subscription.NoLocal = p.remainingBytes[i] & 0x04 >> 2
+		subevent.subscription.QoS = p.remainingBytes[i] & 0x03
+		subevent.subscription.enabled = true
+		subevent.subscription.createdAt = time.Now()
+		e <- subevent
 		i++
 		if i >= len(p.remainingBytes)-1 {
 			break
