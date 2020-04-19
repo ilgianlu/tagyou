@@ -84,3 +84,32 @@ func TestSqliteEnableDisableSubscription(t *testing.T) {
 		t.Errorf("expected 2 subscribers, got %d", len(subs))
 	}
 }
+
+func TestSqliteCannotDuplicateSubscription(t *testing.T) {
+	subscriptions, err := testSeed()
+	if err != nil {
+		t.Errorf("error opening test db %s", err)
+	}
+	s0 := Subscription{
+		topic:    "topic",
+		clientId: "gianluca",
+		enabled:  true,
+	}
+	err = subscriptions.addSubscription(s0)
+	if err != nil {
+		t.Errorf("did not expect an error %s", err)
+	}
+	s1 := Subscription{
+		topic:    "topic",
+		clientId: "gianluca",
+		enabled:  true,
+	}
+	err = subscriptions.addSubscription(s1)
+	if err == nil {
+		t.Errorf("expected an error!")
+	}
+	subs := subscriptions.findSubscriptionsByTopic("topic")
+	if len(subs) != 1 {
+		t.Errorf("duplicated subscription!, got %d subscriptions", len(subs))
+	}
+}

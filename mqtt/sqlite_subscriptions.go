@@ -34,7 +34,7 @@ func (is SqliteSubscriptions) addSubscription(s Subscription) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(s.topic, s.clientId, s.enabled)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	tx.Commit()
@@ -55,7 +55,7 @@ func (is SqliteSubscriptions) remSubscription(topic string, clientId string) err
 	defer stmt.Close()
 	_, err = stmt.Exec(topic, clientId)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	tx.Commit()
@@ -87,14 +87,14 @@ func (is SqliteSubscriptions) findSubscriptionsByTopic(topic string) []Subscript
 			s.enabled = true
 		}
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return subscribers
 		}
 		subscribers = append(subscribers, s)
 	}
 	err = rows.Err()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return subscribers
 	}
 

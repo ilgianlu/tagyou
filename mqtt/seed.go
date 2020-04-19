@@ -27,6 +27,7 @@ func Seed(filename string) {
 	);
 	create index subscribed_topics on subscriptions(topic);
 	create index subscribers on subscriptions(clientid);
+	create unique index topic_client_sub on subscriptions(topic, clientid);
 	delete from subscriptions;
 	`
 	_, err = db.Exec(sqlStmt)
