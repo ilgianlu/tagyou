@@ -3,6 +3,7 @@ package mqtt
 import (
 	"database/sql"
 	"testing"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -19,18 +20,20 @@ func TestSqliteAddRemoveSubscription(t *testing.T) {
 		t.Errorf("error opening test db %s", err)
 	}
 	s0 := Subscription{
-		topic:    "topic",
-		clientId: "gianluca",
-		enabled:  true,
+		topic:     "topic",
+		clientId:  "gianluca",
+		enabled:   true,
+		createdAt: time.Now(),
 	}
 	err = subscriptions.addSubscription(s0)
 	if err != nil {
 		t.Errorf("did not expect an error %s", err)
 	}
 	s1 := Subscription{
-		topic:    "topic",
-		clientId: "carlo",
-		enabled:  true,
+		topic:     "topic",
+		clientId:  "carlo",
+		enabled:   true,
+		createdAt: time.Now(),
 	}
 	err = subscriptions.addSubscription(s1)
 	if err != nil {
@@ -61,9 +64,10 @@ func TestSqliteEnableDisableSubscription(t *testing.T) {
 		t.Errorf("did not expect an error %s", err)
 	}
 	s1 := Subscription{
-		topic:    "topic",
-		clientId: "carlo",
-		enabled:  true,
+		topic:     "topic",
+		clientId:  "carlo",
+		enabled:   true,
+		createdAt: time.Now(),
 	}
 	err = subscriptions.addSubscription(s1)
 	if err != nil {
@@ -91,18 +95,20 @@ func TestSqliteCannotDuplicateSubscription(t *testing.T) {
 		t.Errorf("error opening test db %s", err)
 	}
 	s0 := Subscription{
-		topic:    "topic",
-		clientId: "gianluca",
-		enabled:  true,
+		topic:     "topic",
+		clientId:  "gianluca",
+		enabled:   true,
+		createdAt: time.Now(),
 	}
 	err = subscriptions.addSubscription(s0)
 	if err != nil {
 		t.Errorf("did not expect an error %s", err)
 	}
 	s1 := Subscription{
-		topic:    "topic",
-		clientId: "gianluca",
-		enabled:  true,
+		topic:     "topic",
+		clientId:  "gianluca",
+		enabled:   true,
+		createdAt: time.Now(),
 	}
 	err = subscriptions.addSubscription(s1)
 	if err == nil {

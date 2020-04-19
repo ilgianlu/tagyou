@@ -64,7 +64,7 @@ func rangeEvents(subscriptions Subscriptions, connections Connections, events <-
 			clientPing(e)
 		case EVENT_DISCONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
-			clientDisconnect(connections, e)
+			clientDisconnect(subscriptions, connections, e)
 		}
 	}
 }
@@ -144,7 +144,8 @@ func clientPing(e Event) {
 	}
 }
 
-func clientDisconnect(connections Connections, e Event) {
+func clientDisconnect(subscriptions Subscriptions, connections Connections, e Event) {
+	subscriptions.disableClientSubscriptions(e.clientId)
 	if toRem, ok := connections.findConn(e.clientId); ok {
 
 		err0 := connections.remConn(toRem.clientId)

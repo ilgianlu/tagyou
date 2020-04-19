@@ -1,5 +1,7 @@
 package mqtt
 
+import "time"
+
 type Subscription struct {
 	clientId             string
 	topic                string
@@ -8,4 +10,5 @@ type Subscription struct {
 	subNoLocal           uint8
 	subQoS               uint8
 	enabled              bool
+	createdAt            time.Time
 }

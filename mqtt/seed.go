@@ -23,7 +23,8 @@ func Seed(filename string) {
 		retain_handling integer,
 		retain_as_published integer
 		no_local integer,
-		enabled integer
+		enabled integer,
+		created_at integer
 	);
 	create index subscribed_topics on subscriptions(topic);
 	create index subscribers on subscriptions(clientid);
