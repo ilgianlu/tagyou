@@ -19,11 +19,7 @@ func StartMQTT(port string) {
 	defer db.Close()
 
 	connections := make(inMemoryConnections)
-	// subscriptions := SqliteSubscriptions{db: db}
-	subscriptions := inMemorySubscriptions{
-		topicSubscriptions:  make(map[string][]string),
-		clientSubscriptions: make(map[string][]string),
-	}
+	subscriptions := SqliteSubscriptions{db: db}
 	events := make(chan Event, 1)
 
 	go rangeEvents(subscriptions, connections, events)
@@ -34,7 +30,7 @@ func StartMQTT(port string) {
 func openDb() (*sql.DB, error) {
 	if _, err := os.Stat(os.Getenv("DB_FILE")); err != nil {
 		if os.IsNotExist(err) {
-			Seed()
+			Seed(os.Getenv("DB_FILE"))
 		} else {
 			return nil, err
 		}
@@ -79,13 +75,9 @@ func clientConnection(connections Connections, subscriptions Subscriptions, e Ev
 		log.Println("could not add connection", aerr)
 	}
 	if e.connection.cleanStart() {
-		subscriptions.remSubscribed(e.clientId)
+		subscriptions.remSubscriptionsByClientId(e.clientId)
 	} else {
-		if s, ok := subscriptions.findSubscribed(e.clientId); ok {
-			for i := 0; i < len(s); i++ {
-				subscriptions.remSubscription(e.clientId, s[i])
-			}
-		}
+		subscriptions.enableClientSubscriptions(e.clientId)
 	}
 	if e.err != 0 {
 		_, werr := e.connection.conn.Write(Connack(e.err))
@@ -109,7 +101,7 @@ func clientSubscribed(e Event) {
 }
 
 func clientSubscription(subscriptions Subscriptions, e Event) {
-	err := subscriptions.addSubscription(e.topic, e.clientId)
+	err := subscriptions.addSubscription(e.subscription)
 	if err != nil {
 		log.Println("cannot persist subscription:", err)
 	}
@@ -131,14 +123,14 @@ func clientUnsubscription(subscriptions Subscriptions, e Event) {
 }
 
 func clientPublish(subs Subscriptions, connections Connections, e Event) {
-	dests := subs.findSubscribers(e.topic)
+	dests := subs.findSubscriptionsByTopic(e.topic)
 	for i := 0; i < len(dests); i++ {
-		if c, ok := connections.findConn(dests[i]); ok {
+		if c, ok := connections.findConn(dests[i].clientId); ok {
 			n, err := c.publish(append(e.packet.header, e.packet.remainingBytes...))
 			if err != nil {
-				log.Println("cannot write to", dests[i], ":", err)
+				log.Println("cannot write to", dests[i].clientId, ":", err)
 			}
-			log.Println("published", n, "bytes to", dests[i])
+			log.Println("published", n, "bytes to", dests[i].clientId)
 		} else {
 			log.Println(dests[i], "is not connected")
 		}

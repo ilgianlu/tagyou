@@ -6,19 +6,25 @@ import (
 	"os"
 )
 
-const TABLE_SUBSCRIPTIONS = "subscriptions"
+func Seed(filename string) {
+	os.Remove(filename)
 
-func Seed() {
-	os.Remove(os.Getenv("DB_FILE"))
-
-	db, err := sql.Open("sqlite3", os.Getenv("DB_FILE"))
+	db, err := sql.Open("sqlite3", filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
+	// SUBSCRIPTIONS
 	sqlStmt := `
-	create table subscriptions (topic text, clientid text);
+	create table subscriptions (
+		topic text,
+		clientid text,
+		qos integer,
+		retain_handling integer,
+		retain_as_published integer
+		no_local integer,
+		enabled integer
+	);
 	create index subscribed_topics on subscriptions(topic);
 	create index subscribers on subscriptions(clientid);
 	delete from subscriptions;

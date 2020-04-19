@@ -2,30 +2,37 @@ package mqtt
 
 import (
 	"database/sql"
-	"strings"
 	"log"
-	"fmt"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type sqliteSubscriptions struct {
+const SQL_INSERT = "insert into subscriptions(topic, clientid, enabled) values(?, ?, ?)"
+const SQL_DELETE = "delete from subscriptions where topic = ? and clientid = ?"
+const SQL_DELETE_TOPIC = "delete from subscriptions where topic = ?"
+const SQL_DELETE_CLIENTID = "delete from subscriptions where clientid = ?"
+const SQL_SELECT_TOPIC = "select topic, clientid, enabled from subscriptions where topic = ? and enabled = 1"
+const SQL_SELECT_CLIENTID = "select topic, clientid, enabled from subscriptions where clientid = ? and enabled = 1"
+const SQL_UPDATE_CLIENTID = "update subscriptions set enabled = ? where clientid = ?"
+
+type SqliteSubscriptions struct {
 	db *sql.DB
 }
 
-func (is sqliteSubscriptions) addSubscription(topic string, subscriber string) error {
+func (is SqliteSubscriptions) addSubscription(s Subscription) error {
 	tx, err := is.db.Begin()
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
-	stmt, err := tx.Prepare(fmt.Sprintf("insert into %s(topic, clientid) values(?, ?)", TABLE_SUBSCRIPTIONS))
+	stmt, err := tx.Prepare(SQL_INSERT)
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(topic, subscriber)
+	_, err = stmt.Exec(s.topic, s.clientId, s.enabled)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -34,19 +41,19 @@ func (is sqliteSubscriptions) addSubscription(topic string, subscriber string) e
 	return nil
 }
 
-func (is sqliteSubscriptions) remSubscription(topic string, subscriber string) error {
+func (is SqliteSubscriptions) remSubscription(topic string, clientId string) error {
 	tx, err := is.db.Begin()
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
-	stmt, err := tx.Prepare(fmt.Sprintf("delete from %s where topic = ? and clientid = ?", TABLE_SUBSCRIPTIONS))
+	stmt, err := tx.Prepare(SQL_DELETE)
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(topic, subscriber)
+	_, err = stmt.Exec(topic, clientId)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -55,72 +62,151 @@ func (is sqliteSubscriptions) remSubscription(topic string, subscriber string) e
 	return nil
 }
 
-func (is sqliteSubscriptions) findSubscribers(topic string) []string {
+func (is SqliteSubscriptions) findTopicSubscribers(topic string) []Subscription {
 	topicSegments := strings.Split(topic, TOPIC_SEPARATOR)
 	if len(topicSegments) == 1 {
-		if s, ok := is.findSubscribed(topic); ok {
-			return s
-		} else {
-			return []string{}
-		}
+		return is.findSubscriptionsByTopic(topic)
 	} else {
 		return is.multiSegmentSubs(topicSegments)
 	}
 }
 
-func (is sqliteSubscriptions) findSubscribed(topic string) ([]string, bool) {
-	subscribers := []string{}
-	rows, err := is.db.Query(fmt.Sprintf("select topic, clientid from %s where topic = ?", TABLE_SUBSCRIPTIONS), topic)
+func (is SqliteSubscriptions) findSubscriptionsByTopic(topic string) []Subscription {
+	subscribers := []Subscription{}
+	rows, err := is.db.Query(SQL_SELECT_TOPIC, topic)
 	if err != nil {
 		log.Fatal(err)
-		return subscribers, false
+		return subscribers
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var topic string
-		var clientid string
-		err = rows.Scan(&topic, &clientid)
+		var s Subscription
+		var enabled int
+		err = rows.Scan(&s.topic, &s.clientId, &enabled)
+		if enabled == 1 {
+			s.enabled = true
+		}
 		if err != nil {
 			log.Fatal(err)
-			return subscribers, false
+			return subscribers
 		}
-		subscribers = append(subscribers, clientid)
+		subscribers = append(subscribers, s)
 	}
 	err = rows.Err()
 	if err != nil {
 		log.Fatal(err)
-		return subscribers, false
+		return subscribers
 	}
 
-	return subscribers, true
+	return subscribers
 }
 
-func (is sqliteSubscriptions) multiSegmentSubs(topicSegments []string) []string {
-	subs := make([]string, 0)
+func (is SqliteSubscriptions) findSubscriptionsByClientId(clientId string) []Subscription {
+	subscribers := []Subscription{}
+	rows, err := is.db.Query(SQL_SELECT_CLIENTID, clientId)
+	if err != nil {
+		log.Fatal(err)
+		return subscribers
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var s Subscription
+		var enabled int
+		err = rows.Scan(&s.topic, &s.clientId, &enabled)
+		if enabled == 1 {
+			s.enabled = true
+		}
+		if err != nil {
+			log.Fatal(err)
+			return subscribers
+		}
+		subscribers = append(subscribers, s)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+		return subscribers
+	}
+
+	return subscribers
+}
+
+func (is SqliteSubscriptions) multiSegmentSubs(topicSegments []string) []Subscription {
+	subs := []Subscription{}
 	for i := 1; i <= len(topicSegments); i++ {
 		subT := append(make([]string, 0), topicSegments[:i]...)
 		if len(subT) < len(topicSegments) {
 			subT = append(subT, TOPIC_WILDCARD)
 		}
 		t := strings.Join(subT, TOPIC_SEPARATOR)
-		if ss, ok := is.findSubscribed(t); ok {
-			subs = append(subs, ss...)
-		}
+		ss := is.findSubscriptionsByTopic(t)
+		subs = append(subs, ss...)
 	}
 	return subs
 }
 
-func (is sqliteSubscriptions) remSubscribed(topic string) {
+func (is SqliteSubscriptions) remSubscriptionsByTopic(topic string) {
 	tx, err := is.db.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt, err := tx.Prepare(fmt.Sprintf("delete from %s where topic = ?", TABLE_SUBSCRIPTIONS))
+	stmt, err := tx.Prepare(SQL_DELETE_TOPIC)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(topic)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tx.Commit()
+}
+
+func (is SqliteSubscriptions) remSubscriptionsByClientId(clientId string) {
+	tx, err := is.db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt, err := tx.Prepare(SQL_DELETE_CLIENTID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(clientId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tx.Commit()
+}
+
+func (is SqliteSubscriptions) disableClientSubscriptions(clientId string) {
+	tx, err := is.db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt, err := tx.Prepare(SQL_UPDATE_CLIENTID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(0, clientId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tx.Commit()
+}
+
+func (is SqliteSubscriptions) enableClientSubscriptions(clientId string) {
+	tx, err := is.db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt, err := tx.Prepare(SQL_UPDATE_CLIENTID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(1, clientId)
 	if err != nil {
 		log.Fatal(err)
 	}

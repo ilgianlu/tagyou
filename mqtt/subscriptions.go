@@ -1,9 +1,13 @@
 package mqtt
 
 type Subscriptions interface {
-	addSubscription(string, string) error
-	remSubscription(string, string) error
-	findSubscribers(string) []string
-	findSubscribed(string) ([]string, bool)
-	remSubscribed(string)
+	addSubscription(s Subscription) error
+	remSubscription(topic string, clientId string) error
+	findSubscriptionsByTopic(topic string) []Subscription
+	findSubscriptionsByClientId(clientId string) []Subscription
+	findTopicSubscribers(topic string) []Subscription
+	remSubscriptionsByTopic(topic string)
+	remSubscriptionsByClientId(clientId string)
+	disableClientSubscriptions(clientId string)
+	enableClientSubscriptions(clientId string)
 }

@@ -11,10 +11,11 @@ const EVENT_DISCONNECT = 100
 const EVENT_KEEPALIVE_TIMEOUT = 101
 
 type Event struct {
-	eventType  int
-	clientId   string
-	topic      string
-	connection *Connection
-	packet     *Packet
-	err        uint8
+	eventType    int
+	clientId     string
+	topic        string
+	subscription Subscription
+	connection   *Connection
+	packet       *Packet
+	err          uint8
 }

@@ -1,8 +1,8 @@
 package mqtt
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -183,6 +183,12 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 	event.clientId = c.clientId
 	event.connection = c
 	event.packet = p
+	if p.flags != 2 {
+		log.Println("malformed packet")
+		event.err = MALFORMED_PACKET
+		e <- event
+		return nil
+	}
 	i := 0
 	pi := Read2BytesInt(p.remainingBytes, i)
 	p.packetIdentifier = pi
@@ -203,23 +209,31 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 		}
 		i++
 	}
-	subs := make([]string, 10)
 	j := 0
 	for {
 		var subevent Event
 		subevent.eventType = EVENT_SUBSCRIPTION
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		subs[j] = string(p.remainingBytes[i : i+sl])
-		subevent.clientId = c.clientId
-		subevent.topic = subs[j]
+		s := string(p.remainingBytes[i : i+sl])
+		subevent.subscription.clientId = c.clientId
+		subevent.subscription.topic = s
 		e <- subevent
 		i = i + sl
+		if p.remainingBytes[i]&0x12 != 0 {
+			log.Println("ignore this subscription & stop")
+			break
+		}
+		subevent.subscription.subRetainHandling = p.remainingBytes[i] & 0x30 >> 4
+		subevent.subscription.subRetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
+		subevent.subscription.subNoLocal = p.remainingBytes[i] & 0x04 >> 2
+		subevent.subscription.subQoS = p.remainingBytes[i] & 0x03
+		i++
 		if i >= len(p.remainingBytes)-1 {
 			break
 		}
 		j++
-		if j > 10 {
+		if j > MAX_TOPIC_SINGLE_SUBSCRIBE {
 			break
 		}
 	}
