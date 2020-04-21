@@ -123,7 +123,7 @@ func clientUnsubscription(subscriptions Subscriptions, e Event) {
 }
 
 func clientPublish(subs Subscriptions, connections Connections, e Event) {
-	dests := subs.findTopicSubscribers(e.topic)
+	dests := subs.findTopicSubscribers(e.published.topic)
 	for i := 0; i < len(dests); i++ {
 		if c, ok := connections.findConn(dests[i].clientId); ok {
 			n, err := c.publish(append(e.packet.header, e.packet.remainingBytes...))
@@ -132,7 +132,7 @@ func clientPublish(subs Subscriptions, connections Connections, e Event) {
 			}
 			log.Println("published", n, "bytes to", dests[i].clientId)
 		} else {
-			log.Println(dests[i], "is not connected")
+			log.Println(dests[i].clientId, "is not connected")
 		}
 	}
 }

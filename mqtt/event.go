@@ -15,6 +15,7 @@ type Event struct {
 	clientId     string
 	topic        string
 	subscription Subscription
+	published    Published
 	connection   *Connection
 	packet       *Packet
 	err          uint8

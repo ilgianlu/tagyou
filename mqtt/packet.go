@@ -75,7 +75,7 @@ func (p *Packet) emit(connection *Connection, e chan<- Event) error {
 	case PACKET_TYPE_CONNECT:
 		return p.connectReq(e, connection)
 	case PACKET_TYPE_PUBLISH:
-		return p.publishReq(e)
+		return p.publishReq(e, connection)
 	case PACKET_TYPE_SUBSCRIBE:
 		return p.subscribeReq(e, connection)
 	case PACKET_TYPE_UNSUBSCRIBE:
@@ -165,14 +165,22 @@ func (p *Packet) disconnectReq(e chan<- Event, connection *Connection) error {
 	return nil
 }
 
-func (p *Packet) publishReq(e chan<- Event) error {
+func (p *Packet) publishReq(e chan<- Event, c *Connection) error {
 	var event Event
 	event.eventType = EVENT_PUBLISH
+	event.clientId = c.clientId
+	event.published.dup = (p.flags & 0x08 >> 3) == 0
+	event.published.qos = p.flags & 0x06 >> 1
+	event.published.retain = (p.flags & 0x01) == 0
 	i := 0
 	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	topic := string(p.remainingBytes[i : i+tl])
-	event.topic = topic
+	event.published.topic = topic
+	if event.published.qos != 0 {
+		pi := Read2BytesInt(p.remainingBytes, i)
+		p.packetIdentifier = pi
+	}
 	event.packet = p
 	e <- event
 	return nil
