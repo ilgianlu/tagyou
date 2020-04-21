@@ -17,7 +17,10 @@
 # data files
 *.db
 *.db3
-.env*
+
+# only default env
+.env.*
+!.env.default.local
 
 # main binary
 tagyou
