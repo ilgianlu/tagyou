@@ -14,7 +14,12 @@ func Seed(filename string) {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	// SUBSCRIPTIONS
+
+	createSubscriptions(db)
+	createRetains(db)
+}
+
+func createSubscriptions(db *sql.DB) {
 	sqlStmt := `
 	create table subscriptions (
 		topic text,
@@ -31,7 +36,24 @@ func Seed(filename string) {
 	create unique index topic_client_sub on subscriptions(topic, clientid);
 	delete from subscriptions;
 	`
-	_, err = db.Exec(sqlStmt)
+	_, err := db.Exec(sqlStmt)
+	if err != nil {
+		log.Printf("%q: %s\n", err, sqlStmt)
+		return
+	}
+}
+
+func createRetains(db *sql.DB) {
+	sqlStmt := `
+	create table retains (
+		topic text,
+		application_message blob,
+		created_at integer
+	);
+	create unique index topic_retain on retains(topic);
+	delete from retains;
+	`
+	_, err := db.Exec(sqlStmt)
 	if err != nil {
 		log.Printf("%q: %s\n", err, sqlStmt)
 		return
