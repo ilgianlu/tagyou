@@ -8,16 +8,16 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const SQL_INSERT = `insert into subscriptions(
+const SUBSCRIPTION_INSERT = `insert into subscriptions(
 	topic, clientid, enabled, created_at,
 	qos, retain_handling, retain_as_published, no_local)
 	values(?, ?, ?, ?, ?, ?, ?, ?)`
-const SQL_DELETE = "delete from subscriptions where topic = ? and clientid = ?"
-const SQL_DELETE_TOPIC = "delete from subscriptions where topic = ?"
-const SQL_DELETE_CLIENTID = "delete from subscriptions where clientid = ?"
-const SQL_SELECT_TOPIC = "select topic, clientid, enabled from subscriptions where topic = ? and enabled = 1"
-const SQL_SELECT_CLIENTID = "select topic, clientid, enabled from subscriptions where clientid = ? and enabled = 1"
-const SQL_UPDATE_CLIENTID = "update subscriptions set enabled = ? where clientid = ?"
+const SUBSCRIPTION_DELETE = "delete from subscriptions where topic = ? and clientid = ?"
+const SUBSCRIPTION_DELETE_TOPIC = "delete from subscriptions where topic = ?"
+const SUBSCRIPTION_DELETE_CLIENTID = "delete from subscriptions where clientid = ?"
+const SUBSCRIPTION_SELECT_TOPIC = "select topic, clientid, enabled from subscriptions where topic = ? and enabled = 1"
+const SUBSCRIPTION_SELECT_CLIENTID = "select topic, clientid, enabled from subscriptions where clientid = ? and enabled = 1"
+const SUBSCRIPTION_UPDATE_CLIENTID = "update subscriptions set enabled = ? where clientid = ?"
 
 type SqliteSubscriptions struct {
 	db *sql.DB
@@ -29,7 +29,7 @@ func (is SqliteSubscriptions) addSubscription(s Subscription) error {
 		log.Fatal(err)
 		return err
 	}
-	stmt, err := tx.Prepare(SQL_INSERT)
+	stmt, err := tx.Prepare(SUBSCRIPTION_INSERT)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -53,7 +53,7 @@ func (is SqliteSubscriptions) remSubscription(topic string, clientId string) err
 		log.Fatal(err)
 		return err
 	}
-	stmt, err := tx.Prepare(SQL_DELETE)
+	stmt, err := tx.Prepare(SUBSCRIPTION_DELETE)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -79,7 +79,7 @@ func (is SqliteSubscriptions) findTopicSubscribers(topic string) []Subscription 
 
 func (is SqliteSubscriptions) findSubscriptionsByTopic(topic string) []Subscription {
 	subscribers := []Subscription{}
-	rows, err := is.db.Query(SQL_SELECT_TOPIC, topic)
+	rows, err := is.db.Query(SUBSCRIPTION_SELECT_TOPIC, topic)
 	if err != nil {
 		log.Fatal(err)
 		return subscribers
@@ -109,7 +109,7 @@ func (is SqliteSubscriptions) findSubscriptionsByTopic(topic string) []Subscript
 
 func (is SqliteSubscriptions) findSubscriptionsByClientId(clientId string) []Subscription {
 	subscribers := []Subscription{}
-	rows, err := is.db.Query(SQL_SELECT_CLIENTID, clientId)
+	rows, err := is.db.Query(SUBSCRIPTION_SELECT_CLIENTID, clientId)
 	if err != nil {
 		log.Fatal(err)
 		return subscribers
@@ -156,7 +156,7 @@ func (is SqliteSubscriptions) remSubscriptionsByTopic(topic string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt, err := tx.Prepare(SQL_DELETE_TOPIC)
+	stmt, err := tx.Prepare(SUBSCRIPTION_DELETE_TOPIC)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func (is SqliteSubscriptions) remSubscriptionsByClientId(clientId string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt, err := tx.Prepare(SQL_DELETE_CLIENTID)
+	stmt, err := tx.Prepare(SUBSCRIPTION_DELETE_CLIENTID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func (is SqliteSubscriptions) disableClientSubscriptions(clientId string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt, err := tx.Prepare(SQL_UPDATE_CLIENTID)
+	stmt, err := tx.Prepare(SUBSCRIPTION_UPDATE_CLIENTID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -207,7 +207,7 @@ func (is SqliteSubscriptions) enableClientSubscriptions(clientId string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt, err := tx.Prepare(SQL_UPDATE_CLIENTID)
+	stmt, err := tx.Prepare(SUBSCRIPTION_UPDATE_CLIENTID)
 	if err != nil {
 		log.Fatal(err)
 	}
