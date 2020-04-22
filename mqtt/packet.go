@@ -170,9 +170,9 @@ func (p *Packet) publishReq(e chan<- Event, c *Connection) error {
 	var event Event
 	event.eventType = EVENT_PUBLISH
 	event.clientId = c.clientId
-	event.published.dup = (p.flags & 0x08 >> 3) == 0
+	event.published.dup = (p.flags & 0x08 >> 3) == 1
 	event.published.qos = p.flags & 0x06 >> 1
-	event.published.retain = (p.flags & 0x01) == 0
+	event.published.retain = (p.flags & 0x01) == 1
 	i := 0
 	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
