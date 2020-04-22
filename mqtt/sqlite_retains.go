@@ -17,28 +17,30 @@ type SqliteRetains struct {
 }
 
 func (is SqliteRetains) addRetain(r Retain) error {
+	rErr := is.remRetain(r.topic)
+	if rErr != nil {
+		log.Println(rErr)
+		return rErr
+	}
 	if len(r.applicationMessage) == 0 {
-		rErr := is.remRetain(r.topic)
-		if rErr != nil {
-			log.Fatal(rErr)
-			return rErr
-		}
 		return nil
 	}
 	tx, err := is.db.Begin()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	stmt, err := tx.Prepare(RETAIN_INSERT)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		_ = tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(r.topic, r.applicationMessage, r.createdAt.Unix())
 	if err != nil {
 		log.Println(err)
+		_ = tx.Rollback()
 		return err
 	}
 	_ = tx.Commit()
@@ -48,18 +50,20 @@ func (is SqliteRetains) addRetain(r Retain) error {
 func (is SqliteRetains) remRetain(topic string) error {
 	tx, err := is.db.Begin()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	stmt, err := tx.Prepare(RETAIN_DELETE)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		_ = tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(topic)
 	if err != nil {
 		log.Println(err)
+		_ = tx.Rollback()
 		return err
 	}
 	_ = tx.Commit()
@@ -70,7 +74,7 @@ func (is SqliteRetains) findRetainByTopic(topic string) []Retain {
 	retains := []Retain{}
 	rows, err := is.db.Query(RETAIN_SELECT_TOPIC, topic)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return retains
 	}
 	defer rows.Close()

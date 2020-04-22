@@ -32,6 +32,7 @@ func (is SqliteSubscriptions) addSubscription(s Subscription) error {
 	stmt, err := tx.Prepare(SUBSCRIPTION_INSERT)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
@@ -41,6 +42,7 @@ func (is SqliteSubscriptions) addSubscription(s Subscription) error {
 	)
 	if err != nil {
 		log.Println(err)
+		_ = tx.Rollback()
 		return err
 	}
 	_ = tx.Commit()
@@ -56,12 +58,14 @@ func (is SqliteSubscriptions) remSubscription(topic string, clientId string) err
 	stmt, err := tx.Prepare(SUBSCRIPTION_DELETE)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(topic, clientId)
 	if err != nil {
 		log.Println(err)
+		_ = tx.Rollback()
 		return err
 	}
 	_ = tx.Commit()
@@ -155,15 +159,20 @@ func (is SqliteSubscriptions) remSubscriptionsByTopic(topic string) {
 	tx, err := is.db.Begin()
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	stmt, err := tx.Prepare(SUBSCRIPTION_DELETE_TOPIC)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
+		return
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(topic)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
+		return
 	}
 	_ = tx.Commit()
 }
@@ -172,15 +181,20 @@ func (is SqliteSubscriptions) remSubscriptionsByClientId(clientId string) {
 	tx, err := is.db.Begin()
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	stmt, err := tx.Prepare(SUBSCRIPTION_DELETE_CLIENTID)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
+		return
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(clientId)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
+		return
 	}
 	_ = tx.Commit()
 }
@@ -189,15 +203,20 @@ func (is SqliteSubscriptions) disableClientSubscriptions(clientId string) {
 	tx, err := is.db.Begin()
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	stmt, err := tx.Prepare(SUBSCRIPTION_UPDATE_CLIENTID)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
+		return
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(0, clientId)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
+		return
 	}
 	_ = tx.Commit()
 }
@@ -206,15 +225,20 @@ func (is SqliteSubscriptions) enableClientSubscriptions(clientId string) {
 	tx, err := is.db.Begin()
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	stmt, err := tx.Prepare(SUBSCRIPTION_UPDATE_CLIENTID)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
+		return
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(1, clientId)
 	if err != nil {
 		log.Fatal(err)
+		_ = tx.Rollback()
+		return
 	}
 	_ = tx.Commit()
 }
