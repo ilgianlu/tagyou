@@ -10,13 +10,21 @@ import (
 const RETAIN_INSERT = `insert into retains(topic, application_message, created_at)
 	values(?, ?, ?)`
 const RETAIN_DELETE = "delete from retains where topic = ?"
-const RETAIN_SELECT_TOPIC = "select topic, application_message, created_at from retains where topic = ?"
+const RETAIN_SELECT_TOPIC = "select topic, application_message from retains where topic = ?"
 
 type SqliteRetains struct {
 	db *sql.DB
 }
 
 func (is SqliteRetains) addRetain(r Retain) error {
+	if len(r.applicationMessage) == 0 {
+		rErr := is.remRetain(r.topic)
+		if rErr != nil {
+			log.Fatal(rErr)
+			return rErr
+		}
+		return nil
+	}
 	tx, err := is.db.Begin()
 	if err != nil {
 		log.Fatal(err)
@@ -68,7 +76,7 @@ func (is SqliteRetains) findRetainByTopic(topic string) []Retain {
 	defer rows.Close()
 	for rows.Next() {
 		var r Retain
-		err = rows.Scan(&r.topic, &r.applicationMessage, &r.createdAt)
+		err = rows.Scan(&r.topic, &r.applicationMessage)
 		if err != nil {
 			log.Println(err)
 			return retains

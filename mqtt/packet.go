@@ -8,12 +8,13 @@ import (
 )
 
 type Packet struct {
-	header           []byte
-	packetType       uint8
-	flags            uint8
-	remainingBytes   []byte
-	packetIdentifier int
-	subscribedCount  int
+	header             []byte
+	packetType         uint8
+	flags              uint8
+	remainingBytes     []byte
+	applicationMessage int
+	packetIdentifier   int
+	subscribedCount    int
 }
 
 func ReadPacket(conn net.Conn, connection *Connection, e chan<- Event) (Packet, error) {
@@ -180,7 +181,9 @@ func (p *Packet) publishReq(e chan<- Event, c *Connection) error {
 	if event.published.qos != 0 {
 		pi := Read2BytesInt(p.remainingBytes, i)
 		p.packetIdentifier = pi
+		i = i + 2
 	}
+	p.applicationMessage = i
 	event.packet = p
 	e <- event
 	return nil

@@ -20,9 +20,10 @@ func StartMQTT(port string) {
 
 	connections := make(inMemoryConnections)
 	subscriptions := SqliteSubscriptions{db: db}
+	retains := SqliteRetains{db: db}
 	events := make(chan Event, 1)
 
-	go rangeEvents(subscriptions, connections, events)
+	go rangeEvents(subscriptions, retains, connections, events)
 
 	startTCP(events, port)
 }
@@ -38,7 +39,7 @@ func openDb() (*sql.DB, error) {
 	return sql.Open("sqlite3", os.Getenv("DB_FILE"))
 }
 
-func rangeEvents(subscriptions Subscriptions, connections Connections, events <-chan Event) {
+func rangeEvents(subscriptions Subscriptions, retains Retains, connections Connections, events <-chan Event) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
@@ -49,7 +50,7 @@ func rangeEvents(subscriptions Subscriptions, connections Connections, events <-
 			clientSubscribed(e)
 		case EVENT_SUBSCRIPTION:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscription", e.topic)
-			clientSubscription(subscriptions, e)
+			clientSubscription(subscriptions, retains, e)
 		case EVENT_UNSUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
 			clientUnsubscribed(e)
@@ -58,7 +59,7 @@ func rangeEvents(subscriptions Subscriptions, connections Connections, events <-
 			clientUnsubscription(subscriptions, e)
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
-			clientPublish(subscriptions, connections, e)
+			clientPublish(subscriptions, retains, connections, e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
 			clientPing(e)
@@ -100,10 +101,20 @@ func clientSubscribed(e Event) {
 	}
 }
 
-func clientSubscription(subscriptions Subscriptions, e Event) {
+func clientSubscription(subscriptions Subscriptions, retains Retains, e Event) {
 	err := subscriptions.addSubscription(e.subscription)
 	if err != nil {
 		log.Println("cannot persist subscription:", err)
+	}
+	sendRetain(retains, e)
+}
+
+func sendRetain(retains Retains, e Event) {
+	rs := retains.findRetainByTopic(e.subscription.topic)
+	p := Publish(e.subscription.QoS, true, e.topic, rs[0].applicationMessage)
+	_, werr := e.connection.conn.Write(append(p.header, p.remainingBytes...))
+	if werr != nil {
+		log.Println("could not write to", e.clientId)
 	}
 }
 
@@ -122,7 +133,10 @@ func clientUnsubscription(subscriptions Subscriptions, e Event) {
 	}
 }
 
-func clientPublish(subs Subscriptions, connections Connections, e Event) {
+func clientPublish(subs Subscriptions, retains Retains, connections Connections, e Event) {
+	if e.published.retain {
+		saveRetain(retains, e)
+	}
 	dests := subs.findTopicSubscribers(e.published.topic)
 	for i := 0; i < len(dests); i++ {
 		if c, ok := connections.findConn(dests[i].clientId); ok {
@@ -134,6 +148,17 @@ func clientPublish(subs Subscriptions, connections Connections, e Event) {
 		} else {
 			log.Println(dests[i].clientId, "is not connected")
 		}
+	}
+}
+
+func saveRetain(retains Retains, e Event) {
+	var r Retain
+	r.topic = e.published.topic
+	r.applicationMessage = e.packet.remainingBytes[e.packet.applicationMessage:]
+	r.createdAt = time.Now()
+	err := retains.addRetain(r)
+	if err != nil {
+		log.Println("could not save retained message:", err)
 	}
 }
 
