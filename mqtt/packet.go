@@ -60,12 +60,12 @@ func (p *Packet) read(conn net.Conn) error {
 	for bytesCount < remainingLength {
 		buffer = make([]byte, 1024)
 		n, err := conn.Read(buffer)
+		p.remainingBytes = append(p.remainingBytes, buffer[:n]...)
 		bytesCount = bytesCount + n
 		if err != nil {
 			log.Printf("error after %d byte read: %s\n", bytesCount, err)
 			return err
 		}
-		p.remainingBytes = append(p.remainingBytes, buffer[:n]...)
 	}
 	log.Printf("read %d bytes packet\n", bytesCount)
 	return nil
