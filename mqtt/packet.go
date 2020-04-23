@@ -178,6 +178,7 @@ func (p *Packet) publishReq(e chan<- Event, c *Connection) error {
 	i = i + 2
 	topic := string(p.remainingBytes[i : i+tl])
 	event.published.topic = topic
+	i = i + tl
 	if event.published.qos != 0 {
 		pi := Read2BytesInt(p.remainingBytes, i)
 		p.packetIdentifier = pi
@@ -225,6 +226,7 @@ func (p *Packet) subscribeReq(e chan<- Event, c *Connection) error {
 	for {
 		var subevent Event
 		subevent.eventType = EVENT_SUBSCRIPTION
+		subevent.connection = c
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])

@@ -110,14 +110,16 @@ func clientSubscription(subscriptions Subscriptions, retains Retains, e Event) {
 }
 
 func sendRetain(retains Retains, e Event) {
-	rs := retains.findRetainByTopic(e.subscription.topic)
+	rs := retains.findRetainsByTopic(e.subscription.topic)
 	if len(rs) == 0 {
 		return
 	}
-	p := Publish(e.subscription.QoS, true, e.topic, rs[0].applicationMessage)
-	_, werr := e.connection.conn.Write(append(p.header, p.remainingBytes...))
-	if werr != nil {
-		log.Println("could not write to", e.clientId)
+	for _, r := range rs {
+		p := Publish(e.subscription.QoS, true, r.topic, r.applicationMessage)
+		_, werr := e.connection.conn.Write(append(p.header, p.remainingBytes...))
+		if werr != nil {
+			log.Println("could not write to", e.clientId)
+		}
 	}
 }
 

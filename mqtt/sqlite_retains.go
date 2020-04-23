@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -11,6 +12,7 @@ const RETAIN_INSERT = `insert into retains(topic, application_message, created_a
 	values(?, ?, ?)`
 const RETAIN_DELETE = "delete from retains where topic = ?"
 const RETAIN_SELECT_TOPIC = "select topic, application_message from retains where topic = ?"
+const RETAIN_SELECT_LIKE_TOPIC = "select topic, application_message from retains where topic like ?"
 
 type SqliteRetains struct {
 	db *sql.DB
@@ -70,9 +72,15 @@ func (is SqliteRetains) remRetain(topic string) error {
 	return nil
 }
 
-func (is SqliteRetains) findRetainByTopic(topic string) []Retain {
+func (is SqliteRetains) findRetainsByTopic(topic string) []Retain {
 	retains := []Retain{}
-	rows, err := is.db.Query(RETAIN_SELECT_TOPIC, topic)
+	var rows *sql.Rows
+	var err error
+	if withWildCard(topic) {
+		rows, err = is.db.Query(RETAIN_SELECT_LIKE_TOPIC, fmt.Sprint(topic[:len(topic)-1], "%"))
+	} else {
+		rows, err = is.db.Query(RETAIN_SELECT_TOPIC, topic)
+	}
 	if err != nil {
 		log.Println(err)
 		return retains
@@ -94,4 +102,8 @@ func (is SqliteRetains) findRetainByTopic(topic string) []Retain {
 	}
 
 	return retains
+}
+
+func withWildCard(topic string) bool {
+	return topic[len(topic)-1:] == TOPIC_WILDCARD
 }
