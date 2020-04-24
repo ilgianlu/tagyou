@@ -17,6 +17,7 @@ func Seed(filename string) {
 
 	createSubscriptions(db)
 	createRetains(db)
+	createAuth(db)
 }
 
 func createSubscriptions(db *sql.DB) {
@@ -31,9 +32,9 @@ func createSubscriptions(db *sql.DB) {
 		enabled integer,
 		created_at integer
 	);
-	create index subscribed_topics on subscriptions(topic);
-	create index subscribers on subscriptions(clientid);
-	create unique index topic_client_sub on subscriptions(topic, clientid);
+	create index subscribed_topics_idx on subscriptions(topic);
+	create index subscribers_idx on subscriptions(clientid);
+	create unique index topic_client_sub_idx on subscriptions(topic, clientid);
 	delete from subscriptions;
 	`
 	_, err := db.Exec(sqlStmt)
@@ -50,8 +51,29 @@ func createRetains(db *sql.DB) {
 		application_message blob,
 		created_at integer
 	);
-	create unique index topic_retain on retains(topic);
+	create unique index topic_retain_idx on retains(topic);
 	delete from retains;
+	`
+	_, err := db.Exec(sqlStmt)
+	if err != nil {
+		log.Printf("%q: %s\n", err, sqlStmt)
+		return
+	}
+}
+
+func createAuth(db *sql.DB) {
+	sqlStmt := `
+	create table auth (
+		clientid text,
+		username text,
+		password text,
+		subscribe_acl text,
+		publish_acl text,
+		created_at integer
+	);
+	create unique index clientid_idx on auth(clientid);
+	create index clientid_username_idx on auth(clientid, username);
+	delete from auth;
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
