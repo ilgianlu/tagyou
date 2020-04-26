@@ -87,3 +87,16 @@ func (is SqliteAuths) findAuth(clientId string) (Auth, bool) {
 	}
 	return a, true
 }
+
+func (is SqliteAuths) checkAuth(clientId string, username string, password string) bool {
+	if a, ok := is.findAuth(clientId); ok {
+		if a.checkPassword(password) != nil {
+			log.Println("wrong credentials")
+			return false
+		} else {
+			return true
+		}
+	} else {
+		return false
+	}
+}

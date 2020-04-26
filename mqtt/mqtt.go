@@ -21,9 +21,10 @@ func StartMQTT(port string) {
 	connections := make(inMemoryConnections)
 	subscriptions := SqliteSubscriptions{db: db}
 	retains := SqliteRetains{db: db}
+	auths := SqliteAuths{db: db}
 	events := make(chan Event, 1)
 
-	go rangeEvents(subscriptions, retains, connections, events)
+	go rangeEvents(subscriptions, retains, connections, auths, events)
 
 	startTCP(events, port)
 }
@@ -39,12 +40,12 @@ func openDb() (*sql.DB, error) {
 	return sql.Open("sqlite3", os.Getenv("DB_FILE"))
 }
 
-func rangeEvents(subscriptions Subscriptions, retains Retains, connections Connections, events <-chan Event) {
+func rangeEvents(subscriptions Subscriptions, retains Retains, connections Connections, auths Auths, events <-chan Event) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client connect")
-			clientConnection(connections, subscriptions, e)
+			clientConnection(connections, subscriptions, auths, e)
 		case EVENT_SUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
 			clientSubscribed(e)
@@ -70,10 +71,15 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 	}
 }
 
-func clientConnection(connections Connections, subscriptions Subscriptions, e Event) {
+func clientConnection(connections Connections, subscriptions Subscriptions, auths Auths, e Event) {
+	if !auths.checkAuth(e.clientId, e.connection.username, e.connection.password) {
+		log.Println("wrong connect credentials")
+		return
+	}
 	aerr := connections.addConn(e.clientId, *e.connection)
 	if aerr != nil {
 		log.Println("could not add connection", aerr)
+		return
 	}
 	if e.connection.cleanStart() {
 		subscriptions.remSubscriptionsByClientId(e.clientId)

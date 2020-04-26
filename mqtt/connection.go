@@ -11,6 +11,8 @@ type Connection struct {
 	keepAlive       int
 	willTopic       string
 	willMessage     []byte
+	username        string
+	password        string
 	conn            net.Conn
 }
 
