@@ -63,17 +63,17 @@ func createRetains(db *sql.DB) {
 
 func createAuth(db *sql.DB) {
 	sqlStmt := `
-	create table auth (
+	create table auths (
 		clientid text,
 		username text,
-		password text,
+		password blob,
 		subscribe_acl text,
 		publish_acl text,
 		created_at integer
 	);
-	create unique index clientid_idx on auth(clientid);
-	create index clientid_username_idx on auth(clientid, username);
-	delete from auth;
+	create unique index clientid_idx on auths(clientid);
+	create index clientid_username_idx on auths(clientid, username);
+	delete from auths;
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
