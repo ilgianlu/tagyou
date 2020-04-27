@@ -12,6 +12,7 @@ import (
 )
 
 func StartMQTT(port string) {
+	DISALLOW_ANONYMOUS_LOGIN = os.Getenv("DISALLOW_ANONYMOUS_LOGIN") == "true"
 	db, err := openDb()
 	if err != nil {
 		log.Fatal(err)
@@ -72,7 +73,7 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 }
 
 func clientConnection(connections Connections, subscriptions Subscriptions, auths Auths, e Event) {
-	if !auths.checkAuth(e.clientId, e.connection.username, e.connection.password) {
+	if DISALLOW_ANONYMOUS_LOGIN && !auths.checkAuth(e.clientId, e.connection.username, e.connection.password) {
 		log.Println("wrong connect credentials")
 		return
 	}
