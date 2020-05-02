@@ -10,6 +10,8 @@ const EVENT_UNSUBSCRIPTION = 21
 const EVENT_DISCONNECT = 100
 const EVENT_KEEPALIVE_TIMEOUT = 101
 
+const EVENT_PACKET_ERR = 1000
+
 type Event struct {
 	eventType    int
 	clientId     string
@@ -17,6 +19,6 @@ type Event struct {
 	subscription Subscription
 	published    Published
 	connection   *Connection
-	packet       *Packet
+	packet       Packet
 	err          uint8
 }
