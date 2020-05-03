@@ -13,19 +13,19 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 			clientConnection(connections, subscriptions, auths, e, outQueue)
 		case EVENT_SUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
-			clientSubscribed(e)
+			clientSubscribed(e, outQueue)
 		case EVENT_SUBSCRIPTION:
 			log.Println("//!! EVENT type", e.eventType, e.subscription.clientId, "client subscription", e.subscription.topic)
-			clientSubscription(subscriptions, retains, e)
+			clientSubscription(subscriptions, retains, e, outQueue)
 		case EVENT_UNSUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
-			clientUnsubscribed(e)
+			clientUnsubscribed(e, outQueue)
 		case EVENT_UNSUBSCRIPTION:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscription", e.topic)
 			clientUnsubscription(subscriptions, e)
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.published.topic)
-			clientPublish(subscriptions, retains, connections, e)
+			clientPublish(subscriptions, retains, connections, e, outQueue)
 		case EVENT_PUBACKED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.packetIdentifier)
 			clientPuback(e)
@@ -67,43 +67,39 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 	outQueue <- o
 }
 
-func clientSubscribed(e Event) {
-	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS)
-	log.Println(p.toByteSlice())
-	_, werr := e.connection.conn.Write(p.toByteSlice())
-	if werr != nil {
-		log.Println("could not write to", e.clientId)
-	}
+func clientSubscribed(e Event, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS)
+	outQueue <- o
 }
 
-func clientSubscription(subscriptions Subscriptions, retains Retains, e Event) {
+func clientSubscription(subscriptions Subscriptions, retains Retains, e Event, outQueue chan<- OutData) {
 	err := subscriptions.addSubscription(e.subscription)
 	if err != nil {
 		log.Println("cannot persist subscription:", err)
 	}
-	sendRetain(retains, e)
+	sendRetain(retains, e, outQueue)
 }
 
-func sendRetain(retains Retains, e Event) {
+func sendRetain(retains Retains, e Event, outQueue chan<- OutData) {
 	rs := retains.findRetainsByTopic(e.subscription.topic)
 	if len(rs) == 0 {
 		return
 	}
 	for _, r := range rs {
-		p := Publish(e.subscription.QoS, true, r.topic, r.applicationMessage)
-		_, werr := e.connection.publish(p.toByteSlice())
-		if werr != nil {
-			log.Println("could not write to", e.clientId)
-		}
+		var o OutData
+		o.clientId = e.clientId
+		o.packet = Publish(e.subscription.QoS, true, r.topic, r.applicationMessage)
+		outQueue <- o
 	}
 }
 
-func clientUnsubscribed(e Event) {
-	p := Unsuback(e.packet.packetIdentifier, e.packet.subscribedCount)
-	_, werr := e.connection.publish(p.toByteSlice())
-	if werr != nil {
-		log.Println("could not write to", e.clientId)
-	}
+func clientUnsubscribed(e Event, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Unsuback(e.packet.packetIdentifier, e.packet.subscribedCount)
+	outQueue <- o
 }
 
 func clientUnsubscription(subscriptions Subscriptions, e Event) {
@@ -113,12 +109,12 @@ func clientUnsubscription(subscriptions Subscriptions, e Event) {
 	}
 }
 
-func clientPublish(subs Subscriptions, retains Retains, connections Connections, e Event) {
+func clientPublish(subs Subscriptions, retains Retains, connections Connections, e Event, outQueue chan<- OutData) {
 	if e.published.retain {
 		saveRetain(retains, e)
 	}
 	dests := subs.findTopicSubscribers(e.published.topic)
-	count := sendToDests(connections, dests, e.packet.toByteSlice())
+	count := sendToDests(connections, dests, e.packet, outQueue)
 	if e.published.qos == 1 {
 		var res uint8
 		if count == 0 {
@@ -127,27 +123,20 @@ func clientPublish(subs Subscriptions, retains Retains, connections Connections,
 			res = PUBACK_SUCCESS
 		}
 		log.Println("pub ack", e.packet.packetIdentifier, "being sent to", e.clientId)
-		p := Puback(e.packet.packetIdentifier, res)
-		_, werr := e.connection.publish(p.toByteSlice())
-		if werr != nil {
-			log.Println("could not write to", e.clientId)
-		}
+		var o OutData
+		o.clientId = e.clientId
+		o.packet = Puback(e.packet.packetIdentifier, res)
+		outQueue <- o
 	}
 }
 
-func sendToDests(connections Connections, dests []Subscription, data []byte) int {
+func sendToDests(connections Connections, dests []Subscription, p Packet, outQueue chan<- OutData) int {
 	count := 0
 	for i := 0; i < len(dests); i++ {
-		if c, ok := connections.findConn(dests[i].clientId); ok {
-			n, err := c.publish(data)
-			if err != nil {
-				log.Println("cannot write to", dests[i].clientId, ":", err)
-			}
-			count++
-			log.Println("published", n, "bytes to", dests[i].clientId)
-		} else {
-			log.Println(dests[i].clientId, "is not connected")
-		}
+		var o OutData
+		o.clientId = dests[i].clientId
+		o.packet = p
+		outQueue <- o
 	}
 	return count
 }
