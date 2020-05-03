@@ -80,6 +80,21 @@ func (p *Packet) checkHeader() bool {
 			return false
 		}
 		return true
+	case PACKET_TYPE_PUBREC:
+		if p.Flags() != 0 {
+			return false
+		}
+		return true
+	case PACKET_TYPE_PUBREL:
+		if p.Flags() != 2 {
+			return false
+		}
+		return true
+	case PACKET_TYPE_PUBCOMP:
+		if p.Flags() != 0 {
+			return false
+		}
+		return true
 	case PACKET_TYPE_SUBSCRIBE:
 		if p.Flags() != 2 {
 			return false
