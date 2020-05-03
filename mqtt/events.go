@@ -15,7 +15,7 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
 			clientSubscribed(e)
 		case EVENT_SUBSCRIPTION:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscription", e.topic)
+			log.Println("//!! EVENT type", e.eventType, e.subscription.clientId, "client subscription", e.subscription.topic)
 			clientSubscription(subscriptions, retains, e)
 		case EVENT_UNSUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
@@ -55,13 +55,14 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 		subscriptions.enableClientSubscriptions(e.clientId)
 	}
 	if e.err != 0 {
-		p := Connack(e.err)
+		p := Connack(false, e.err)
 		_, werr := e.connection.publish(p.toByteSlice())
 		if werr != nil {
 			log.Println("could not write to", e.clientId)
 		}
 	} else {
-		p := Connack(0)
+		p := Connack(false, 0)
+		log.Println(p.toByteSlice())
 		_, werr := e.connection.publish(p.toByteSlice())
 		if werr != nil {
 			log.Println("could not write to", e.clientId)

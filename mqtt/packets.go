@@ -7,6 +7,7 @@ import (
 
 func rangePackets(connection *Connection, packets <-chan Packet, events chan<- Event) {
 	for p := range packets {
+		// log.Println(p)
 		switch p.PacketType() {
 		case PACKET_TYPE_CONNECT:
 			connectReq(p, events, connection)
@@ -242,13 +243,18 @@ func Unsuback(packetIdentifier int, unsubscribed int) Packet {
 	return p
 }
 
-func Connack(reasonCode uint8) Packet {
+func Connack(sessionPresent bool, reasonCode uint8) Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_CONNACK) << 4
 	p.remainingLength = 2
+	p.remainingLengthBytes = 1
 	p.remainingBytes = make([]byte, 2)
-	p.remainingBytes[2] = 0
-	p.remainingBytes[3] = reasonCode
+	if sessionPresent {
+		p.remainingBytes[0] = 1
+	} else {
+		p.remainingBytes[0] = 0
+	}
+	p.remainingBytes[1] = reasonCode
 	return p
 }
 

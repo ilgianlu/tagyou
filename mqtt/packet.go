@@ -57,8 +57,8 @@ func Start(buff []byte) (Packet, error) {
 			return p, fmt.Errorf("header: malformed remainingLength format: %s\n", err)
 		}
 		p.remainingLength = rl
-		// i = i + k
-		p.CompletePacket(buff)
+		i = i + k
+		p.CompletePacket(buff[i:])
 		return p, nil
 	} else {
 		return p, fmt.Errorf("header: invalid %b", buff[0])
@@ -91,7 +91,7 @@ func (p *Packet) checkHeader() bool {
 }
 
 func (p *Packet) toByteSlice() []byte {
-	res := make([]byte, 2)
+	res := make([]byte, 1)
 	res[0] = p.header
 	res = append(res, WriteVarInt(p.remainingLength)...)
 	res = append(res, p.remainingBytes...)
