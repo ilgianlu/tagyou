@@ -5,12 +5,12 @@ import (
 	"time"
 )
 
-func rangeEvents(subscriptions Subscriptions, retains Retains, connections Connections, auths Auths, events <-chan Event) {
+func rangeEvents(subscriptions Subscriptions, retains Retains, connections Connections, auths Auths, events <-chan Event, outQueue chan<- OutData) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client connect")
-			clientConnection(connections, subscriptions, auths, e)
+			clientConnection(connections, subscriptions, auths, e, outQueue)
 		case EVENT_SUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
 			clientSubscribed(e)
@@ -42,7 +42,7 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 	}
 }
 
-func clientConnection(connections Connections, subscriptions Subscriptions, auths Auths, e Event) {
+func clientConnection(connections Connections, subscriptions Subscriptions, auths Auths, e Event, outQueue chan<- OutData) {
 	if DISALLOW_ANONYMOUS_LOGIN && !auths.checkAuth(e.clientId, e.connection.username, e.connection.password) {
 		log.Println("wrong connect credentials")
 		return
@@ -57,19 +57,14 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 	} else {
 		subscriptions.enableClientSubscriptions(e.clientId)
 	}
+	var o OutData
+	o.clientId = e.clientId
 	if e.err != 0 {
-		p := Connack(false, e.err)
-		_, werr := e.connection.publish(p.toByteSlice())
-		if werr != nil {
-			log.Println("could not write to", e.clientId)
-		}
+		o.packet = Connack(false, e.err)
 	} else {
-		p := Connack(false, 0)
-		_, werr := e.connection.publish(p.toByteSlice())
-		if werr != nil {
-			log.Println("could not write to", e.clientId)
-		}
+		o.packet = Connack(false, 0)
 	}
+	outQueue <- o
 }
 
 func clientSubscribed(e Event) {

@@ -24,8 +24,10 @@ func StartMQTT(port string) {
 	retains := SqliteRetains{db: db}
 	auths := SqliteAuths{db: db}
 	events := make(chan Event, 1)
+	outQueue := make(chan OutData, 1)
 
-	go rangeEvents(subscriptions, retains, connections, auths, events)
+	go rangeEvents(subscriptions, retains, connections, auths, events, outQueue)
+	go rangeOutQueue(connections, outQueue)
 
 	startTCP(events, port)
 }
