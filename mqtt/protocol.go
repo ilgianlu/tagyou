@@ -41,3 +41,7 @@ const MALFORMED_PACKET = 0x81
 // Unsupported Protocol Version
 // The Server does not support the version of the MQTT protocol requested by the Client
 const UNSUPPORTED_PROTOCOL_VERSION = 132
+
+// publish ack in QoS 1
+const PUBACK_SUCCESS = 0x00
+const PUBACK_NO_MATCHING_SUBSCRIBERS = 0x10

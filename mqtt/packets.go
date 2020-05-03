@@ -103,6 +103,7 @@ func publishReq(p Packet, events chan<- Event, c *Connection) {
 	var event Event
 	event.eventType = EVENT_PUBLISH
 	event.clientId = c.clientId
+	event.connection = c
 	event.published.dup = (p.Flags() & 0x08 >> 3) == 1
 	event.published.qos = p.Flags() & 0x06 >> 1
 	event.published.retain = (p.Flags() & 0x01) == 1

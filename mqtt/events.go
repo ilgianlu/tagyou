@@ -123,17 +123,38 @@ func clientPublish(subs Subscriptions, retains Retains, connections Connections,
 		saveRetain(retains, e)
 	}
 	dests := subs.findTopicSubscribers(e.published.topic)
+	count := sendToDests(connections, dests, e.packet.toByteSlice())
+	if e.published.qos == 1 {
+		var res uint8
+		if count == 0 {
+			res = PUBACK_NO_MATCHING_SUBSCRIBERS
+		} else {
+			res = PUBACK_SUCCESS
+		}
+		log.Println("pub ack", e.packet.packetIdentifier, "being sent to", e.clientId)
+		p := Puback(e.packet.packetIdentifier, res)
+		_, werr := e.connection.publish(p.toByteSlice())
+		if werr != nil {
+			log.Println("could not write to", e.clientId)
+		}
+	}
+}
+
+func sendToDests(connections Connections, dests []Subscription, data []byte) int {
+	count := 0
 	for i := 0; i < len(dests); i++ {
 		if c, ok := connections.findConn(dests[i].clientId); ok {
-			n, err := c.publish(e.packet.toByteSlice())
+			n, err := c.publish(data)
 			if err != nil {
 				log.Println("cannot write to", dests[i].clientId, ":", err)
 			}
+			count++
 			log.Println("published", n, "bytes to", dests[i].clientId)
 		} else {
 			log.Println(dests[i].clientId, "is not connected")
 		}
 	}
+	return count
 }
 
 func clientPuback(e Event) {
