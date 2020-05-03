@@ -26,6 +26,9 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.published.topic)
 			clientPublish(subscriptions, retains, connections, e)
+		case EVENT_PUBACKED:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.packetIdentifier)
+			clientPuback(e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
 			clientPing(e)
@@ -70,7 +73,7 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 }
 
 func clientSubscribed(e Event) {
-	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount)
+	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS)
 	log.Println(p.toByteSlice())
 	_, werr := e.connection.conn.Write(p.toByteSlice())
 	if werr != nil {
@@ -131,6 +134,11 @@ func clientPublish(subs Subscriptions, retains Retains, connections Connections,
 			log.Println(dests[i].clientId, "is not connected")
 		}
 	}
+}
+
+func clientPuback(e Event) {
+	// find msg identifier sent
+	// check reasoncode
 }
 
 func saveRetain(retains Retains, e Event) {

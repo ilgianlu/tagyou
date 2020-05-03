@@ -15,6 +15,8 @@ func rangePackets(connection *Connection, packets <-chan Packet, events chan<- E
 			disconnectReq(p, events, connection)
 		case PACKET_TYPE_PUBLISH:
 			publishReq(p, events, connection)
+		case PACKET_TYPE_PUBACK:
+			pubackReq(p, events, connection)
 		case PACKET_TYPE_SUBSCRIBE:
 			subscribeReq(p, events, connection)
 		case PACKET_TYPE_UNSUBSCRIBE:
@@ -116,6 +118,25 @@ func publishReq(p Packet, events chan<- Event, c *Connection) {
 		i = i + 2
 	}
 	p.applicationMessage = i
+	event.packet = p
+	events <- event
+}
+
+func pubackReq(p Packet, events chan<- Event, c *Connection) {
+	var event Event
+	event.eventType = EVENT_PUBACKED
+	event.clientId = c.clientId
+	event.connection = c
+	i := 0
+	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
+	i = i + 2
+	if i < len(p.remainingBytes) {
+		p.reasonCode = p.remainingBytes[i]
+	}
+	if c.protocolVersion == MQTT_V5 {
+		// i++
+		// read properties
+	}
 	event.packet = p
 	events <- event
 }
@@ -223,12 +244,15 @@ func pingReq(events chan<- Event, connection *Connection) {
 	events <- event
 }
 
-func Suback(packetIdentifier int, subscribed int) Packet {
+func Suback(packetIdentifier int, subscribed int, qosAccepted uint8) Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_SUBACK) << 4
 	p.remainingLength = 2 + subscribed
 	p.remainingBytes = Write2BytesInt(packetIdentifier)
 	subRes := make([]byte, subscribed)
+	for i := 0; i < subscribed; i++ {
+		subRes[i] = qosAccepted
+	}
 	p.remainingBytes = append(p.remainingBytes, subRes...)
 	return p
 }
@@ -284,5 +308,19 @@ func Publish(qos uint8, retain bool, topic string, payload []byte) Packet {
 	// write payload
 	rb = append(rb, payload...)
 	p.remainingBytes = rb
+	return p
+}
+
+func Puback(packetIdentifier int, reasonCode uint8) Packet {
+	var p Packet
+	p.header = uint8(PACKET_TYPE_PUBACK) << 4
+	if reasonCode == 0 {
+		p.remainingLength = 2
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+	} else {
+		p.remainingLength = 3
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+		p.remainingBytes = append(p.remainingBytes, reasonCode)
+	}
 	return p
 }
