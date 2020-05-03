@@ -4,6 +4,9 @@ const MINIMUM_SUPPORTED_PROTOCOL = 4
 
 const DEFAULT_KEEPALIVE = 30
 
+const MQTT_V5 = 5
+const MQTT_V3_11 = 4
+
 const MAX_TOPIC_SINGLE_SUBSCRIBE = 10
 
 var DISALLOW_ANONYMOUS_LOGIN bool = true
@@ -11,6 +14,7 @@ var DISALLOW_ANONYMOUS_LOGIN bool = true
 const PACKET_TYPE_CONNECT = 1
 const PACKET_TYPE_CONNACK = 2
 const PACKET_TYPE_PUBLISH = 3
+const PACKET_TYPE_PUBACK = 4
 const PACKET_TYPE_SUBSCRIBE = 8
 const PACKET_TYPE_SUBACK = 9
 const PACKET_TYPE_UNSUBSCRIBE = 10
@@ -37,3 +41,7 @@ const MALFORMED_PACKET = 0x81
 // Unsupported Protocol Version
 // The Server does not support the version of the MQTT protocol requested by the Client
 const UNSUPPORTED_PROTOCOL_VERSION = 132
+
+// publish ack in QoS 1
+const PUBACK_SUCCESS = 0x00
+const PUBACK_NO_MATCHING_SUBSCRIBERS = 0x10

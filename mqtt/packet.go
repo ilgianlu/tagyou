@@ -11,6 +11,7 @@ type Packet struct {
 	remainingBytes       []byte
 	applicationMessage   int
 	packetIdentifier     int
+	reasonCode           uint8
 	subscribedCount      int
 	err                  error
 }
@@ -73,6 +74,11 @@ func (p *Packet) checkHeader() bool {
 		}
 		return true
 	case PACKET_TYPE_PUBLISH:
+		return true
+	case PACKET_TYPE_PUBACK:
+		if p.Flags() != 0 {
+			return false
+		}
 		return true
 	case PACKET_TYPE_SUBSCRIBE:
 		if p.Flags() != 2 {

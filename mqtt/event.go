@@ -2,6 +2,7 @@ package mqtt
 
 const EVENT_CONNECT = 0
 const EVENT_PUBLISH = 2
+const EVENT_PUBACKED = 3
 const EVENT_SUBSCRIBED = 10
 const EVENT_SUBSCRIPTION = 11
 const EVENT_PING = 12

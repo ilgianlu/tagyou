@@ -26,6 +26,9 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.published.topic)
 			clientPublish(subscriptions, retains, connections, e)
+		case EVENT_PUBACKED:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.packetIdentifier)
+			clientPuback(e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
 			clientPing(e)
@@ -70,7 +73,7 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 }
 
 func clientSubscribed(e Event) {
-	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount)
+	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS)
 	log.Println(p.toByteSlice())
 	_, werr := e.connection.conn.Write(p.toByteSlice())
 	if werr != nil {
@@ -120,17 +123,43 @@ func clientPublish(subs Subscriptions, retains Retains, connections Connections,
 		saveRetain(retains, e)
 	}
 	dests := subs.findTopicSubscribers(e.published.topic)
+	count := sendToDests(connections, dests, e.packet.toByteSlice())
+	if e.published.qos == 1 {
+		var res uint8
+		if count == 0 {
+			res = PUBACK_NO_MATCHING_SUBSCRIBERS
+		} else {
+			res = PUBACK_SUCCESS
+		}
+		log.Println("pub ack", e.packet.packetIdentifier, "being sent to", e.clientId)
+		p := Puback(e.packet.packetIdentifier, res)
+		_, werr := e.connection.publish(p.toByteSlice())
+		if werr != nil {
+			log.Println("could not write to", e.clientId)
+		}
+	}
+}
+
+func sendToDests(connections Connections, dests []Subscription, data []byte) int {
+	count := 0
 	for i := 0; i < len(dests); i++ {
 		if c, ok := connections.findConn(dests[i].clientId); ok {
-			n, err := c.publish(e.packet.toByteSlice())
+			n, err := c.publish(data)
 			if err != nil {
 				log.Println("cannot write to", dests[i].clientId, ":", err)
 			}
+			count++
 			log.Println("published", n, "bytes to", dests[i].clientId)
 		} else {
 			log.Println(dests[i].clientId, "is not connected")
 		}
 	}
+	return count
+}
+
+func clientPuback(e Event) {
+	// find msg identifier sent
+	// check reasoncode
 }
 
 func saveRetain(retains Retains, e Event) {
