@@ -29,9 +29,18 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 		case EVENT_PUBACKED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.packetIdentifier)
 			clientPuback(e)
+		case EVENT_PUBRECED:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub received message", e.packet.packetIdentifier)
+			clientPubrec(e, outQueue)
+		case EVENT_PUBRELED:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub releases message", e.packet.packetIdentifier)
+			clientPubrel(e, outQueue)
+		case EVENT_PUBCOMPED:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub complete message", e.packet.packetIdentifier)
+			clientPubcomp(e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
-			clientPing(e)
+			clientPing(e, outQueue)
 		case EVENT_DISCONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
 			clientDisconnect(subscriptions, connections, e)
@@ -128,6 +137,13 @@ func clientPublish(subs Subscriptions, retains Retains, connections Connections,
 		o.packet = Puback(e.packet.packetIdentifier, res)
 		outQueue <- o
 	}
+	if e.published.qos == 2 {
+		log.Println("pub rec", e.packet.packetIdentifier, "being sent to", e.clientId)
+		var o OutData
+		o.clientId = e.clientId
+		o.packet = Pubrec(e.packet.packetIdentifier, PUBREC_SUCCESS)
+		outQueue <- o
+	}
 }
 
 func sendToDests(connections Connections, dests []Subscription, p Packet, outQueue chan<- OutData) int {
@@ -146,6 +162,29 @@ func clientPuback(e Event) {
 	// check reasoncode
 }
 
+func clientPubrel(e Event, outQueue chan<- OutData) {
+	// find msg identifier sent
+	// check reasoncode
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Pubcomp(e.packet.packetIdentifier, PUBCOMP_SUCCESS)
+	outQueue <- o
+}
+
+func clientPubrec(e Event, outQueue chan<- OutData) {
+	// find msg identifier sent
+	// check reasoncode
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Pubrel(e.packet.packetIdentifier, PUBREL_SUCCESS)
+	outQueue <- o
+}
+
+func clientPubcomp(e Event) {
+	// find msg identifier sent
+	// check reasoncode
+}
+
 func saveRetain(retains Retains, e Event) {
 	var r Retain
 	r.topic = e.published.topic
@@ -157,12 +196,11 @@ func saveRetain(retains Retains, e Event) {
 	}
 }
 
-func clientPing(e Event) {
-	p := PingResp()
-	_, werr := e.connection.publish(p.toByteSlice())
-	if werr != nil {
-		log.Println("could not write to", e.clientId)
-	}
+func clientPing(e Event, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = PingResp()
+	outQueue <- o
 }
 
 func clientDisconnect(subscriptions Subscriptions, connections Connections, e Event) {

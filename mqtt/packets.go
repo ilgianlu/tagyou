@@ -17,6 +17,12 @@ func rangePackets(connection *Connection, packets <-chan Packet, events chan<- E
 			publishReq(p, events, connection)
 		case PACKET_TYPE_PUBACK:
 			pubackReq(p, events, connection)
+		case PACKET_TYPE_PUBREC:
+			pubrecReq(p, events, connection)
+		case PACKET_TYPE_PUBREL:
+			pubrelReq(p, events, connection)
+		case PACKET_TYPE_PUBCOMP:
+			pubcompReq(p, events, connection)
 		case PACKET_TYPE_SUBSCRIBE:
 			subscribeReq(p, events, connection)
 		case PACKET_TYPE_UNSUBSCRIBE:
@@ -126,6 +132,63 @@ func publishReq(p Packet, events chan<- Event, c *Connection) {
 func pubackReq(p Packet, events chan<- Event, c *Connection) {
 	var event Event
 	event.eventType = EVENT_PUBACKED
+	event.clientId = c.clientId
+	event.connection = c
+	i := 0
+	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
+	i = i + 2
+	if i < len(p.remainingBytes) {
+		p.reasonCode = p.remainingBytes[i]
+	}
+	if c.protocolVersion == MQTT_V5 {
+		// i++
+		// read properties
+	}
+	event.packet = p
+	events <- event
+}
+
+func pubrelReq(p Packet, events chan<- Event, c *Connection) {
+	var event Event
+	event.eventType = EVENT_PUBRELED
+	event.clientId = c.clientId
+	event.connection = c
+	i := 0
+	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
+	i = i + 2
+	if i < len(p.remainingBytes) {
+		p.reasonCode = p.remainingBytes[i]
+	}
+	if c.protocolVersion == MQTT_V5 {
+		// i++
+		// read properties
+	}
+	event.packet = p
+	events <- event
+}
+
+func pubrecReq(p Packet, events chan<- Event, c *Connection) {
+	var event Event
+	event.eventType = EVENT_PUBRECED
+	event.clientId = c.clientId
+	event.connection = c
+	i := 0
+	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
+	i = i + 2
+	if i < len(p.remainingBytes) {
+		p.reasonCode = p.remainingBytes[i]
+	}
+	if c.protocolVersion == MQTT_V5 {
+		// i++
+		// read properties
+	}
+	event.packet = p
+	events <- event
+}
+
+func pubcompReq(p Packet, events chan<- Event, c *Connection) {
+	var event Event
+	event.eventType = EVENT_PUBCOMPED
 	event.clientId = c.clientId
 	event.connection = c
 	i := 0
@@ -315,6 +378,48 @@ func Publish(qos uint8, retain bool, topic string, payload []byte) Packet {
 func Puback(packetIdentifier int, reasonCode uint8) Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_PUBACK) << 4
+	if reasonCode == 0 {
+		p.remainingLength = 2
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+	} else {
+		p.remainingLength = 3
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+		p.remainingBytes = append(p.remainingBytes, reasonCode)
+	}
+	return p
+}
+
+func Pubrel(packetIdentifier int, reasonCode uint8) Packet {
+	var p Packet
+	p.header = uint8(PACKET_TYPE_PUBREL) << 4
+	if reasonCode == 0 {
+		p.remainingLength = 2
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+	} else {
+		p.remainingLength = 3
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+		p.remainingBytes = append(p.remainingBytes, reasonCode)
+	}
+	return p
+}
+
+func Pubrec(packetIdentifier int, reasonCode uint8) Packet {
+	var p Packet
+	p.header = uint8(PACKET_TYPE_PUBREC) << 4
+	if reasonCode == 0 {
+		p.remainingLength = 2
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+	} else {
+		p.remainingLength = 3
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+		p.remainingBytes = append(p.remainingBytes, reasonCode)
+	}
+	return p
+}
+
+func Pubcomp(packetIdentifier int, reasonCode uint8) Packet {
+	var p Packet
+	p.header = uint8(PACKET_TYPE_PUBCOMP) << 4
 	if reasonCode == 0 {
 		p.remainingLength = 2
 		p.remainingBytes = Write2BytesInt(packetIdentifier)
