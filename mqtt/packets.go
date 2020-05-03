@@ -125,7 +125,6 @@ func subscribeReq(p Packet, events chan<- Event, c *Connection) {
 	event.eventType = EVENT_SUBSCRIBED
 	event.clientId = c.clientId
 	event.connection = c
-	event.packet = p
 	i := 0
 	pi := Read2BytesInt(p.remainingBytes, i)
 	p.packetIdentifier = pi
@@ -178,6 +177,7 @@ func subscribeReq(p Packet, events chan<- Event, c *Connection) {
 		}
 	}
 	p.subscribedCount = j
+	event.packet = p
 	events <- event
 }
 

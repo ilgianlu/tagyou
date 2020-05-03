@@ -24,7 +24,7 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscription", e.topic)
 			clientUnsubscription(subscriptions, e)
 		case EVENT_PUBLISH:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.published.topic)
 			clientPublish(subscriptions, retains, connections, e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
@@ -62,7 +62,6 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 		}
 	} else {
 		p := Connack(false, 0)
-		log.Println(p.toByteSlice())
 		_, werr := e.connection.publish(p.toByteSlice())
 		if werr != nil {
 			log.Println("could not write to", e.clientId)
@@ -72,6 +71,7 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 
 func clientSubscribed(e Event) {
 	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount)
+	log.Println(p.toByteSlice())
 	_, werr := e.connection.conn.Write(p.toByteSlice())
 	if werr != nil {
 		log.Println("could not write to", e.clientId)
