@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func rangeEvents(subscriptions Subscriptions, retains Retains, connections Connections, auths Auths, events <-chan Event, outQueue chan<- OutData) {
+func rangeEvents(subscriptions Subscriptions, retains Retains, retries Retries, connections Connections, auths Auths, events <-chan Event, outQueue chan<- OutData) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
@@ -28,7 +28,7 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, connections Conne
 			clientPublish(subscriptions, retains, connections, e, outQueue)
 		case EVENT_PUBACKED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.packetIdentifier)
-			clientPuback(e)
+			clientPuback(e, retries)
 		case EVENT_PUBRECED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub received message", e.packet.packetIdentifier)
 			clientPubrec(e, outQueue)
@@ -144,10 +144,17 @@ func sendToDest(clientId string, p Packet, outQueue chan<- OutData) {
 	outQueue <- o
 }
 
-func clientPuback(e Event) {
+func clientPuback(e Event, retries Retries) {
 	// find msg identifier sent
 	// check reasoncode
 	// if reasoncode ok remove retry
+	rs := retries.findRetriesByClientId(e.clientId, e.packet.packetIdentifier)
+	if len(rs) > 0 {
+		err := retries.remRetry(e.clientId, e.packet.packetIdentifier)
+		if err != nil {
+			log.Println("could not remove retry", e.clientId, e.packet.packetIdentifier)
+		}
+	}
 }
 
 func clientPubrel(e Event, outQueue chan<- OutData) {

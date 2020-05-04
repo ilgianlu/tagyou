@@ -27,7 +27,7 @@ func StartMQTT(port string) {
 	events := make(chan Event, 1)
 	outQueue := make(chan OutData, 1)
 
-	go rangeEvents(subscriptions, retains, connections, auths, events, outQueue)
+	go rangeEvents(subscriptions, retains, retries, connections, auths, events, outQueue)
 	go rangeOutQueue(connections, retries, outQueue)
 
 	startTCP(events, port)
