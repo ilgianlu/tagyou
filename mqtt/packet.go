@@ -24,6 +24,13 @@ func (p *Packet) Flags() byte {
 	return p.header & 0x0F
 }
 
+func (p *Packet) QoS() byte {
+	if p.PacketType() == PACKET_TYPE_PUBLISH {
+		return p.Flags() & 0x06 >> 1
+	}
+	return 0x10
+}
+
 func (p *Packet) PacketLength() int {
 	return 1 + p.remainingLengthBytes + len(p.remainingBytes)
 }
