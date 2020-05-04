@@ -97,10 +97,7 @@ func sendRetain(retains Retains, e Event, outQueue chan<- OutData) {
 		return
 	}
 	for _, r := range rs {
-		var o OutData
-		o.clientId = e.clientId
-		o.packet = Publish(e.subscription.QoS, true, r.topic, r.applicationMessage)
-		outQueue <- o
+		sendToDest(e.clientId, Publish(e.subscription.QoS, true, r.topic, r.applicationMessage), outQueue)
 	}
 }
 
@@ -123,48 +120,41 @@ func clientPublish(subs Subscriptions, retains Retains, connections Connections,
 		saveRetain(retains, e)
 	}
 	dests := subs.findTopicSubscribers(e.published.topic)
-	count := sendToDests(connections, dests, e.packet, outQueue)
+	sendToDests(connections, dests, e.packet, outQueue)
 	if e.published.qos == 1 {
-		var res uint8
-		if count == 0 {
-			res = PUBACK_NO_MATCHING_SUBSCRIBERS
-		} else {
-			res = PUBACK_SUCCESS
-		}
-		log.Println("pub ack", e.packet.packetIdentifier, "being sent to", e.clientId)
-		var o OutData
-		o.clientId = e.clientId
-		o.packet = Puback(e.packet.packetIdentifier, res)
-		outQueue <- o
+		sendToDest(e.clientId, Puback(e.packet.packetIdentifier, PUBACK_SUCCESS), outQueue)
 	}
 	if e.published.qos == 2 {
-		log.Println("pub rec", e.packet.packetIdentifier, "being sent to", e.clientId)
-		var o OutData
-		o.clientId = e.clientId
-		o.packet = Pubrec(e.packet.packetIdentifier, PUBREC_SUCCESS)
-		outQueue <- o
+		sendToDest(e.clientId, Puback(e.packet.packetIdentifier, PUBREC_SUCCESS), outQueue)
 	}
 }
 
 func sendToDests(connections Connections, dests []Subscription, p Packet, outQueue chan<- OutData) int {
 	count := 0
 	for i := 0; i < len(dests); i++ {
-		var o OutData
-		o.clientId = dests[i].clientId
-		o.packet = p
-		outQueue <- o
+		sendToDest(dests[i].clientId, p, outQueue)
 	}
 	return count
+}
+
+func sendToDest(clientId string, p Packet, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = clientId
+	o.packet = p
+	outQueue <- o
 }
 
 func clientPuback(e Event) {
 	// find msg identifier sent
 	// check reasoncode
+	// if reasoncode ok remove retry
 }
 
 func clientPubrel(e Event, outQueue chan<- OutData) {
 	// find msg identifier sent
 	// check reasoncode
+	// if reasoncode ok
+	// if retry in wait for pubcomp -> remove retry
 	var o OutData
 	o.clientId = e.clientId
 	o.packet = Pubcomp(e.packet.packetIdentifier, PUBCOMP_SUCCESS)
@@ -174,15 +164,20 @@ func clientPubrel(e Event, outQueue chan<- OutData) {
 func clientPubrec(e Event, outQueue chan<- OutData) {
 	// find msg identifier sent
 	// check reasoncode
+	// if reasoncode ok
+	// change retry state to wait for pubcomp
 	var o OutData
 	o.clientId = e.clientId
 	o.packet = Pubrel(e.packet.packetIdentifier, PUBREL_SUCCESS)
 	outQueue <- o
+
 }
 
 func clientPubcomp(e Event) {
 	// find msg identifier sent
 	// check reasoncode
+	// if reasoncode ok
+	// remove retry
 }
 
 func saveRetain(retains Retains, e Event) {

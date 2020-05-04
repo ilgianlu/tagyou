@@ -17,6 +17,7 @@ func Seed(filename string) {
 
 	createSubscriptions(db)
 	createRetains(db)
+	createRetries(db)
 	createAuth(db)
 }
 
@@ -53,6 +54,27 @@ func createRetains(db *sql.DB) {
 	);
 	create unique index topic_retain_idx on retains(topic);
 	delete from retains;
+	`
+	_, err := db.Exec(sqlStmt)
+	if err != nil {
+		log.Printf("%q: %s\n", err, sqlStmt)
+		return
+	}
+}
+
+func createRetries(db *sql.DB) {
+	sqlStmt := `
+	create table retries (
+		clientid text,
+		application_message blob,
+		packet_identifier integer,
+		qos integer,
+		retries integer,
+		ack_status integer,
+		created_at integer
+	);
+	create unique index retries_idx on retries(clientid, packet_identifier);
+	delete from retries;
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
