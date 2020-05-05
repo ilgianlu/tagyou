@@ -43,6 +43,13 @@ func (p *Packet) missingBytes() int {
 	return p.remainingLength - len(p.remainingBytes)
 }
 
+func (p *Packet) ApplicationMessage() []byte {
+	if p.PacketType() == PACKET_TYPE_PUBLISH && p.PacketComplete() {
+		return p.remainingBytes[p.applicationMessage:]
+	}
+	return []byte{}
+}
+
 func (p *Packet) CompletePacket(buff []byte) int {
 	if len(buff) >= p.missingBytes() {
 		p.remainingBytes = append(p.remainingBytes, buff[:p.missingBytes()]...)
