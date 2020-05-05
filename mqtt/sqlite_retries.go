@@ -12,7 +12,7 @@ const RETRY_INSERT = `insert into retries(
 	qos, retries, ack_status, created_at)
 	values(?, ?, ?, ?, ?, ?, ?)`
 const RETRY_DELETE = "delete from retries where clientid = ? and packet_identifier = ?"
-const RETRY_SELECT_BY_CLIENTID_PACKETIDENT = "select * from retries where clientid = ? and packet_identifier = ?"
+const RETRY_SELECT_BY_CLIENTID_PACKETIDENT = "select * from retries where clientid = ? and packet_identifier = ? limit 1"
 
 type SqliteRetries struct {
 	db *sql.DB
@@ -66,30 +66,28 @@ func (is SqliteRetries) remRetry(clientId string, packetIdentifier int) error {
 	return nil
 }
 
-func (is SqliteRetries) findRetriesByClientId(clientId string, packetIdentifier int) []Retry {
-	retries := []Retry{}
+func (is SqliteRetries) findRetry(clientId string, packetIdentifier int) (Retry, bool) {
+	var r Retry
 	rows, err := is.db.Query(RETRY_SELECT_BY_CLIENTID_PACKETIDENT, clientId, packetIdentifier)
 	if err != nil {
 		log.Println(err)
-		return retries
+		return r, false
 	}
 	defer rows.Close()
-	for rows.Next() {
-		var r Retry
+	if rows.Next() {
 		err = rows.Scan(
 			&r.clientId, &r.applicationMessage, &r.packetIdentifier,
 			&r.qos, &r.retries, &r.ackStatus)
 		if err != nil {
 			log.Println(err)
-			return retries
+			return r, false
 		}
-		retries = append(retries, r)
 	}
 	err = rows.Err()
 	if err != nil {
 		log.Println(err)
-		return retries
+		return r, false
 	}
 
-	return retries
+	return r, true
 }
