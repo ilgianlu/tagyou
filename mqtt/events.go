@@ -37,7 +37,7 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, retries Retries, 
 			clientPubrel(e, outQueue)
 		case EVENT_PUBCOMPED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub complete message", e.packet.packetIdentifier)
-			clientPubcomp(e)
+			clientPubcomp(e, retries)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
 			clientPing(e, outQueue)
@@ -180,11 +180,18 @@ func clientPubrec(e Event, outQueue chan<- OutData) {
 
 }
 
-func clientPubcomp(e Event) {
+func clientPubcomp(e Event, retries Retries) {
 	// find msg identifier sent
 	// check reasoncode
 	// if reasoncode ok
 	// remove retry
+	rs := retries.findRetriesByClientId(e.clientId, e.packet.packetIdentifier)
+	if len(rs) > 0 {
+		err := retries.remRetry(e.clientId, e.packet.packetIdentifier)
+		if err != nil {
+			log.Println("could not remove retry", e.clientId, e.packet.packetIdentifier)
+		}
+	}
 }
 
 func saveRetain(retains Retains, e Event) {
