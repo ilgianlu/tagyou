@@ -7,6 +7,7 @@ const WAIT_FOR_PUB_ACK = 10
 
 // qos 2
 const WAIT_FOR_PUB_REC = 20
+const WAIT_FOR_PUB_REL = 20
 const WAIT_FOR_PUB_COMP = 21
 
 type Retry struct {
