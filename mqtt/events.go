@@ -125,7 +125,7 @@ func clientPublish(subs Subscriptions, retains Retains, connections Connections,
 		sendToDest(e.clientId, Puback(e.packet.packetIdentifier, PUBACK_SUCCESS), outQueue)
 	}
 	if e.published.qos == 2 {
-		sendToDest(e.clientId, Puback(e.packet.packetIdentifier, PUBREC_SUCCESS), outQueue)
+		sendToDest(e.clientId, Pubrec(e.packet.packetIdentifier, PUBREC_SUCCESS), outQueue)
 	}
 }
 
