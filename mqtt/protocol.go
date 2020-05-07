@@ -41,6 +41,8 @@ const UNSPECIFIED_ERROR = 0x80
 
 const MALFORMED_PACKET = 0x81
 
+const SESSION_TAKEN_OVER = 0x8E
+
 // 0x84
 // Unsupported Protocol Version
 // The Server does not support the version of the MQTT protocol requested by the Client

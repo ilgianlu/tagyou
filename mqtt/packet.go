@@ -31,6 +31,20 @@ func (p *Packet) QoS() byte {
 	return 0x10
 }
 
+func (p *Packet) Dup() bool {
+	if p.PacketType() == PACKET_TYPE_PUBLISH {
+		return (p.Flags() & 0x08 >> 3) == 1
+	}
+	return false
+}
+
+func (p *Packet) Retain() bool {
+	if p.PacketType() == PACKET_TYPE_PUBLISH {
+		return (p.Flags() & 0x01) == 1
+	}
+	return false
+}
+
 func (p *Packet) PacketLength() int {
 	return 1 + p.remainingLengthBytes + len(p.remainingBytes)
 }
@@ -88,6 +102,9 @@ func (p *Packet) checkHeader() bool {
 		}
 		return true
 	case PACKET_TYPE_PUBLISH:
+		if p.QoS() > 2 {
+			return false
+		}
 		return true
 	case PACKET_TYPE_PUBACK:
 		if p.Flags() != 0 {

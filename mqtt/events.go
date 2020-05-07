@@ -25,7 +25,7 @@ func rangeEvents(subscriptions Subscriptions, retains Retains, retries Retries, 
 			clientUnsubscription(subscriptions, e)
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.published.topic)
-			clientPublish(subscriptions, retains, connections, e, outQueue)
+			clientPublish(subscriptions, retains, e, outQueue)
 		case EVENT_PUBACKED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.packetIdentifier)
 			clientPuback(e, retries)
@@ -56,6 +56,12 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 		log.Println("wrong connect credentials")
 		return
 	}
+	if c, ok := connections.findConn(e.clientId); ok {
+		log.Println("session taken over")
+		p := Connack(false, SESSION_TAKEN_OVER)
+		c.publish(p.toByteSlice())
+		closeRemoveClient(c, connections)
+	}
 	aerr := connections.addConn(e.clientId, *e.connection)
 	if aerr != nil {
 		log.Println("could not add connection", aerr)
@@ -66,14 +72,11 @@ func clientConnection(connections Connections, subscriptions Subscriptions, auth
 	} else {
 		subscriptions.enableClientSubscriptions(e.clientId)
 	}
-	var o OutData
-	o.clientId = e.clientId
 	if e.err != 0 {
-		o.packet = Connack(false, e.err)
+		respond(e.clientId, Connack(false, e.err), outQueue)
 	} else {
-		o.packet = Connack(false, 0)
+		respond(e.clientId, Connack(false, CONNECT_OK), outQueue)
 	}
-	outQueue <- o
 }
 
 func clientSubscribed(e Event, outQueue chan<- OutData) {
@@ -97,7 +100,7 @@ func sendRetain(retains Retains, e Event, outQueue chan<- OutData) {
 		return
 	}
 	for _, r := range rs {
-		sendToDest(e.clientId, Publish(e.subscription.QoS, true, r.topic, r.applicationMessage), outQueue)
+		respond(e.clientId, Publish(e.subscription.QoS, true, r.topic, r.applicationMessage), outQueue)
 	}
 }
 
@@ -115,82 +118,92 @@ func clientUnsubscription(subscriptions Subscriptions, e Event) {
 	}
 }
 
-func clientPublish(subs Subscriptions, retains Retains, connections Connections, e Event, outQueue chan<- OutData) {
+func clientPublish(subs Subscriptions, retains Retains, e Event, outQueue chan<- OutData) {
 	if e.published.retain {
 		saveRetain(retains, e)
 	}
 	dests := subs.findTopicSubscribers(e.published.topic)
-	sendToDests(connections, dests, e.packet, outQueue)
+	sendToDests(dests, e.packet, outQueue)
 	if e.published.qos == 1 {
-		sendToDest(e.clientId, Puback(e.packet.packetIdentifier, PUBACK_SUCCESS), outQueue)
+		respond(e.clientId, Puback(e.packet.packetIdentifier, PUBACK_SUCCESS), outQueue)
 	}
 	if e.published.qos == 2 {
-		sendToDest(e.clientId, Pubrec(e.packet.packetIdentifier, PUBREC_SUCCESS), outQueue)
+		respond(e.clientId, Pubrec(e.packet.packetIdentifier, PUBREC_SUCCESS), outQueue)
 	}
 }
 
-func sendToDests(connections Connections, dests []Subscription, p Packet, outQueue chan<- OutData) int {
+func sendToDests(dests []Subscription, p Packet, outQueue chan<- OutData) int {
 	count := 0
 	for i := 0; i < len(dests); i++ {
-		sendToDest(dests[i].clientId, p, outQueue)
+		respond(dests[i].clientId, p, outQueue)
 	}
 	return count
 }
 
-func sendToDest(clientId string, p Packet, outQueue chan<- OutData) {
+func respond(clientId string, p Packet, outQueue chan<- OutData) {
 	var o OutData
 	o.clientId = clientId
 	o.packet = p
 	outQueue <- o
 }
 
+// func forward(topic string, p Packet, outQueue chan<- OutData) {
+// 	var o OutData
+// 	o.clientId = clientId
+// 	o.packet = p
+// 	outQueue <- o
+// }
+
 func clientPuback(e Event, retries Retries) {
 	// find msg identifier sent
 	// check reasoncode
 	// if reasoncode ok remove retry
-	rs := retries.findRetriesByClientId(e.clientId, e.packet.packetIdentifier)
-	if len(rs) > 0 {
+	if _, ok := retries.findRetry(e.clientId, e.packet.packetIdentifier); ok {
+		log.Println("retry found, removing...", e.clientId, e.packet.packetIdentifier)
 		err := retries.remRetry(e.clientId, e.packet.packetIdentifier)
 		if err != nil {
 			log.Println("could not remove retry", e.clientId, e.packet.packetIdentifier)
 		}
+	} else {
+		log.Println("ack for invalid retry", e.clientId, e.packet.packetIdentifier)
 	}
-}
-
-func clientPubrel(e Event, outQueue chan<- OutData) {
-	// find msg identifier sent
-	// check reasoncode
-	// if reasoncode ok
-	// if retry in wait for pubcomp -> remove retry
-	var o OutData
-	o.clientId = e.clientId
-	o.packet = Pubcomp(e.packet.packetIdentifier, PUBCOMP_SUCCESS)
-	outQueue <- o
 }
 
 func clientPubrec(e Event, outQueue chan<- OutData) {
 	// find msg identifier sent
 	// check reasoncode
 	// if reasoncode ok
-	// change retry state to wait for pubcomp
+	// if retry in wait for pub rec -> send pub rel
 	var o OutData
 	o.clientId = e.clientId
 	o.packet = Pubrel(e.packet.packetIdentifier, PUBREL_SUCCESS)
 	outQueue <- o
+	// change retry state to wait for pubcomp
+}
 
+func clientPubrel(e Event, outQueue chan<- OutData) {
+	// find msg identifier sent
+	// check reasoncode
+	// if reasoncode ok
+	// if retry in wait for pubrel -> send pub comp
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Pubcomp(e.packet.packetIdentifier, PUBCOMP_SUCCESS)
+	outQueue <- o
 }
 
 func clientPubcomp(e Event, retries Retries) {
 	// find msg identifier sent
 	// check reasoncode
 	// if reasoncode ok
-	// remove retry
-	rs := retries.findRetriesByClientId(e.clientId, e.packet.packetIdentifier)
-	if len(rs) > 0 {
+	// if retry in wait for pubcomp -> remove retry
+	if _, ok := retries.findRetry(e.clientId, e.packet.packetIdentifier); ok {
 		err := retries.remRetry(e.clientId, e.packet.packetIdentifier)
 		if err != nil {
 			log.Println("could not remove retry", e.clientId, e.packet.packetIdentifier)
 		}
+	} else {
+		log.Println("pub complete for invalid retry", e.clientId, e.packet.packetIdentifier)
 	}
 }
 
@@ -215,14 +228,17 @@ func clientPing(e Event, outQueue chan<- OutData) {
 func clientDisconnect(subscriptions Subscriptions, connections Connections, e Event) {
 	subscriptions.disableClientSubscriptions(e.clientId)
 	if toRem, ok := connections.findConn(e.clientId); ok {
+		closeRemoveClient(toRem, connections)
+	}
+}
 
-		err0 := connections.remConn(toRem.clientId)
-		if err0 != nil {
-			log.Println("could not remove connection from connections")
-		}
-		err := toRem.conn.Close()
-		if err != nil {
-			log.Println("could not close conn", err)
-		}
+func closeRemoveClient(connection Connection, connections Connections) {
+	err0 := connections.remConn(connection.clientId)
+	if err0 != nil {
+		log.Println("could not remove connection from connections")
+	}
+	err := connection.conn.Close()
+	if err != nil {
+		log.Println("could not close conn", err)
 	}
 }

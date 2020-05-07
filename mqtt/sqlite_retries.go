@@ -12,7 +12,7 @@ const RETRY_INSERT = `insert into retries(
 	qos, retries, ack_status, created_at)
 	values(?, ?, ?, ?, ?, ?, ?)`
 const RETRY_DELETE = "delete from retries where clientid = ? and packet_identifier = ?"
-const RETRY_SELECT_BY_CLIENTID_PACKETIDENT = "select * from retries where clientid = ? and packet_identifier = ? limit 1"
+const RETRY_SELECT_BY_CLIENTID_PACKETIDENT = "select clientid, application_message, packet_identifier, qos, retries, ack_status from retries where clientid = ? and packet_identifier = ? limit 1"
 
 type SqliteRetries struct {
 	db *sql.DB
@@ -82,6 +82,8 @@ func (is SqliteRetries) findRetry(clientId string, packetIdentifier int) (Retry,
 			log.Println(err)
 			return r, false
 		}
+	} else {
+		return r, false
 	}
 	err = rows.Err()
 	if err != nil {

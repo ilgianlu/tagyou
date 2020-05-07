@@ -1,6 +1,8 @@
 package mqtt
 
-import "time"
+import (
+	"time"
+)
 
 // qos 1
 const WAIT_FOR_PUB_ACK = 10
@@ -15,6 +17,7 @@ type Retry struct {
 	applicationMessage []byte
 	packetIdentifier   int
 	qos                uint8
+	dup                bool
 	retries            uint8
 	ackStatus          uint8
 	createdAt          time.Time

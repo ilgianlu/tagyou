@@ -14,9 +14,8 @@ func rangeOutQueue(connections Connections, retries Retries, outQueue <-chan Out
 			} else {
 				log.Println("published", n, "bytes to", o.clientId)
 			}
-			// if qos > 0 save for retry
-			if o.packet.QoS() > 0 {
-				waitForAck(o.clientId, o.packet, retries)
+			if o.packet.QoS() == 1 || o.packet.QoS() == 2 {
+				saveRetry(o.clientId, o.packet, retries)
 			}
 		} else {
 			log.Println(o.clientId, "is not connected")
@@ -24,11 +23,12 @@ func rangeOutQueue(connections Connections, retries Retries, outQueue <-chan Out
 	}
 }
 
-func waitForAck(clientId string, packet Packet, retries Retries) {
+func saveRetry(clientId string, packet Packet, retries Retries) {
 	var r Retry
 	r.clientId = clientId
 	r.packetIdentifier = packet.packetIdentifier
 	r.qos = packet.QoS()
+	r.dup = packet.Dup()
 	if r.qos == 1 {
 		r.ackStatus = WAIT_FOR_PUB_ACK
 	} else {
