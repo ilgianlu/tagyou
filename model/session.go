@@ -23,14 +23,30 @@ type Session struct {
 	Conn            net.Conn `gorm:"-"`
 }
 
-func (s Session) reservedBit() bool {
+func (s Session) ReservedBit() bool {
 	return (s.ConnectFlags & 0x01) == 0
 }
 
-func (s Session) cleanStart() bool {
+func (s Session) CleanStart() bool {
 	return (s.ConnectFlags & 0x02) > 0
 }
 
-func (s Session) willFlag() bool {
+func (s Session) WillFlag() bool {
 	return (s.ConnectFlags & 0x04) > 0
+}
+
+func (s Session) WillQoS() uint8 {
+	return (s.ConnectFlags & 0x18 >> 3)
+}
+
+func (s Session) WillRetain() bool {
+	return (s.ConnectFlags & 0x20) > 0
+}
+
+func (s Session) HavePass() bool {
+	return (s.ConnectFlags & 0x40) > 0
+}
+
+func (s Session) HaveUser() bool {
+	return (s.ConnectFlags & 0x80) > 0
 }

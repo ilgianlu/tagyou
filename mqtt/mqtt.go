@@ -1,47 +1,32 @@
 package mqtt
 
 import (
-	"database/sql"
 	"io"
 	"log"
 	"net"
 	"os"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 func StartMQTT(port string) {
 	DISALLOW_ANONYMOUS_LOGIN = os.Getenv("DISALLOW_ANONYMOUS_LOGIN") == "true"
-	db, err := openDb()
+	db, err := gorm.Open("sqlite3", ":memory:")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to connect database")
 	}
 	defer db.Close()
 
-	connections := make(inMemoryConnections)
-	subscriptions := SqliteSubscriptions{db: db}
-	retains := SqliteRetains{db: db}
-	retries := SqliteRetries{db: db}
-	auths := SqliteAuths{db: db}
+	var connections Connections
 	events := make(chan Event, 1)
 	outQueue := make(chan OutData, 1)
 
-	go rangeEvents(subscriptions, retains, retries, connections, auths, events, outQueue)
-	go rangeOutQueue(connections, retries, outQueue)
+	go rangeEvents(connections, db, events, outQueue)
+	go rangeOutQueue(connections, db, outQueue)
 
 	startTCP(events, port)
-}
-
-func openDb() (*sql.DB, error) {
-	if _, err := os.Stat(os.Getenv("DB_FILE")); err != nil {
-		if os.IsNotExist(err) {
-			Seed(os.Getenv("DB_FILE"))
-		} else {
-			return nil, err
-		}
-	}
-	return sql.Open("sqlite3", os.Getenv("DB_FILE"))
 }
 
 func startTCP(events chan<- Event, port string) {
@@ -63,11 +48,10 @@ func startTCP(events chan<- Event, port string) {
 
 func handleConnection(conn net.Conn, events chan<- Event) {
 	defer conn.Close()
-	var connection Connection
-	connection.conn = conn
-	connection.keepAlive = DEFAULT_KEEPALIVE
+	client := clientConn{keepAlive: DEFAULT_KEEPALIVE}
 	buffers := make(chan []byte, 2)
 	packets := make(chan Packet)
+	connectOk := make(chan clientConn)
 	for {
 		buffer := make([]byte, 1024)
 		bytesCount, err := conn.Read(buffer)
@@ -75,48 +59,43 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 			log.Println("could read packet", err)
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				log.Println("keepalive not respected!")
-				sendWill(conn, &connection, events)
-				disconnectClient(&connection, events)
+				willEvent(client.clientId, events)
+				disconnectClient(client.clientId, events)
 				break
 			}
 			if err == io.EOF {
 				log.Println("connection closed!")
-				sendWill(conn, &connection, events)
-				disconnectClient(&connection, events)
+				willEvent(client.clientId, events)
+				disconnectClient(client.clientId, events)
 				break
 			}
 		}
 		buffers <- buffer[:bytesCount]
 
 		go rangeBuffers(buffers, packets)
-		go rangePackets(&connection, packets, events)
+		go rangePackets(packets, events)
 
-		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(connection.keepAlive*2) * time.Second))
+		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(client.keepAlive*2) * time.Second))
 		if derr != nil {
 			log.Println("cannot set read deadline", derr)
 			defer conn.Close()
 			break
 		}
+		client = <-connectOk
 	}
 	log.Println("abandon closed connection!")
 }
 
-func sendWill(conn net.Conn, connection *Connection, e chan<- Event) {
-	// publish will message event
-	if connection.willTopic != "" {
-		willPacket := Publish(connection.willQoS(), connection.willRetain(), connection.willTopic, connection.willMessage)
-		var event Event
-		event.eventType = EVENT_PUBLISH
-		event.topic = connection.willTopic
-		event.packet = willPacket
-		e <- event
-	}
+func willEvent(clientId string, e chan<- Event) {
+	var event Event
+	event.eventType = EVENT_WILL_SEND
+	event.clientId = clientId
+	e <- event
 }
 
-func disconnectClient(connection *Connection, e chan<- Event) {
+func disconnectClient(clientId string, e chan<- Event) {
 	var event Event
 	event.eventType = EVENT_DISCONNECT
-	event.clientId = connection.clientId
-	event.connection = connection
+	event.clientId = clientId
 	e <- event
 }
