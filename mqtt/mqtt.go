@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ilgianlu/tagyou/model"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
@@ -48,10 +49,9 @@ func startTCP(events chan<- Event, port string) {
 
 func handleConnection(conn net.Conn, events chan<- Event) {
 	defer conn.Close()
-	client := clientConn{keepAlive: DEFAULT_KEEPALIVE}
+	session := model.Session{KeepAlive: DEFAULT_KEEPALIVE}
 	buffers := make(chan []byte, 2)
 	packets := make(chan Packet)
-	connectOk := make(chan clientConn)
 	for {
 		buffer := make([]byte, 1024)
 		bytesCount, err := conn.Read(buffer)
@@ -59,29 +59,32 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 			log.Println("could read packet", err)
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				log.Println("keepalive not respected!")
-				willEvent(client.clientId, events)
-				disconnectClient(client.clientId, events)
+				if session.ClientId != "" {
+					willEvent(session.ClientId, events)
+					disconnectClient(session.ClientId, events)
+				}
 				break
 			}
 			if err == io.EOF {
 				log.Println("connection closed!")
-				willEvent(client.clientId, events)
-				disconnectClient(client.clientId, events)
+				if session.ClientId != "" {
+					willEvent(session.ClientId, events)
+					disconnectClient(session.ClientId, events)
+				}
 				break
 			}
 		}
 		buffers <- buffer[:bytesCount]
 
 		go rangeBuffers(buffers, packets)
-		go rangePackets(packets, events)
+		go rangePackets(packets, events, &session)
 
-		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(client.keepAlive*2) * time.Second))
+		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
 		if derr != nil {
 			log.Println("cannot set read deadline", derr)
 			defer conn.Close()
 			break
 		}
-		client = <-connectOk
 	}
 	log.Println("abandon closed connection!")
 }
