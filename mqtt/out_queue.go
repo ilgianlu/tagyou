@@ -3,41 +3,45 @@ package mqtt
 import (
 	"log"
 	"time"
+
+	"github.com/ilgianlu/tagyou/model"
+	"github.com/jinzhu/gorm"
 )
 
-func rangeOutQueue(connections Connections, retries Retries, outQueue <-chan OutData) {
+func rangeOutQueue(connections Connections, db *gorm.DB, outQueue <-chan OutData) {
 	for o := range outQueue {
-		if c, ok := connections.findConn(o.clientId); ok {
-			n, err := c.publish(o.packet.toByteSlice())
-			if err != nil {
-				log.Println("cannot write to", o.clientId, ":", err)
-			} else {
-				log.Println("published", n, "bytes to", o.clientId)
-			}
-			if o.packet.QoS() == 1 || o.packet.QoS() == 2 {
-				saveRetry(o.clientId, o.packet, retries)
-			}
-		} else {
-			log.Println(o.clientId, "is not connected")
-		}
+		simpleSend(connections, db, o.clientId, o.packet)
 	}
 }
 
-func saveRetry(clientId string, packet Packet, retries Retries) {
-	var r Retry
-	r.clientId = clientId
-	r.packetIdentifier = packet.packetIdentifier
-	r.qos = packet.QoS()
-	r.dup = packet.Dup()
-	if r.qos == 1 {
-		r.ackStatus = WAIT_FOR_PUB_ACK
+func simpleSend(connections Connections, db *gorm.DB, clientId string, packet Packet) {
+	if c, ok := connections[clientId]; ok {
+		n, err := c.Write(packet.toByteSlice())
+		if err != nil {
+			log.Println("cannot write to", clientId, ":", err)
+		} else {
+			log.Println("published", n, "bytes to", clientId)
+		}
+		if packet.QoS() == 1 || packet.QoS() == 2 {
+			saveRetry(db, clientId, packet)
+		}
 	} else {
-		r.ackStatus = WAIT_FOR_PUB_REC
+		log.Println(clientId, "is not connected")
 	}
-	r.applicationMessage = packet.ApplicationMessage()
-	r.createdAt = time.Now()
-	err := retries.addRetry(r)
-	if err != nil {
-		log.Println("cannot save retry of", r.clientId, r.packetIdentifier)
+}
+
+func saveRetry(db *gorm.DB, clientId string, packet Packet) {
+	var r model.Retry
+	r.ClientId = clientId
+	r.PacketIdentifier = packet.packetIdentifier
+	r.Qos = packet.QoS()
+	r.Dup = packet.Dup()
+	if r.Qos == 1 {
+		r.AckStatus = model.WAIT_FOR_PUB_ACK
+	} else {
+		r.AckStatus = model.WAIT_FOR_PUB_REC
 	}
+	r.ApplicationMessage = packet.ApplicationMessage()
+	r.CreatedAt = time.Now()
+	db.Create(&r)
 }

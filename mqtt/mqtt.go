@@ -49,7 +49,7 @@ func startTCP(events chan<- Event, port string) {
 
 func handleConnection(conn net.Conn, events chan<- Event) {
 	defer conn.Close()
-	session := model.Session{KeepAlive: DEFAULT_KEEPALIVE}
+	session := model.Session{KeepAlive: DEFAULT_KEEPALIVE, Conn: conn}
 	buffers := make(chan []byte, 2)
 	packets := make(chan Packet)
 	for {

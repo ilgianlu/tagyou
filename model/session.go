@@ -20,6 +20,8 @@ type Session struct {
 	WillMessage     []byte
 	Subscriptions   []Subscription
 	Retries         []Retry
+	Username        string
+	Password        string   `gorm:"-"`
 	Conn            net.Conn `gorm:"-"`
 }
 

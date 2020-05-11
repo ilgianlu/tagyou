@@ -86,13 +86,13 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 		// read username
 		unl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		username := string(p.remainingBytes[i : i+unl])
+		session.Username = string(p.remainingBytes[i : i+unl])
 		i = i + unl
 		// read password
 		pwdl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		password := string(p.remainingBytes[i : i+pwdl])
-		log.Printf("username \"%s\"\nlogging with password \"%s\"\n", username, password)
+		session.Password = string(p.remainingBytes[i : i+pwdl])
+		log.Printf("username \"%s\"\nlogging with password \"%s\"\n", session.Username, session.Password)
 	}
 	event.session = session
 	events <- event

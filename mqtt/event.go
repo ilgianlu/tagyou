@@ -1,5 +1,11 @@
 package mqtt
 
+import (
+	"net"
+
+	"github.com/ilgianlu/tagyou/model"
+)
+
 const EVENT_CONNECT = 0
 const EVENT_PUBLISH = 2
 const EVENT_PUBACKED = 3
@@ -13,6 +19,7 @@ const EVENT_UNSUBSCRIBED = 20
 const EVENT_UNSUBSCRIPTION = 21
 const EVENT_DISCONNECT = 100
 const EVENT_KEEPALIVE_TIMEOUT = 101
+const EVENT_WILL_SEND = 102
 
 const EVENT_PACKET_ERR = 1000
 
@@ -20,9 +27,10 @@ type Event struct {
 	eventType    int
 	clientId     string
 	topic        string
-	subscription Subscription
+	session      *model.Session
+	subscription model.Subscription
 	published    Published
-	connection   *Connection
+	conn         net.Conn
 	packet       Packet
 	err          uint8
 }
