@@ -233,9 +233,9 @@ func clientPing(e Event, outQueue chan<- OutData) {
 }
 
 func clientDisconnect(db *gorm.DB, connections Connections, e Event) {
-	if conn, ok := connections[e.session.ClientId]; ok {
+	if conn, ok := connections[e.clientId]; ok {
 		closeClient(conn)
-		removeClient(e.session.ClientId, connections)
+		removeClient(e.clientId, connections)
 	}
 }
 
