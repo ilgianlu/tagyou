@@ -21,5 +21,5 @@ type Retry struct {
 	Retries            uint8
 	AckStatus          uint8
 	CreatedAt          time.Time
-	SessionID          uint64
+	SessionID          uint
 }

@@ -4,11 +4,12 @@ import (
 	"net"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 type Session struct {
-	ID              uint64
+	ID              uint `gorm:"primary_key"`
 	ExpireAt        time.Time
 	ClientId        string `gorm:"unique"`
 	Connected       bool
@@ -51,4 +52,10 @@ func (s Session) HavePass() bool {
 
 func (s Session) HaveUser() bool {
 	return (s.ConnectFlags & 0x80) > 0
+}
+
+func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
+	tx.Where("session_id = ?", s.ID).Delete(Subscription{})
+	tx.Where("session_id = ?", s.ID).Delete(Retry{})
+	return nil
 }

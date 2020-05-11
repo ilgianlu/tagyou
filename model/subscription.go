@@ -3,7 +3,7 @@ package model
 import "time"
 
 type Subscription struct {
-	ID                uint64
+	ID                uint   `gorm:"primary_key"`
 	ClientId          string `gorm:"index:clientid_idx"`
 	Topic             string `gorm:"index:subscription_topic_idx"`
 	RetainHandling    uint8
@@ -12,5 +12,5 @@ type Subscription struct {
 	QoS               uint8
 	Enabled           bool
 	CreatedAt         time.Time
-	SessionID         uint64
+	SessionID         uint
 }
