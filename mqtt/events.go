@@ -73,7 +73,7 @@ func clientConnection(db *gorm.DB, connections Connections, e Event, outQueue ch
 	}
 	connections[e.clientId] = e.session.Conn
 	if e.session.CleanStart() {
-		db.Delete("client_id = ?", e.clientId)
+		db.Where("client_id = ?", e.clientId).Delete(model.Subscription{})
 	} else {
 		db.Model(&model.Subscription{}).Where("client_id = ?", e.clientId).UpdateColumn("enabled", true)
 	}
