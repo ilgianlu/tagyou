@@ -20,7 +20,9 @@ func StartMQTT(port string) {
 	}
 	defer db.Close()
 
-	var connections Connections
+	model.Migrate(db)
+
+	connections := make(Connections)
 	events := make(chan Event, 1)
 	outQueue := make(chan OutData, 1)
 
