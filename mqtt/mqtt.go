@@ -14,7 +14,7 @@ import (
 
 func StartMQTT(port string) {
 	DISALLOW_ANONYMOUS_LOGIN = os.Getenv("DISALLOW_ANONYMOUS_LOGIN") == "true"
-	db, err := gorm.Open("sqlite3", ":memory:")
+	db, err := gorm.Open("sqlite3", "sqlite.db3")
 	if err != nil {
 		log.Fatal("failed to connect database")
 	}
@@ -51,7 +51,12 @@ func startTCP(events chan<- Event, port string) {
 
 func handleConnection(conn net.Conn, events chan<- Event) {
 	defer conn.Close()
-	session := model.Session{KeepAlive: DEFAULT_KEEPALIVE, Conn: conn}
+	session := model.Session{
+		Connected: true,
+		KeepAlive: DEFAULT_KEEPALIVE,
+		ExpireAt:  time.Now().Add(time.Duration(SESSION_MAX_DURATION_HOURS) * time.Hour),
+		Conn:      conn,
+	}
 	buffers := make(chan []byte, 2)
 	packets := make(chan Packet)
 	for {

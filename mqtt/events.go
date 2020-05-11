@@ -64,6 +64,7 @@ func clientConnection(db *gorm.DB, connections Connections, e Event, outQueue ch
 		log.Println("wrong connect credentials")
 		return
 	}
+
 	if c, ok := connections[e.clientId]; ok {
 		log.Println("session taken over")
 		p := Connack(false, SESSION_TAKEN_OVER)
@@ -72,18 +73,21 @@ func clientConnection(db *gorm.DB, connections Connections, e Event, outQueue ch
 		removeClient(e.clientId, connections)
 	}
 	connections[e.clientId] = e.session.Conn
-	if e.session.CleanStart() {
-		db.Where("client_id = ?", e.clientId).Delete(model.Subscription{})
+	sendSimple(e.clientId, Connack(false, CONNECT_OK), outQueue)
+
+	startSession(db, e.session)
+}
+
+func startSession(db *gorm.DB, session *model.Session) {
+	if db.Where("client_id = ?", session.ClientId).First(&session).RecordNotFound() {
+		db.Create(&session)
 	} else {
-		db.Model(&model.Subscription{}).Where("client_id = ?", e.clientId).UpdateColumn("enabled", true)
-	}
-	if e.err != 0 {
-		sendSimple(e.clientId, Connack(false, e.err), outQueue)
-	} else {
-		e.session.Connected = true
-		e.session.ExpireAt = time.Now().Add(time.Duration(SESSION_MAX_DURATION_HOURS) * time.Hour)
-		db.Create(&e.session)
-		sendSimple(e.clientId, Connack(false, CONNECT_OK), outQueue)
+		if session.CleanStart() {
+			model.CleanSession(db, session.ClientId)
+			db.Create(&session)
+		} else {
+			db.Save(&session)
+		}
 	}
 }
 

@@ -59,3 +59,7 @@ func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
 	tx.Where("session_id = ?", s.ID).Delete(Retry{})
 	return nil
 }
+
+func CleanSession(db *gorm.DB, clientId string) {
+	db.Where("client_id = ?", clientId).Delete(Session{})
+}
