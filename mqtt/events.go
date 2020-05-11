@@ -80,6 +80,9 @@ func clientConnection(db *gorm.DB, connections Connections, e Event, outQueue ch
 	if e.err != 0 {
 		sendSimple(e.clientId, Connack(false, e.err), outQueue)
 	} else {
+		e.session.Connected = true
+		e.session.ExpireAt = time.Now().Add(time.Duration(SESSION_MAX_DURATION_HOURS) * time.Hour)
+		db.Create(&e.session)
 		sendSimple(e.clientId, Connack(false, CONNECT_OK), outQueue)
 	}
 }
@@ -178,7 +181,7 @@ func clientPuback(db *gorm.DB, e Event) {
 
 func removeRetry(db *gorm.DB, clientId string, packetIdentifier int) {
 	var r model.Retry
-	if db.Where("client_id = ? and packet_identifier = ?").First(&r).RecordNotFound() {
+	if db.Where("client_id = ? and packet_identifier = ?", clientId, packetIdentifier).First(&r).RecordNotFound() {
 		log.Println("ack for invalid retry", clientId, packetIdentifier)
 	} else {
 		log.Println("retry found, removing...", clientId, packetIdentifier)
