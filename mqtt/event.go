@@ -1,8 +1,6 @@
 package mqtt
 
 import (
-	"net"
-
 	"github.com/ilgianlu/tagyou/model"
 )
 
@@ -30,7 +28,6 @@ type Event struct {
 	session      *model.Session
 	subscription model.Subscription
 	published    Published
-	conn         net.Conn
 	packet       Packet
 	err          uint8
 }
