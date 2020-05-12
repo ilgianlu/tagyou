@@ -1,44 +1,42 @@
 package mqtt
 
 import (
-	"database/sql"
 	"io"
 	"log"
 	"net"
 	"os"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/model"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
+const MQTT_V5 = 5
+const MQTT_V3_11 = 4
+
+const TOPIC_SEPARATOR = "/"
+const TOPIC_WILDCARD = "#"
+
 func StartMQTT(port string) {
-	DISALLOW_ANONYMOUS_LOGIN = os.Getenv("DISALLOW_ANONYMOUS_LOGIN") == "true"
-	db, err := openDb()
+	conf.DISALLOW_ANONYMOUS_LOGIN = os.Getenv("DISALLOW_ANONYMOUS_LOGIN") == "true"
+	db, err := gorm.Open("sqlite3", "sqlite.db3")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to connect database")
 	}
 	defer db.Close()
 
-	connections := make(inMemoryConnections)
-	subscriptions := SqliteSubscriptions{db: db}
-	retains := SqliteRetains{db: db}
-	auths := SqliteAuths{db: db}
-	events := make(chan Event, 1)
+	model.Migrate(db)
 
-	go rangeEvents(subscriptions, retains, connections, auths, events)
+	connections := make(Connections)
+	events := make(chan Event, 1)
+	outQueue := make(chan OutData, 1)
+
+	go rangeEvents(connections, db, events, outQueue)
+	go rangeOutQueue(connections, db, outQueue)
 
 	startTCP(events, port)
-}
-
-func openDb() (*sql.DB, error) {
-	if _, err := os.Stat(os.Getenv("DB_FILE")); err != nil {
-		if os.IsNotExist(err) {
-			Seed(os.Getenv("DB_FILE"))
-		} else {
-			return nil, err
-		}
-	}
-	return sql.Open("sqlite3", os.Getenv("DB_FILE"))
 }
 
 func startTCP(events chan<- Event, port string) {
@@ -60,9 +58,12 @@ func startTCP(events chan<- Event, port string) {
 
 func handleConnection(conn net.Conn, events chan<- Event) {
 	defer conn.Close()
-	var connection Connection
-	connection.conn = conn
-	connection.keepAlive = DEFAULT_KEEPALIVE
+	session := model.Session{
+		Connected: true,
+		KeepAlive: conf.DEFAULT_KEEPALIVE,
+		ExpireAt:  time.Now().Add(time.Duration(conf.SESSION_MAX_DURATION_HOURS) * time.Hour),
+		Conn:      conn,
+	}
 	buffers := make(chan []byte, 2)
 	packets := make(chan Packet)
 	for {
@@ -72,23 +73,27 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 			log.Println("could read packet", err)
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				log.Println("keepalive not respected!")
-				sendWill(conn, &connection, events)
-				disconnectClient(&connection, events)
+				if session.ClientId != "" {
+					willEvent(session.ClientId, events)
+					disconnectClient(session.ClientId, events)
+				}
 				break
 			}
 			if err == io.EOF {
 				log.Println("connection closed!")
-				sendWill(conn, &connection, events)
-				disconnectClient(&connection, events)
+				if session.ClientId != "" {
+					willEvent(session.ClientId, events)
+					disconnectClient(session.ClientId, events)
+				}
 				break
 			}
 		}
 		buffers <- buffer[:bytesCount]
 
 		go rangeBuffers(buffers, packets)
-		go rangePackets(&connection, packets, events)
+		go rangePackets(packets, events, &session)
 
-		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(connection.keepAlive*2) * time.Second))
+		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
 		if derr != nil {
 			log.Println("cannot set read deadline", derr)
 			defer conn.Close()
@@ -98,22 +103,16 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 	log.Println("abandon closed connection!")
 }
 
-func sendWill(conn net.Conn, connection *Connection, e chan<- Event) {
-	// publish will message event
-	if connection.willTopic != "" {
-		willPacket := Publish(connection.willQoS(), connection.willRetain(), connection.willTopic, connection.willMessage)
-		var event Event
-		event.eventType = EVENT_PUBLISH
-		event.topic = connection.willTopic
-		event.packet = willPacket
-		e <- event
-	}
+func willEvent(clientId string, e chan<- Event) {
+	var event Event
+	event.eventType = EVENT_WILL_SEND
+	event.clientId = clientId
+	e <- event
 }
 
-func disconnectClient(connection *Connection, e chan<- Event) {
+func disconnectClient(clientId string, e chan<- Event) {
 	var event Event
 	event.eventType = EVENT_DISCONNECT
-	event.clientId = connection.clientId
-	event.connection = connection
+	event.clientId = clientId
 	e <- event
 }

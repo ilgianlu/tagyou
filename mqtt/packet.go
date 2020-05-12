@@ -4,6 +4,38 @@ import (
 	"fmt"
 )
 
+const PACKET_TYPE_CONNECT = 1
+const PACKET_TYPE_CONNACK = 2
+const PACKET_TYPE_PUBLISH = 3
+const PACKET_TYPE_PUBACK = 4
+const PACKET_TYPE_PUBREC = 5
+const PACKET_TYPE_PUBREL = 6
+const PACKET_TYPE_PUBCOMP = 7
+const PACKET_TYPE_SUBSCRIBE = 8
+const PACKET_TYPE_SUBACK = 9
+const PACKET_TYPE_UNSUBSCRIBE = 10
+const PACKET_TYPE_UNSUBACK = 11
+const PACKET_TYPE_PINGREQ = 12
+const PACKET_TYPE_PINGRES = 13
+const PACKET_TYPE_DISCONNECT = 14
+const PACKET_MAX_SIZE = 65000
+
+// connect response
+const CONNECT_OK = 0
+const UNSPECIFIED_ERROR = 0x80
+const MALFORMED_PACKET = 0x81
+const UNSUPPORTED_PROTOCOL_VERSION = 0x84
+const SESSION_TAKEN_OVER = 0x8E
+
+// publish ack in QoS 1
+const PUBACK_SUCCESS = 0x00
+const PUBACK_NO_MATCHING_SUBSCRIBERS = 0x10
+
+// publish in QoS 2
+const PUBCOMP_SUCCESS = 0x00
+const PUBREL_SUCCESS = 0x00
+const PUBREC_SUCCESS = 0x00
+
 type Packet struct {
 	header               byte
 	remainingLength      int
@@ -24,6 +56,27 @@ func (p *Packet) Flags() byte {
 	return p.header & 0x0F
 }
 
+func (p *Packet) QoS() byte {
+	if p.PacketType() == PACKET_TYPE_PUBLISH {
+		return p.Flags() & 0x06 >> 1
+	}
+	return 0x10
+}
+
+func (p *Packet) Dup() bool {
+	if p.PacketType() == PACKET_TYPE_PUBLISH {
+		return (p.Flags() & 0x08 >> 3) == 1
+	}
+	return false
+}
+
+func (p *Packet) Retain() bool {
+	if p.PacketType() == PACKET_TYPE_PUBLISH {
+		return (p.Flags() & 0x01) == 1
+	}
+	return false
+}
+
 func (p *Packet) PacketLength() int {
 	return 1 + p.remainingLengthBytes + len(p.remainingBytes)
 }
@@ -34,6 +87,13 @@ func (p *Packet) PacketComplete() bool {
 
 func (p *Packet) missingBytes() int {
 	return p.remainingLength - len(p.remainingBytes)
+}
+
+func (p *Packet) ApplicationMessage() []byte {
+	if p.PacketType() == PACKET_TYPE_PUBLISH && p.PacketComplete() {
+		return p.remainingBytes[p.applicationMessage:]
+	}
+	return []byte{}
 }
 
 func (p *Packet) CompletePacket(buff []byte) int {
@@ -74,8 +134,26 @@ func (p *Packet) checkHeader() bool {
 		}
 		return true
 	case PACKET_TYPE_PUBLISH:
+		if p.QoS() > 2 {
+			return false
+		}
 		return true
 	case PACKET_TYPE_PUBACK:
+		if p.Flags() != 0 {
+			return false
+		}
+		return true
+	case PACKET_TYPE_PUBREC:
+		if p.Flags() != 0 {
+			return false
+		}
+		return true
+	case PACKET_TYPE_PUBREL:
+		if p.Flags() != 2 {
+			return false
+		}
+		return true
+	case PACKET_TYPE_PUBCOMP:
 		if p.Flags() != 0 {
 			return false
 		}

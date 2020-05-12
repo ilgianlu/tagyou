@@ -2,196 +2,289 @@ package mqtt
 
 import (
 	"log"
+	"net"
+	"strings"
 	"time"
+
+	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/model"
+	"github.com/jinzhu/gorm"
 )
 
-func rangeEvents(subscriptions Subscriptions, retains Retains, connections Connections, auths Auths, events <-chan Event) {
+func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQueue chan<- OutData) {
 	for e := range events {
 		switch e.eventType {
 		case EVENT_CONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client connect")
-			clientConnection(connections, subscriptions, auths, e)
+			clientConnection(db, connections, e, outQueue)
 		case EVENT_SUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
-			clientSubscribed(e)
+			clientSubscribed(e, outQueue)
 		case EVENT_SUBSCRIPTION:
-			log.Println("//!! EVENT type", e.eventType, e.subscription.clientId, "client subscription", e.subscription.topic)
-			clientSubscription(subscriptions, retains, e)
+			log.Println("//!! EVENT type", e.eventType, e.subscription.ClientId, "client subscription", e.subscription.Topic)
+			clientSubscription(db, e, outQueue)
 		case EVENT_UNSUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
-			clientUnsubscribed(e)
+			clientUnsubscribed(e, outQueue)
 		case EVENT_UNSUBSCRIPTION:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscription", e.topic)
-			clientUnsubscription(subscriptions, e)
+			clientUnsubscription(db, e)
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.published.topic)
-			clientPublish(subscriptions, retains, connections, e)
+			clientPublish(db, e, outQueue)
 		case EVENT_PUBACKED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.packetIdentifier)
-			clientPuback(e)
+			clientPuback(db, e)
+		case EVENT_PUBRECED:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub received message", e.packet.packetIdentifier)
+			clientPubrec(e, outQueue)
+		case EVENT_PUBRELED:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub releases message", e.packet.packetIdentifier)
+			clientPubrel(e, outQueue)
+		case EVENT_PUBCOMPED:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub complete message", e.packet.packetIdentifier)
+			clientPubcomp(db, e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
-			clientPing(e)
+			clientPing(e, outQueue)
 		case EVENT_DISCONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
-			clientDisconnect(subscriptions, connections, e)
+			clientDisconnect(db, connections, e)
+		case EVENT_WILL_SEND:
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "sending will message")
+			sendWill(db, e, outQueue)
 		case EVENT_PACKET_ERR:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "packet error")
-			clientDisconnect(subscriptions, connections, e)
+			clientDisconnect(db, connections, e)
 		}
 	}
 }
 
-func clientConnection(connections Connections, subscriptions Subscriptions, auths Auths, e Event) {
-	if DISALLOW_ANONYMOUS_LOGIN && !auths.checkAuth(e.clientId, e.connection.username, e.connection.password) {
+func clientConnection(db *gorm.DB, connections Connections, e Event, outQueue chan<- OutData) {
+	if conf.DISALLOW_ANONYMOUS_LOGIN && !model.CheckAuth(db, e.clientId, e.session.Username, e.session.Password) {
 		log.Println("wrong connect credentials")
 		return
 	}
-	aerr := connections.addConn(e.clientId, *e.connection)
-	if aerr != nil {
-		log.Println("could not add connection", aerr)
+
+	if c, ok := connections[e.clientId]; ok {
+		log.Println("session taken over")
+		p := Connack(false, SESSION_TAKEN_OVER)
+		sendSimple(e.clientId, p, outQueue)
+		closeClient(c)
+		removeClient(e.clientId, connections)
+	}
+	connections[e.clientId] = e.session.Conn
+	sendSimple(e.clientId, Connack(false, CONNECT_OK), outQueue)
+
+	startSession(db, e.session)
+}
+
+func startSession(db *gorm.DB, session *model.Session) {
+	if db.Where("client_id = ?", session.ClientId).First(&session).RecordNotFound() {
+		db.Create(&session)
+	} else {
+		if session.CleanStart() {
+			model.CleanSession(db, session.ClientId)
+			db.Create(&session)
+		} else {
+			db.Save(&session)
+		}
+	}
+}
+
+func clientSubscribed(e Event, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS)
+	outQueue <- o
+}
+
+func clientSubscription(db *gorm.DB, e Event, outQueue chan<- OutData) {
+	db.Create(&e.subscription)
+	sendRetain(db, e, outQueue)
+}
+
+func sendRetain(db *gorm.DB, e Event, outQueue chan<- OutData) {
+	retains := findRetains(db, e.subscription.Topic)
+	if len(retains) == 0 {
 		return
 	}
-	if e.connection.cleanStart() {
-		subscriptions.remSubscriptionsByClientId(e.clientId)
-	} else {
-		subscriptions.enableClientSubscriptions(e.clientId)
-	}
-	if e.err != 0 {
-		p := Connack(false, e.err)
-		_, werr := e.connection.publish(p.toByteSlice())
-		if werr != nil {
-			log.Println("could not write to", e.clientId)
-		}
-	} else {
-		p := Connack(false, 0)
-		_, werr := e.connection.publish(p.toByteSlice())
-		if werr != nil {
-			log.Println("could not write to", e.clientId)
-		}
+	for _, r := range retains {
+		p := Publish(e.subscription.QoS, true, r.Topic, r.ApplicationMessage)
+		sendForward(db, r.Topic, p, outQueue)
 	}
 }
 
-func clientSubscribed(e Event) {
-	p := Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS)
-	log.Println(p.toByteSlice())
-	_, werr := e.connection.conn.Write(p.toByteSlice())
-	if werr != nil {
-		log.Println("could not write to", e.clientId)
-	}
+func findRetains(db *gorm.DB, subscribedTopic string) []model.Retain {
+	trimmedTopic := trimWildcard(subscribedTopic)
+	var retains []model.Retain
+	db.Where("topic LIKE ?", strings.Join([]string{trimmedTopic, "%"}, "")).Find(&retains)
+	return retains
 }
 
-func clientSubscription(subscriptions Subscriptions, retains Retains, e Event) {
-	err := subscriptions.addSubscription(e.subscription)
-	if err != nil {
-		log.Println("cannot persist subscription:", err)
+func trimWildcard(topic string) string {
+	lci := len(topic) - 1
+	lc := topic[lci]
+	if string(lc) == TOPIC_WILDCARD {
+		topic = topic[:lci]
 	}
-	sendRetain(retains, e)
+	return topic
 }
 
-func sendRetain(retains Retains, e Event) {
-	rs := retains.findRetainsByTopic(e.subscription.topic)
-	if len(rs) == 0 {
-		return
-	}
-	for _, r := range rs {
-		p := Publish(e.subscription.QoS, true, r.topic, r.applicationMessage)
-		_, werr := e.connection.publish(p.toByteSlice())
-		if werr != nil {
-			log.Println("could not write to", e.clientId)
-		}
-	}
+func clientUnsubscribed(e Event, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Unsuback(e.packet.packetIdentifier, e.packet.subscribedCount)
+	outQueue <- o
 }
 
-func clientUnsubscribed(e Event) {
-	p := Unsuback(e.packet.packetIdentifier, e.packet.subscribedCount)
-	_, werr := e.connection.publish(p.toByteSlice())
-	if werr != nil {
-		log.Println("could not write to", e.clientId)
+func clientUnsubscription(db *gorm.DB, e Event) {
+	var sub model.Subscription
+	if db.Where("topic = ? and client_id = ?", e.topic, e.clientId).First(&sub).RecordNotFound() {
+		log.Println("no subscription to unsubscribe", e.topic, e.clientId)
 	}
+	db.Delete(sub)
 }
 
-func clientUnsubscription(subscriptions Subscriptions, e Event) {
-	err := subscriptions.remSubscription(e.topic, e.clientId)
-	if err != nil {
-		log.Println("could not remove topic subscription")
-	}
-}
-
-func clientPublish(subs Subscriptions, retains Retains, connections Connections, e Event) {
+func clientPublish(db *gorm.DB, e Event, outQueue chan<- OutData) {
 	if e.published.retain {
-		saveRetain(retains, e)
+		saveRetain(db, e)
 	}
-	dests := subs.findTopicSubscribers(e.published.topic)
-	count := sendToDests(connections, dests, e.packet.toByteSlice())
+	sendForward(db, e.published.topic, e.packet, outQueue)
 	if e.published.qos == 1 {
-		var res uint8
-		if count == 0 {
-			res = PUBACK_NO_MATCHING_SUBSCRIBERS
-		} else {
-			res = PUBACK_SUCCESS
-		}
-		log.Println("pub ack", e.packet.packetIdentifier, "being sent to", e.clientId)
-		p := Puback(e.packet.packetIdentifier, res)
-		_, werr := e.connection.publish(p.toByteSlice())
-		if werr != nil {
-			log.Println("could not write to", e.clientId)
-		}
+		sendSimple(e.clientId, Puback(e.packet.packetIdentifier, PUBACK_SUCCESS), outQueue)
+	}
+	if e.published.qos == 2 {
+		sendSimple(e.clientId, Pubrec(e.packet.packetIdentifier, PUBREC_SUCCESS), outQueue)
 	}
 }
 
-func sendToDests(connections Connections, dests []Subscription, data []byte) int {
-	count := 0
-	for i := 0; i < len(dests); i++ {
-		if c, ok := connections.findConn(dests[i].clientId); ok {
-			n, err := c.publish(data)
-			if err != nil {
-				log.Println("cannot write to", dests[i].clientId, ":", err)
-			}
-			count++
-			log.Println("published", n, "bytes to", dests[i].clientId)
-		} else {
-			log.Println(dests[i].clientId, "is not connected")
-		}
-	}
-	return count
+func sendForward(db *gorm.DB, topic string, packet Packet, outQueue chan<- OutData) {
+	topicSegments := strings.Split(topic, TOPIC_SEPARATOR)
+	subs := findDests(db, topicSegments)
+	sendSubscribers(subs, packet, outQueue)
 }
 
-func clientPuback(e Event) {
+func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
+	subs := []model.Subscription{}
+	for i := 1; i <= len(topicSegments); i++ {
+		subT := append(make([]string, 0), topicSegments[:i]...)
+		if len(subT) < len(topicSegments) {
+			subT = append(subT, TOPIC_WILDCARD)
+		}
+		t := strings.Join(subT, TOPIC_SEPARATOR)
+		ss := []model.Subscription{}
+		db.Where("topic = ?", t).Find(&ss)
+		subs = append(subs, ss...)
+	}
+	return subs
+}
+
+func sendSubscribers(subscribers []model.Subscription, packet Packet, outQueue chan<- OutData) {
+	for _, s := range subscribers {
+		sendSimple(s.ClientId, packet, outQueue)
+	}
+}
+
+func sendSimple(clientId string, p Packet, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = clientId
+	o.packet = p
+	outQueue <- o
+}
+
+func clientPuback(db *gorm.DB, e Event) {
 	// find msg identifier sent
 	// check reasoncode
+	// if reasoncode ok remove retry
+	removeRetry(db, e.session.ClientId, e.packet.packetIdentifier)
 }
 
-func saveRetain(retains Retains, e Event) {
-	var r Retain
-	r.topic = e.published.topic
-	r.applicationMessage = e.packet.remainingBytes[e.packet.applicationMessage:]
-	r.createdAt = time.Now()
-	err := retains.addRetain(r)
+func removeRetry(db *gorm.DB, clientId string, packetIdentifier int) {
+	var r model.Retry
+	if db.Where("client_id = ? and packet_identifier = ?", clientId, packetIdentifier).First(&r).RecordNotFound() {
+		log.Println("ack for invalid retry", clientId, packetIdentifier)
+	} else {
+		log.Println("retry found, removing...", clientId, packetIdentifier)
+		db.Delete(&r)
+	}
+}
+
+func clientPubrec(e Event, outQueue chan<- OutData) {
+	// find msg identifier sent
+	// check reasoncode
+	// if reasoncode ok
+	// if retry in wait for pub rec -> send pub rel
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Pubrel(e.packet.packetIdentifier, PUBREL_SUCCESS)
+	outQueue <- o
+	// change retry state to wait for pubcomp
+}
+
+func clientPubrel(e Event, outQueue chan<- OutData) {
+	// find msg identifier sent
+	// check reasoncode
+	// if reasoncode ok
+	// if retry in wait for pubrel -> send pub comp
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = Pubcomp(e.packet.packetIdentifier, PUBCOMP_SUCCESS)
+	outQueue <- o
+}
+
+func clientPubcomp(db *gorm.DB, e Event) {
+	// find msg identifier sent
+	// check reasoncode
+	// if reasoncode ok
+	// if retry in wait for pubcomp -> remove retry
+	removeRetry(db, e.session.ClientId, e.packet.packetIdentifier)
+}
+
+func saveRetain(db *gorm.DB, e Event) {
+	var r model.Retain
+	r.Topic = e.published.topic
+	r.ApplicationMessage = e.packet.remainingBytes[e.packet.applicationMessage:]
+	r.CreatedAt = time.Now()
+	db.Delete(&r)
+	if len(r.ApplicationMessage) > 0 {
+		db.Create(&r)
+	}
+}
+
+func clientPing(e Event, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = PingResp()
+	outQueue <- o
+}
+
+func clientDisconnect(db *gorm.DB, connections Connections, e Event) {
+	if conn, ok := connections[e.clientId]; ok {
+		closeClient(conn)
+		removeClient(e.clientId, connections)
+		model.DisconnectSession(db, e.clientId)
+	}
+}
+
+func sendWill(db *gorm.DB, e Event, outQueue chan<- OutData) {
+	var s model.Session
+	if db.First(&s, "client_id = ?", e.clientId).RecordNotFound() {
+		return
+	}
+	if s.WillTopic != "" {
+		p := Publish(s.WillQoS(), s.WillRetain(), s.WillTopic, s.WillMessage)
+		sendForward(db, s.WillTopic, p, outQueue)
+	}
+}
+
+func closeClient(connection net.Conn) {
+	err := connection.Close()
 	if err != nil {
-		log.Println("could not save retained message:", err)
+		log.Println("could not close conn", err)
 	}
 }
 
-func clientPing(e Event) {
-	p := PingResp()
-	_, werr := e.connection.publish(p.toByteSlice())
-	if werr != nil {
-		log.Println("could not write to", e.clientId)
-	}
-}
-
-func clientDisconnect(subscriptions Subscriptions, connections Connections, e Event) {
-	subscriptions.disableClientSubscriptions(e.clientId)
-	if toRem, ok := connections.findConn(e.clientId); ok {
-
-		err0 := connections.remConn(toRem.clientId)
-		if err0 != nil {
-			log.Println("could not remove connection from connections")
-		}
-		err := toRem.conn.Close()
-		if err != nil {
-			log.Println("could not close conn", err)
-		}
-	}
+func removeClient(clientId string, connections Connections) {
+	delete(connections, clientId)
 }

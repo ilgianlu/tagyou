@@ -3,26 +3,35 @@ package mqtt
 import (
 	"log"
 	"time"
+
+	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/model"
 )
 
-func rangePackets(connection *Connection, packets <-chan Packet, events chan<- Event) {
+func rangePackets(packets <-chan Packet, events chan<- Event, session *model.Session) {
 	for p := range packets {
 		// log.Println(p)
 		switch p.PacketType() {
 		case PACKET_TYPE_CONNECT:
-			connectReq(p, events, connection)
+			connectReq(p, events, session)
 		case PACKET_TYPE_DISCONNECT:
-			disconnectReq(p, events, connection)
+			disconnectReq(p, events, session)
 		case PACKET_TYPE_PUBLISH:
-			publishReq(p, events, connection)
+			publishReq(p, events, session)
 		case PACKET_TYPE_PUBACK:
-			pubackReq(p, events, connection)
+			pubackReq(p, events, session)
+		case PACKET_TYPE_PUBREC:
+			pubrecReq(p, events, session)
+		case PACKET_TYPE_PUBREL:
+			pubrelReq(p, events, session)
+		case PACKET_TYPE_PUBCOMP:
+			pubcompReq(p, events, session)
 		case PACKET_TYPE_SUBSCRIBE:
-			subscribeReq(p, events, connection)
+			subscribeReq(p, events, session)
 		case PACKET_TYPE_UNSUBSCRIBE:
-			unsubscribeReq(p, events, connection)
+			unsubscribeReq(p, events, session)
 		case PACKET_TYPE_PINGREQ:
-			pingReq(events, connection)
+			pingReq(events, session)
 		default:
 			var event Event
 			event.eventType = EVENT_PACKET_ERR
@@ -32,10 +41,9 @@ func rangePackets(connection *Connection, packets <-chan Packet, events chan<- E
 	}
 }
 
-func connectReq(p Packet, events chan<- Event, connection *Connection) {
+func connectReq(p Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_CONNECT
-	event.connection = connection
 	i := 0
 	pl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
@@ -43,70 +51,70 @@ func connectReq(p Packet, events chan<- Event, connection *Connection) {
 	i = i + pl
 	v := p.remainingBytes[i]
 	// log.Println("protocolVersion", v)
-	connection.protocolVersion = v
+	session.ProtocolVersion = v
 	i++
-	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
+	if int(v) < conf.MINIMUM_SUPPORTED_PROTOCOL {
 		log.Println("unsupported protocol version err", v)
 		event.err = UNSUPPORTED_PROTOCOL_VERSION
 		events <- event
 	}
-	connection.connectFlags = p.remainingBytes[i]
+	session.ConnectFlags = p.remainingBytes[i]
 	i++
 	ka := p.remainingBytes[i : i+2]
-	connection.keepAlive = Read2BytesInt(ka, 0)
+	session.KeepAlive = Read2BytesInt(ka, 0)
 	// log.Println("keepAlive", Read2BytesInt(ka, 0))
 	i = i + 2
 	cil := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
-	clientId := string(p.remainingBytes[i : i+cil])
-	log.Printf("%d bytes, clientId %s\n", cil, string(p.remainingBytes[i:i+cil]))
-	event.clientId = clientId
-	connection.clientId = clientId
+	event.clientId = string(p.remainingBytes[i : i+cil])
+	session.ClientId = event.clientId
+	log.Printf("%d bytes, clientId %s\n", cil, event.clientId)
 	i = i + cil
-	if connection.willFlag() {
+	if session.WillFlag() {
 		// read will topic
 		wtl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		connection.willTopic = string(p.remainingBytes[i : i+wtl])
+		session.WillTopic = string(p.remainingBytes[i : i+wtl])
 		i = i + wtl
 		// will message
 		wml := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		connection.willMessage = p.remainingBytes[i : i+wml]
-		log.Printf("will topic \"%s\"\nwith message \"%s\"\n", connection.willTopic, connection.willMessage)
+		session.WillMessage = p.remainingBytes[i : i+wml]
+		log.Printf("will topic \"%s\"\nwith message \"%s\"\n", session.WillTopic, session.WillMessage)
 		i = i + wml
 	}
-	if connection.haveUser() {
+	if session.HaveUser() {
 		// read username
 		unl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		username := string(p.remainingBytes[i : i+unl])
+		session.Username = string(p.remainingBytes[i : i+unl])
 		i = i + unl
 		// read password
 		pwdl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		password := string(p.remainingBytes[i : i+pwdl])
-		log.Printf("username \"%s\"\nlogging with password \"%s\"\n", username, password)
+		session.Password = string(p.remainingBytes[i : i+pwdl])
+		log.Printf("username \"%s\"\nlogging with password \"%s\"\n", session.Username, session.Password)
 	}
+	event.session = session
 	events <- event
 }
 
-func disconnectReq(p Packet, events chan<- Event, connection *Connection) {
+func disconnectReq(p Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_DISCONNECT
-	event.clientId = connection.clientId
-	event.connection = connection
+	event.clientId = session.ClientId
+	event.session = session
 	events <- event
 }
 
-func publishReq(p Packet, events chan<- Event, c *Connection) {
+func publishReq(p Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_PUBLISH
-	event.clientId = c.clientId
-	event.connection = c
-	event.published.dup = (p.Flags() & 0x08 >> 3) == 1
-	event.published.qos = p.Flags() & 0x06 >> 1
-	event.published.retain = (p.Flags() & 0x01) == 1
+	event.clientId = session.ClientId
+	event.session = session
+	event.published.dup = p.Dup()
+	event.published.qos = p.QoS()
+	event.published.retain = p.Retain()
 	i := 0
 	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
@@ -123,18 +131,18 @@ func publishReq(p Packet, events chan<- Event, c *Connection) {
 	events <- event
 }
 
-func pubackReq(p Packet, events chan<- Event, c *Connection) {
+func pubackReq(p Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_PUBACKED
-	event.clientId = c.clientId
-	event.connection = c
+	event.clientId = session.ClientId
+	event.session = session
 	i := 0
 	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	if i < len(p.remainingBytes) {
 		p.reasonCode = p.remainingBytes[i]
 	}
-	if c.protocolVersion == MQTT_V5 {
+	if session.ProtocolVersion == MQTT_V5 {
 		// i++
 		// read properties
 	}
@@ -142,16 +150,73 @@ func pubackReq(p Packet, events chan<- Event, c *Connection) {
 	events <- event
 }
 
-func subscribeReq(p Packet, events chan<- Event, c *Connection) {
+func pubrelReq(p Packet, events chan<- Event, session *model.Session) {
+	var event Event
+	event.eventType = EVENT_PUBRELED
+	event.clientId = session.ClientId
+	event.session = session
+	i := 0
+	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
+	i = i + 2
+	if i < len(p.remainingBytes) {
+		p.reasonCode = p.remainingBytes[i]
+	}
+	if session.ProtocolVersion == MQTT_V5 {
+		// i++
+		// read properties
+	}
+	event.packet = p
+	events <- event
+}
+
+func pubrecReq(p Packet, events chan<- Event, session *model.Session) {
+	var event Event
+	event.eventType = EVENT_PUBRECED
+	event.clientId = session.ClientId
+	event.session = session
+	i := 0
+	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
+	i = i + 2
+	if i < len(p.remainingBytes) {
+		p.reasonCode = p.remainingBytes[i]
+	}
+	if session.ProtocolVersion == MQTT_V5 {
+		// i++
+		// read properties
+	}
+	event.packet = p
+	events <- event
+}
+
+func pubcompReq(p Packet, events chan<- Event, session *model.Session) {
+	var event Event
+	event.eventType = EVENT_PUBCOMPED
+	event.clientId = session.ClientId
+	event.session = session
+	i := 0
+	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
+	i = i + 2
+	if i < len(p.remainingBytes) {
+		p.reasonCode = p.remainingBytes[i]
+	}
+	if session.ProtocolVersion == MQTT_V5 {
+		// i++
+		// read properties
+	}
+	event.packet = p
+	events <- event
+}
+
+func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_SUBSCRIBED
-	event.clientId = c.clientId
-	event.connection = c
+	event.clientId = session.ClientId
+	event.session = session
 	i := 0
 	pi := Read2BytesInt(p.remainingBytes, i)
 	p.packetIdentifier = pi
 	i = i + 2
-	if c.protocolVersion == 5 {
+	if session.ProtocolVersion == 5 {
 		pl := int(p.remainingBytes[i])
 		log.Println("property length", pl)
 		if pl > 0 {
@@ -171,12 +236,12 @@ func subscribeReq(p Packet, events chan<- Event, c *Connection) {
 	for {
 		var subevent Event
 		subevent.eventType = EVENT_SUBSCRIPTION
-		subevent.connection = c
+		subevent.session = session
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
-		subevent.subscription.clientId = c.clientId
-		subevent.subscription.topic = s
+		subevent.subscription.ClientId = session.ClientId
+		subevent.subscription.Topic = s
 		i = i + sl
 		if p.remainingBytes[i]&0x12 != 0 {
 			log.Println("ignore this subscription & stop")
@@ -186,15 +251,15 @@ func subscribeReq(p Packet, events chan<- Event, c *Connection) {
 		subevent.subscription.RetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
 		subevent.subscription.NoLocal = p.remainingBytes[i] & 0x04 >> 2
 		subevent.subscription.QoS = p.remainingBytes[i] & 0x03
-		subevent.subscription.enabled = true
-		subevent.subscription.createdAt = time.Now()
+		subevent.subscription.Enabled = true
+		subevent.subscription.CreatedAt = time.Now()
 		events <- subevent
 		i++
 		if i >= len(p.remainingBytes)-1 {
 			break
 		}
 		j++
-		if j > MAX_TOPIC_SINGLE_SUBSCRIBE {
+		if j > conf.MAX_TOPIC_SINGLE_SUBSCRIBE {
 			break
 		}
 	}
@@ -203,11 +268,11 @@ func subscribeReq(p Packet, events chan<- Event, c *Connection) {
 	events <- event
 }
 
-func unsubscribeReq(p Packet, events chan<- Event, c *Connection) {
+func unsubscribeReq(p Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_UNSUBSCRIBED
-	event.clientId = c.clientId
-	event.connection = c
+	event.clientId = session.ClientId
+	event.session = session
 	event.packet = p
 	i := 0
 	pi := Read2BytesInt(p.remainingBytes, i)
@@ -221,7 +286,7 @@ func unsubscribeReq(p Packet, events chan<- Event, c *Connection) {
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		unsubs[j] = string(p.remainingBytes[i : i+sl])
-		unsubevent.clientId = c.clientId
+		unsubevent.clientId = session.ClientId
 		unsubevent.topic = unsubs[j]
 		events <- unsubevent
 		i = i + sl
@@ -237,11 +302,11 @@ func unsubscribeReq(p Packet, events chan<- Event, c *Connection) {
 	events <- event
 }
 
-func pingReq(events chan<- Event, connection *Connection) {
+func pingReq(events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_PING
-	event.clientId = connection.clientId
-	event.connection = connection
+	event.clientId = session.ClientId
+	event.session = session
 	events <- event
 }
 
@@ -315,6 +380,48 @@ func Publish(qos uint8, retain bool, topic string, payload []byte) Packet {
 func Puback(packetIdentifier int, reasonCode uint8) Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_PUBACK) << 4
+	if reasonCode == 0 {
+		p.remainingLength = 2
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+	} else {
+		p.remainingLength = 3
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+		p.remainingBytes = append(p.remainingBytes, reasonCode)
+	}
+	return p
+}
+
+func Pubrel(packetIdentifier int, reasonCode uint8) Packet {
+	var p Packet
+	p.header = uint8(PACKET_TYPE_PUBREL) << 4
+	if reasonCode == 0 {
+		p.remainingLength = 2
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+	} else {
+		p.remainingLength = 3
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+		p.remainingBytes = append(p.remainingBytes, reasonCode)
+	}
+	return p
+}
+
+func Pubrec(packetIdentifier int, reasonCode uint8) Packet {
+	var p Packet
+	p.header = uint8(PACKET_TYPE_PUBREC) << 4
+	if reasonCode == 0 {
+		p.remainingLength = 2
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+	} else {
+		p.remainingLength = 3
+		p.remainingBytes = Write2BytesInt(packetIdentifier)
+		p.remainingBytes = append(p.remainingBytes, reasonCode)
+	}
+	return p
+}
+
+func Pubcomp(packetIdentifier int, reasonCode uint8) Packet {
+	var p Packet
+	p.header = uint8(PACKET_TYPE_PUBCOMP) << 4
 	if reasonCode == 0 {
 		p.remainingLength = 2
 		p.remainingBytes = Write2BytesInt(packetIdentifier)
