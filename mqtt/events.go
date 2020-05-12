@@ -243,6 +243,7 @@ func clientDisconnect(db *gorm.DB, connections Connections, e Event) {
 	if conn, ok := connections[e.clientId]; ok {
 		closeClient(conn)
 		removeClient(e.clientId, connections)
+		model.DisconnectSession(db, e.clientId)
 	}
 }
 
