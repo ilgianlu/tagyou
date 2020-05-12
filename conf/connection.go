@@ -1,0 +1,5 @@
+package conf
+
+var SESSION_MAX_DURATION_HOURS int = 1
+
+const DEFAULT_KEEPALIVE = 30

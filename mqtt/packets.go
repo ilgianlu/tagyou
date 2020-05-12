@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 )
 
@@ -52,7 +53,7 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 	// log.Println("protocolVersion", v)
 	session.ProtocolVersion = v
 	i++
-	if int(v) < MINIMUM_SUPPORTED_PROTOCOL {
+	if int(v) < conf.MINIMUM_SUPPORTED_PROTOCOL {
 		log.Println("unsupported protocol version err", v)
 		event.err = UNSUPPORTED_PROTOCOL_VERSION
 		events <- event
@@ -258,7 +259,7 @@ func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 			break
 		}
 		j++
-		if j > MAX_TOPIC_SINGLE_SUBSCRIBE {
+		if j > conf.MAX_TOPIC_SINGLE_SUBSCRIBE {
 			break
 		}
 	}

@@ -7,13 +7,20 @@ import (
 	"os"
 	"time"
 
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
+const MQTT_V5 = 5
+const MQTT_V3_11 = 4
+
+const TOPIC_SEPARATOR = "/"
+const TOPIC_WILDCARD = "#"
+
 func StartMQTT(port string) {
-	DISALLOW_ANONYMOUS_LOGIN = os.Getenv("DISALLOW_ANONYMOUS_LOGIN") == "true"
+	conf.DISALLOW_ANONYMOUS_LOGIN = os.Getenv("DISALLOW_ANONYMOUS_LOGIN") == "true"
 	db, err := gorm.Open("sqlite3", "sqlite.db3")
 	if err != nil {
 		log.Fatal("failed to connect database")
@@ -53,8 +60,8 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 	defer conn.Close()
 	session := model.Session{
 		Connected: true,
-		KeepAlive: DEFAULT_KEEPALIVE,
-		ExpireAt:  time.Now().Add(time.Duration(SESSION_MAX_DURATION_HOURS) * time.Hour),
+		KeepAlive: conf.DEFAULT_KEEPALIVE,
+		ExpireAt:  time.Now().Add(time.Duration(conf.SESSION_MAX_DURATION_HOURS) * time.Hour),
 		Conn:      conn,
 	}
 	buffers := make(chan []byte, 2)

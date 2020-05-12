@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/jinzhu/gorm"
 )
@@ -60,7 +61,7 @@ func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQ
 }
 
 func clientConnection(db *gorm.DB, connections Connections, e Event, outQueue chan<- OutData) {
-	if DISALLOW_ANONYMOUS_LOGIN && !model.CheckAuth(db, e.clientId, e.session.Username, e.session.Password) {
+	if conf.DISALLOW_ANONYMOUS_LOGIN && !model.CheckAuth(db, e.clientId, e.session.Username, e.session.Password) {
 		log.Println("wrong connect credentials")
 		return
 	}

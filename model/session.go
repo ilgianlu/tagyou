@@ -4,6 +4,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
@@ -11,7 +12,7 @@ import (
 type Session struct {
 	ID              uint `gorm:"primary_key"`
 	ExpireAt        time.Time
-	ClientId        string `gorm:"unique"`
+	ClientId        string `gorm:"unique_index"`
 	Connected       bool
 	ProtocolVersion uint8
 	ConnectFlags    uint8
@@ -62,4 +63,11 @@ func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
 
 func CleanSession(db *gorm.DB, clientId string) {
 	db.Where("client_id = ?", clientId).Delete(Session{})
+}
+
+func DisconnectSession(db *gorm.DB, clientId string) {
+	db.Where("client_id = ?", clientId).Update(Session{
+		Connected: false,
+		ExpireAt:  time.Now().Add(time.Duration(conf.SESSION_MAX_DURATION_HOURS) * time.Hour),
+	})
 }
