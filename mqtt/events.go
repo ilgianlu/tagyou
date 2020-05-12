@@ -105,14 +105,30 @@ func clientSubscription(db *gorm.DB, e Event, outQueue chan<- OutData) {
 }
 
 func sendRetain(db *gorm.DB, e Event, outQueue chan<- OutData) {
-	var retains []model.Retain
-	db.Where("topic = ?", e.subscription.Topic).Find(&retains)
+	retains := findRetains(db, e.subscription.Topic)
 	if len(retains) == 0 {
 		return
 	}
 	for _, r := range retains {
-		sendSimple(e.clientId, Publish(e.subscription.QoS, true, r.Topic, r.ApplicationMessage), outQueue)
+		p := Publish(e.subscription.QoS, true, r.Topic, r.ApplicationMessage)
+		sendForward(db, r.Topic, p, outQueue)
 	}
+}
+
+func findRetains(db *gorm.DB, subscribedTopic string) []model.Retain {
+	trimmedTopic := trimWildcard(subscribedTopic)
+	var retains []model.Retain
+	db.Where("topic LIKE ?", strings.Join([]string{trimmedTopic, "%"}, "")).Find(&retains)
+	return retains
+}
+
+func trimWildcard(topic string) string {
+	lci := len(topic) - 1
+	lc := topic[lci]
+	if string(lc) == TOPIC_WILDCARD {
+		topic = topic[:lci]
+	}
+	return topic
 }
 
 func clientUnsubscribed(e Event, outQueue chan<- OutData) {
