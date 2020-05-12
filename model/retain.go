@@ -3,7 +3,7 @@ package model
 import "time"
 
 type Retain struct {
-	Topic              string `gorm:"index:retain_topic_idx"`
+	Topic              string `gorm:"primary_key;auto_increment:false"`
 	ApplicationMessage []byte
 	CreatedAt          time.Time
 }

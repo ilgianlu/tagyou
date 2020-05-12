@@ -66,8 +66,8 @@ func CleanSession(db *gorm.DB, clientId string) {
 }
 
 func DisconnectSession(db *gorm.DB, clientId string) {
-	db.Where("client_id = ?", clientId).Update(Session{
-		Connected: false,
-		ExpireAt:  time.Now().Add(time.Duration(conf.SESSION_MAX_DURATION_HOURS) * time.Hour),
+	db.Model(&Session{}).Where("client_id = ?", clientId).Updates(map[string]interface{}{
+		"Connected": false,
+		"ExpireAt":  time.Now().Add(time.Duration(conf.SESSION_MAX_DURATION_HOURS) * time.Hour),
 	})
 }

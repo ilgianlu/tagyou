@@ -230,7 +230,10 @@ func saveRetain(db *gorm.DB, e Event) {
 	r.Topic = e.published.topic
 	r.ApplicationMessage = e.packet.remainingBytes[e.packet.applicationMessage:]
 	r.CreatedAt = time.Now()
-	db.Create(&r)
+	db.Delete(&r)
+	if len(r.ApplicationMessage) > 0 {
+		db.Create(&r)
+	}
 }
 
 func clientPing(e Event, outQueue chan<- OutData) {
