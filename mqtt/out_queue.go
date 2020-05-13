@@ -2,9 +2,7 @@ package mqtt
 
 import (
 	"log"
-	"time"
 
-	"github.com/ilgianlu/tagyou/model"
 	"github.com/jinzhu/gorm"
 )
 
@@ -22,26 +20,7 @@ func simpleSend(connections Connections, db *gorm.DB, clientId string, packet Pa
 		} else {
 			log.Println("published", n, "bytes to", clientId)
 		}
-		if packet.QoS() == 1 || packet.QoS() == 2 {
-			saveRetry(db, clientId, packet)
-		}
 	} else {
 		log.Println(clientId, "is not connected")
 	}
-}
-
-func saveRetry(db *gorm.DB, clientId string, packet Packet) {
-	var r model.Retry
-	r.ClientId = clientId
-	r.PacketIdentifier = packet.packetIdentifier
-	r.Qos = packet.QoS()
-	r.Dup = packet.Dup()
-	if r.Qos == 1 {
-		r.AckStatus = model.WAIT_FOR_PUB_ACK
-	} else {
-		r.AckStatus = model.WAIT_FOR_PUB_REC
-	}
-	r.ApplicationMessage = packet.ApplicationMessage()
-	r.CreatedAt = time.Now()
-	db.Create(&r)
 }
