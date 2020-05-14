@@ -64,7 +64,7 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 		ExpireAt:  time.Now().Add(time.Duration(conf.SESSION_MAX_DURATION_HOURS) * time.Hour),
 		Conn:      conn,
 	}
-	buffers := make(chan []byte)
+	buffers := make(chan []byte, 1)
 	packets := make(chan Packet, 1)
 	for {
 		buffer := make([]byte, 1024)

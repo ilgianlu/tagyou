@@ -22,4 +22,5 @@ type Retry struct {
 	AckStatus          uint8
 	CreatedAt          time.Time
 	SessionID          uint
+	ReasonCode         uint8 `gorm:"-"`
 }

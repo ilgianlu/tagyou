@@ -37,10 +37,10 @@ func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQ
 			clientPuback(db, e)
 		case EVENT_PUBRECED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub received message", e.packet.packetIdentifier)
-			clientPubrec(e, outQueue)
+			clientPubrec(db, e, outQueue)
 		case EVENT_PUBRELED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub releases message", e.packet.packetIdentifier)
-			clientPubrel(e, outQueue)
+			clientPubrel(db, e, outQueue)
 		case EVENT_PUBCOMPED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub complete message", e.packet.packetIdentifier)
 			clientPubcomp(db, e)
@@ -110,7 +110,7 @@ func sendRetain(db *gorm.DB, e Event, outQueue chan<- OutData) {
 		return
 	}
 	for _, r := range retains {
-		p := Publish(e.subscription.QoS, true, r.Topic, r.ApplicationMessage)
+		p := Publish(e.subscription.QoS, true, r.Topic, newPacketIdentifier(), r.ApplicationMessage)
 		sendForward(db, r.Topic, p, outQueue)
 	}
 }
@@ -146,23 +146,36 @@ func clientUnsubscription(db *gorm.DB, e Event) {
 	db.Delete(sub)
 }
 
-func clientPublish(db *gorm.DB, e Event, outQueue chan<- OutData) {
-	if e.published.retain {
-		saveRetain(db, e)
+func clientPing(e Event, outQueue chan<- OutData) {
+	var o OutData
+	o.clientId = e.clientId
+	o.packet = PingResp()
+	outQueue <- o
+}
+
+func clientDisconnect(db *gorm.DB, connections Connections, e Event) {
+	if conn, ok := connections[e.clientId]; ok {
+		closeClient(conn)
+		removeClient(e.clientId, connections)
+		model.DisconnectSession(db, e.clientId)
 	}
-	sendForward(db, e.published.topic, e.packet, outQueue)
-	if e.published.qos == 1 {
-		sendSimple(e.clientId, Puback(e.packet.packetIdentifier, PUBACK_SUCCESS), outQueue)
+}
+
+func closeClient(connection net.Conn) {
+	err := connection.Close()
+	if err != nil {
+		log.Println("could not close conn", err)
 	}
-	if e.published.qos == 2 {
-		sendSimple(e.clientId, Pubrec(e.packet.packetIdentifier, PUBREC_SUCCESS), outQueue)
-	}
+}
+
+func removeClient(clientId string, connections Connections) {
+	delete(connections, clientId)
 }
 
 func sendForward(db *gorm.DB, topic string, packet Packet, outQueue chan<- OutData) {
 	topicSegments := strings.Split(topic, TOPIC_SEPARATOR)
 	subs := findDests(db, topicSegments)
-	sendSubscribers(subs, packet, outQueue)
+	sendSubscribers(db, topic, subs, packet, outQueue)
 }
 
 func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
@@ -180,9 +193,51 @@ func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
 	return subs
 }
 
-func sendSubscribers(subscribers []model.Subscription, packet Packet, outQueue chan<- OutData) {
+func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, packet Packet, outQueue chan<- OutData) {
 	for _, s := range subscribers {
-		sendSimple(s.ClientId, packet, outQueue)
+		qos := getQos(packet.QoS(), s.QoS)
+		if qos == conf.QOS0 {
+			// prepare publish packet qos 0 no packet identifier
+			p := Publish(conf.QOS0, packet.Retain(), topic, 0, packet.ApplicationMessage())
+			sendSimple(s.ClientId, p, outQueue)
+		} else if qos == conf.QOS1 {
+			// prepare publish packet qos 1 (if sub permit) new packet identifier
+			p := Publish(qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
+			r := model.Retry{
+				ClientId:           s.ClientId,
+				PacketIdentifier:   packet.packetIdentifier,
+				Qos:                qos,
+				Dup:                packet.Dup(),
+				ApplicationMessage: packet.ApplicationMessage(),
+				AckStatus:          model.WAIT_FOR_PUB_ACK,
+				CreatedAt:          time.Now(),
+			}
+			db.Save(&r)
+			sendSimple(r.ClientId, p, outQueue)
+		} else if qos == 2 {
+			// prepare publish packet qos 2 (if sub permit) new packet identifier
+			p := Publish(qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
+			r := model.Retry{
+				ClientId:           s.ClientId,
+				PacketIdentifier:   packet.packetIdentifier,
+				Qos:                qos,
+				Dup:                packet.Dup(),
+				ApplicationMessage: packet.ApplicationMessage(),
+				AckStatus:          model.WAIT_FOR_PUB_REL,
+				CreatedAt:          time.Now(),
+			}
+			db.Save(&r)
+			sendSimple(r.ClientId, p, outQueue)
+		}
+
+	}
+}
+
+func getQos(pubQos uint8, subQos uint8) uint8 {
+	if pubQos > subQos {
+		return subQos
+	} else {
+		return pubQos
 	}
 }
 
@@ -191,54 +246,6 @@ func sendSimple(clientId string, p Packet, outQueue chan<- OutData) {
 	o.clientId = clientId
 	o.packet = p
 	outQueue <- o
-}
-
-func clientPuback(db *gorm.DB, e Event) {
-	// find msg identifier sent
-	// check reasoncode
-	// if reasoncode ok remove retry
-	removeRetry(db, e.session.ClientId, e.packet.packetIdentifier)
-}
-
-func removeRetry(db *gorm.DB, clientId string, packetIdentifier int) {
-	var r model.Retry
-	if db.Where("client_id = ? and packet_identifier = ?", clientId, packetIdentifier).First(&r).RecordNotFound() {
-		log.Println("ack for invalid retry", clientId, packetIdentifier)
-	} else {
-		log.Println("retry found, removing...", clientId, packetIdentifier)
-		db.Delete(&r)
-	}
-}
-
-func clientPubrec(e Event, outQueue chan<- OutData) {
-	// find msg identifier sent
-	// check reasoncode
-	// if reasoncode ok
-	// if retry in wait for pub rec -> send pub rel
-	var o OutData
-	o.clientId = e.clientId
-	o.packet = Pubrel(e.packet.packetIdentifier, PUBREL_SUCCESS)
-	outQueue <- o
-	// change retry state to wait for pubcomp
-}
-
-func clientPubrel(e Event, outQueue chan<- OutData) {
-	// find msg identifier sent
-	// check reasoncode
-	// if reasoncode ok
-	// if retry in wait for pubrel -> send pub comp
-	var o OutData
-	o.clientId = e.clientId
-	o.packet = Pubcomp(e.packet.packetIdentifier, PUBCOMP_SUCCESS)
-	outQueue <- o
-}
-
-func clientPubcomp(db *gorm.DB, e Event) {
-	// find msg identifier sent
-	// check reasoncode
-	// if reasoncode ok
-	// if retry in wait for pubcomp -> remove retry
-	removeRetry(db, e.session.ClientId, e.packet.packetIdentifier)
 }
 
 func saveRetain(db *gorm.DB, e Event) {
@@ -252,39 +259,13 @@ func saveRetain(db *gorm.DB, e Event) {
 	}
 }
 
-func clientPing(e Event, outQueue chan<- OutData) {
-	var o OutData
-	o.clientId = e.clientId
-	o.packet = PingResp()
-	outQueue <- o
-}
-
-func clientDisconnect(db *gorm.DB, connections Connections, e Event) {
-	if conn, ok := connections[e.clientId]; ok {
-		closeClient(conn)
-		removeClient(e.clientId, connections)
-		model.DisconnectSession(db, e.clientId)
-	}
-}
-
 func sendWill(db *gorm.DB, e Event, outQueue chan<- OutData) {
 	var s model.Session
 	if db.First(&s, "client_id = ?", e.clientId).RecordNotFound() {
 		return
 	}
 	if s.WillTopic != "" {
-		p := Publish(s.WillQoS(), s.WillRetain(), s.WillTopic, s.WillMessage)
+		p := Publish(s.WillQoS(), s.WillRetain(), s.WillTopic, newPacketIdentifier(), s.WillMessage)
 		sendForward(db, s.WillTopic, p, outQueue)
 	}
-}
-
-func closeClient(connection net.Conn) {
-	err := connection.Close()
-	if err != nil {
-		log.Println("could not close conn", err)
-	}
-}
-
-func removeClient(clientId string, connections Connections) {
-	delete(connections, clientId)
 }
