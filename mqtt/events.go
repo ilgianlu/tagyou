@@ -110,7 +110,7 @@ func sendRetain(db *gorm.DB, e Event, outQueue chan<- OutData) {
 		return
 	}
 	for _, r := range retains {
-		p := Publish(e.subscription.QoS, true, r.Topic, r.ApplicationMessage)
+		p := Publish(e.subscription.QoS, true, r.Topic, newPacketIdentifier(), r.ApplicationMessage)
 		sendForward(db, r.Topic, p, outQueue)
 	}
 }
@@ -175,7 +175,7 @@ func removeClient(clientId string, connections Connections) {
 func sendForward(db *gorm.DB, topic string, packet Packet, outQueue chan<- OutData) {
 	topicSegments := strings.Split(topic, TOPIC_SEPARATOR)
 	subs := findDests(db, topicSegments)
-	sendSubscribers(db, subs, packet, outQueue)
+	sendSubscribers(db, topic, subs, packet, outQueue)
 }
 
 func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
@@ -193,17 +193,20 @@ func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
 	return subs
 }
 
-func sendSubscribers(db *gorm.DB, subscribers []model.Subscription, packet Packet, outQueue chan<- OutData) {
+func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, packet Packet, outQueue chan<- OutData) {
 	for _, s := range subscribers {
-		if packet.QoS() == 0 {
+		qos := getQos(packet.QoS(), s.QoS)
+		if qos == conf.QOS0 {
 			// prepare publish packet qos 0 no packet identifier
+			p := Publish(conf.QOS0, packet.Retain(), topic, 0, packet.ApplicationMessage())
 			sendSimple(s.ClientId, p, outQueue)
-		} else if packet.QoS() == 1 {
+		} else if qos == conf.QOS1 {
 			// prepare publish packet qos 1 (if sub permit) new packet identifier
+			p := Publish(qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
 			r := model.Retry{
 				ClientId:           s.ClientId,
 				PacketIdentifier:   packet.packetIdentifier,
-				Qos:                packet.QoS(),
+				Qos:                qos,
 				Dup:                packet.Dup(),
 				ApplicationMessage: packet.ApplicationMessage(),
 				AckStatus:          model.WAIT_FOR_PUB_ACK,
@@ -211,12 +214,13 @@ func sendSubscribers(db *gorm.DB, subscribers []model.Subscription, packet Packe
 			}
 			db.Save(&r)
 			sendSimple(r.ClientId, p, outQueue)
-		} else if packet.QoS() == 2 {
+		} else if qos == 2 {
 			// prepare publish packet qos 2 (if sub permit) new packet identifier
+			p := Publish(qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
 			r := model.Retry{
 				ClientId:           s.ClientId,
 				PacketIdentifier:   packet.packetIdentifier,
-				Qos:                packet.QoS(),
+				Qos:                qos,
 				Dup:                packet.Dup(),
 				ApplicationMessage: packet.ApplicationMessage(),
 				AckStatus:          model.WAIT_FOR_PUB_REL,
@@ -226,6 +230,14 @@ func sendSubscribers(db *gorm.DB, subscribers []model.Subscription, packet Packe
 			sendSimple(r.ClientId, p, outQueue)
 		}
 
+	}
+}
+
+func getQos(pubQos uint8, subQos uint8) uint8 {
+	if pubQos > subQos {
+		return subQos
+	} else {
+		return pubQos
 	}
 }
 
@@ -253,7 +265,7 @@ func sendWill(db *gorm.DB, e Event, outQueue chan<- OutData) {
 		return
 	}
 	if s.WillTopic != "" {
-		p := Publish(s.WillQoS(), s.WillRetain(), s.WillTopic, s.WillMessage)
+		p := Publish(s.WillQoS(), s.WillRetain(), s.WillTopic, newPacketIdentifier(), s.WillMessage)
 		sendForward(db, s.WillTopic, p, outQueue)
 	}
 }

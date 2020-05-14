@@ -107,30 +107,6 @@ func disconnectReq(p Packet, events chan<- Event, session *model.Session) {
 	events <- event
 }
 
-func publishReq(p Packet, events chan<- Event, session *model.Session) {
-	var event Event
-	event.eventType = EVENT_PUBLISH
-	event.clientId = session.ClientId
-	event.session = session
-	event.published.dup = p.Dup()
-	event.published.qos = p.QoS()
-	event.published.retain = p.Retain()
-	i := 0
-	tl := Read2BytesInt(p.remainingBytes, i)
-	i = i + 2
-	topic := string(p.remainingBytes[i : i+tl])
-	event.published.topic = topic
-	i = i + tl
-	if event.published.qos != 0 {
-		pi := Read2BytesInt(p.remainingBytes, i)
-		p.packetIdentifier = pi
-		i = i + 2
-	}
-	p.applicationMessage = i
-	event.packet = p
-	events <- event
-}
-
 func pubackReq(p Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_PUBACKED
@@ -352,28 +328,6 @@ func PingResp() Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_PINGRES) << 4
 	p.remainingLength = 0
-	return p
-}
-
-func Publish(qos uint8, retain bool, topic string, payload []byte) Packet {
-	var p Packet
-	p.header = uint8(PACKET_TYPE_PUBLISH) << 4
-	p.header = p.header | qos<<1
-	if retain {
-		p.header = p.header | 1
-	}
-	// write var int length 2 + len(topic) + len(payload)
-	p.remainingLength = 2 + len(topic) + len(payload)
-
-	// write topic length
-	rb := Write2BytesInt(len(topic))
-	// write topic string
-	rb = append(rb, []byte(topic)...)
-	// write packet identifier only if qos > 0
-
-	// write payload
-	rb = append(rb, payload...)
-	p.remainingBytes = rb
 	return p
 }
 
