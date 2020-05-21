@@ -68,13 +68,13 @@ func clientConnection(db *gorm.DB, connections Connections, e Event, outQueue ch
 
 	if c, ok := connections[e.clientId]; ok {
 		log.Println("session taken over")
-		p := Connack(false, SESSION_TAKEN_OVER)
+		p := Connack(false, SESSION_TAKEN_OVER, e.session.ProtocolVersion)
 		sendSimple(e.clientId, p, outQueue)
 		closeClient(c)
 		removeClient(e.clientId, connections)
 	}
 	connections[e.clientId] = e.session.Conn
-	sendSimple(e.clientId, Connack(false, CONNECT_OK), outQueue)
+	sendSimple(e.clientId, Connack(false, CONNECT_OK, e.session.ProtocolVersion), outQueue)
 
 	startSession(db, e.session)
 }
@@ -95,7 +95,7 @@ func startSession(db *gorm.DB, session *model.Session) {
 func clientSubscribed(e Event, outQueue chan<- OutData) {
 	var o OutData
 	o.clientId = e.clientId
-	o.packet = Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS)
+	o.packet = Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS, e.session.ProtocolVersion)
 	outQueue <- o
 }
 
@@ -134,7 +134,7 @@ func trimWildcard(topic string) string {
 func clientUnsubscribed(e Event, outQueue chan<- OutData) {
 	var o OutData
 	o.clientId = e.clientId
-	o.packet = Unsuback(e.packet.packetIdentifier, e.packet.subscribedCount)
+	o.packet = Unsuback(e.packet.packetIdentifier, e.packet.subscribedCount, e.session.ProtocolVersion)
 	outQueue <- o
 }
 

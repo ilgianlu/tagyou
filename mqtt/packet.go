@@ -46,6 +46,10 @@ type Packet struct {
 	reasonCode           uint8
 	subscribedCount      int
 	err                  error
+	propertiesPos        int
+	propertiesLength     int
+	willPropertiesPos    int
+	willPropertiesLength int
 }
 
 func (p *Packet) PacketType() byte {
@@ -124,6 +128,14 @@ func Start(buff []byte) (Packet, error) {
 	} else {
 		return p, fmt.Errorf("header: invalid %b", buff[0])
 	}
+}
+
+func (p *Packet) readProperties(i int) (int, int, int) {
+	propertiesLength, k, err := ReadVarInt(p.remainingBytes[i:])
+	if err != nil {
+		return 0, 0, MALFORMED_PACKET
+	}
+	return k + propertiesLength, i, 0
 }
 
 func (p *Packet) checkHeader() bool {
