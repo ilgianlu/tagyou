@@ -59,3 +59,11 @@ func Write2BytesInt(i int) []byte {
 	b[1] = byte(i & 0x00FF)
 	return b
 }
+
+func Read4BytesInt(a []byte) uint32 {
+	v := uint32(a[0])
+	for i := 1; i < 4; i++ {
+		v = v<<8 + uint32(a[i])
+	}
+	return v
+}

@@ -77,3 +77,21 @@ func TestWrite2BytesInt(t *testing.T) {
 		t.Errorf("expected [4, 1] received [%d, %d]", v2[0], v2[1])
 	}
 }
+
+func TestRead4BytesInt(t *testing.T) {
+	b := []byte{0, 0, 0, 1}
+	v := Read4BytesInt(b)
+	if v != 1 {
+		t.Errorf("expected 1, read %d\n", v)
+	}
+	b1 := []byte{0, 0, 1, 0}
+	v1 := Read4BytesInt(b1)
+	if v1 != 256 {
+		t.Errorf("expected 256, read %d\n", v1)
+	}
+	b2 := []byte{1, 0, 0, 1}
+	v2 := Read4BytesInt(b2)
+	if v2 != 16777217 {
+		t.Errorf("expected 16777217, read %d\n", v2)
+	}
+}
