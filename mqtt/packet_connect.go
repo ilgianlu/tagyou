@@ -40,7 +40,6 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 			events <- event
 			return
 		}
-		p.propertiesLength = pl
 		p.propertiesPos = pp
 		i = i + pl
 	}
