@@ -51,7 +51,7 @@ func publishReq(p Packet, events chan<- Event, session *model.Session) {
 		i = i + 2
 	}
 	if session.ProtocolVersion >= MQTT_V5 {
-		pl, pp, err := p.readProperties(i)
+		pl, pp, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
 			event.err = uint8(err)

@@ -14,7 +14,7 @@ func disconnectReq(p Packet, events chan<- Event, session *model.Session) {
 	i := 0
 	p.reasonCode = p.remainingBytes[i]
 	if session.ProtocolVersion >= MQTT_V5 {
-		pl, pp, err := p.readProperties(i)
+		pl, pp, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
 			event.err = uint8(err)

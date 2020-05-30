@@ -50,7 +50,7 @@ type Packet struct {
 	propertiesLength     int
 	willPropertiesPos    int
 	willPropertiesLength int
-	properties           map[int]int
+	properties           Properties
 }
 
 func (p *Packet) PacketType() byte {
