@@ -36,21 +36,22 @@ type Property struct {
 }
 
 func (p *Packet) parseProperties(i int) (int, int, int) {
-	propertiesLength, k, err := ReadVarInt(p.remainingBytes[i:])
+	alignProp := p.remainingBytes[i:]
+	propertiesLength, k, err := ReadVarInt(alignProp)
 	if err != nil {
 		return 0, 0, MALFORMED_PACKET
 	}
 	p.properties = make(map[int]Property)
-	for propertiesLength > 0 {
-		propId, property, fw := parseProp(p.remainingBytes, i)
+	j := k
+	for j < propertiesLength {
+		propId, property, fw := parseProp(alignProp, j)
 		if fw == 0 {
 			return 0, 0, MALFORMED_PACKET
 		}
 		p.properties[propId] = property
-		i = i + fw
-		propertiesLength = propertiesLength - property.length
+		j = j + fw
 	}
-	return k + propertiesLength, i, 0
+	return k + propertiesLength, i + j, 0
 }
 
 func parseProp(buffer []byte, i int) (int, Property, int) {
