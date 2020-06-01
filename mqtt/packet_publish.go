@@ -1,6 +1,7 @@
 package mqtt
 
 import (
+	"log"
 	"math/rand"
 
 	"github.com/ilgianlu/tagyou/model"
@@ -48,6 +49,18 @@ func publishReq(p Packet, events chan<- Event, session *model.Session) {
 		pi := Read2BytesInt(p.remainingBytes, i)
 		p.packetIdentifier = pi
 		i = i + 2
+	}
+	if session.ProtocolVersion >= MQTT_V5 {
+		pl, pp, err := p.parseProperties(i)
+		if err != 0 {
+			log.Println("err reading properties", err)
+			event.err = uint8(err)
+			events <- event
+			return
+		}
+		p.propertiesLength = pl
+		p.propertiesPos = pp
+		i = i + pl
 	}
 	p.applicationMessage = i
 	event.packet = p

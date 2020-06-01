@@ -46,6 +46,11 @@ type Packet struct {
 	reasonCode           uint8
 	subscribedCount      int
 	err                  error
+	propertiesPos        int
+	propertiesLength     int
+	willPropertiesPos    int
+	willPropertiesLength int
+	properties           Properties
 }
 
 func (p *Packet) PacketType() byte {

@@ -11,7 +11,7 @@ func clientPubrec(db *gorm.DB, e Event, outQueue chan<- OutData) {
 	sendPubrel := func(retry model.Retry) {
 		var o OutData
 		o.clientId = retry.ClientId
-		o.packet = Pubrel(retry.PacketIdentifier, retry.ReasonCode)
+		o.packet = Pubrel(retry.PacketIdentifier, retry.ReasonCode, e.session.ProtocolVersion)
 		outQueue <- o
 	}
 
