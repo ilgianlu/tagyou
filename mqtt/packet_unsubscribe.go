@@ -12,10 +12,7 @@ func unsubscribeReq(p Packet, events chan<- Event, session *model.Session) {
 	event.clientId = session.ClientId
 	event.session = session
 	event.packet = p
-	i := 0
-	pi := Read2BytesInt(p.remainingBytes, i)
-	p.packetIdentifier = pi
-	i = i + 2
+	i := 2 // 2 bytes for packet identifier
 	if session.ProtocolVersion >= MQTT_V5 {
 		pl, pp, err := p.parseProperties(i)
 		if err != 0 {

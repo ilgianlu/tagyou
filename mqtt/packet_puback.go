@@ -30,9 +30,7 @@ func pubackReq(p Packet, events chan<- Event, session *model.Session) {
 	event.eventType = EVENT_PUBACKED
 	event.clientId = session.ClientId
 	event.session = session
-	i := 0
-	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
-	i = i + 2
+	i := 2 // expect packet identifier in first 2 bytes
 	if i < len(p.remainingBytes) {
 		p.reasonCode = p.remainingBytes[i]
 	}

@@ -30,19 +30,19 @@ func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQ
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscription", e.topic)
 			clientUnsubscription(db, e)
 		case EVENT_PUBLISH:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.published.topic)
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
 			clientPublish(db, e, outQueue)
 		case EVENT_PUBACKED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.packetIdentifier)
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.PacketIdentifier())
 			clientPuback(db, e)
 		case EVENT_PUBRECED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub received message", e.packet.packetIdentifier)
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub received message", e.packet.PacketIdentifier())
 			clientPubrec(db, e, outQueue)
 		case EVENT_PUBRELED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub releases message", e.packet.packetIdentifier)
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub releases message", e.packet.PacketIdentifier())
 			clientPubrel(db, e, outQueue)
 		case EVENT_PUBCOMPED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub complete message", e.packet.packetIdentifier)
+			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub complete message", e.packet.PacketIdentifier())
 			clientPubcomp(db, e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
@@ -95,7 +95,7 @@ func startSession(db *gorm.DB, session *model.Session) {
 func clientSubscribed(e Event, outQueue chan<- OutData) {
 	var o OutData
 	o.clientId = e.clientId
-	o.packet = Suback(e.packet.packetIdentifier, e.packet.subscribedCount, e.subscription.QoS, e.session.ProtocolVersion)
+	o.packet = Suback(e.packet.PacketIdentifier(), e.packet.subscribedCount, e.subscription.QoS, e.session.ProtocolVersion)
 	outQueue <- o
 }
 
@@ -134,7 +134,7 @@ func trimWildcard(topic string) string {
 func clientUnsubscribed(e Event, outQueue chan<- OutData) {
 	var o OutData
 	o.clientId = e.clientId
-	o.packet = Unsuback(e.packet.packetIdentifier, e.packet.subscribedCount, e.session.ProtocolVersion)
+	o.packet = Unsuback(e.packet.PacketIdentifier(), e.packet.subscribedCount, e.session.ProtocolVersion)
 	outQueue <- o
 }
 
@@ -205,7 +205,7 @@ func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription
 			p := Publish(qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
 			r := model.Retry{
 				ClientId:           s.ClientId,
-				PacketIdentifier:   packet.packetIdentifier,
+				PacketIdentifier:   packet.PacketIdentifier(),
 				Qos:                qos,
 				Dup:                packet.Dup(),
 				ApplicationMessage: packet.ApplicationMessage(),
@@ -219,7 +219,7 @@ func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription
 			p := Publish(qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
 			r := model.Retry{
 				ClientId:           s.ClientId,
-				PacketIdentifier:   packet.packetIdentifier,
+				PacketIdentifier:   packet.PacketIdentifier(),
 				Qos:                qos,
 				Dup:                packet.Dup(),
 				ApplicationMessage: packet.ApplicationMessage(),
@@ -250,8 +250,8 @@ func sendSimple(clientId string, p Packet, outQueue chan<- OutData) {
 
 func saveRetain(db *gorm.DB, e Event) {
 	var r model.Retain
-	r.Topic = e.published.topic
-	r.ApplicationMessage = e.packet.remainingBytes[e.packet.applicationMessage:]
+	r.Topic = e.topic
+	r.ApplicationMessage = e.packet.ApplicationMessage()
 	r.CreatedAt = time.Now()
 	db.Delete(&r)
 	if len(r.ApplicationMessage) > 0 {

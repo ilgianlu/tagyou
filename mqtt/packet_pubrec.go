@@ -30,9 +30,7 @@ func pubrecReq(p Packet, events chan<- Event, session *model.Session) {
 	event.eventType = EVENT_PUBRECED
 	event.clientId = session.ClientId
 	event.session = session
-	i := 0
-	p.packetIdentifier = Read2BytesInt(p.remainingBytes, i)
-	i = i + 2
+	i := 2 // 2 bytes for packet identifier
 	if i < len(p.remainingBytes) {
 		p.reasonCode = p.remainingBytes[i]
 	}

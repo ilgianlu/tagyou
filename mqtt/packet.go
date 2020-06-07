@@ -37,12 +37,18 @@ const PUBREL_SUCCESS = 0x00
 const PUBREC_SUCCESS = 0x00
 
 type Packet struct {
+	// header
 	header               byte
 	remainingLength      int
 	remainingLengthBytes int
-	remainingBytes       []byte
-	applicationMessage   int
-	packetIdentifier     int
+	// packet remaining bytes
+	remainingBytes []byte
+	// variable header offset in remaining bytes
+	varHeaderOffset int
+	properties      Properties
+	// payload
+	payloadOffset int
+
 	reasonCode           uint8
 	subscribedCount      int
 	err                  error
@@ -50,7 +56,6 @@ type Packet struct {
 	propertiesLength     int
 	willPropertiesPos    int
 	willPropertiesLength int
-	properties           Properties
 }
 
 func (p *Packet) PacketType() byte {
@@ -82,6 +87,10 @@ func (p *Packet) Retain() bool {
 	return false
 }
 
+func (p *Packet) PacketIdentifier() int {
+	return Read2BytesInt(p.remainingBytes, p.varHeaderOffset)
+}
+
 func (p *Packet) PacketLength() int {
 	return 1 + p.remainingLengthBytes + len(p.remainingBytes)
 }
@@ -96,7 +105,7 @@ func (p *Packet) missingBytes() int {
 
 func (p *Packet) ApplicationMessage() []byte {
 	if p.PacketType() == PACKET_TYPE_PUBLISH && p.PacketComplete() {
-		return p.remainingBytes[p.applicationMessage:]
+		return p.remainingBytes[p.payloadOffset:]
 	}
 	return []byte{}
 }

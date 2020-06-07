@@ -19,7 +19,7 @@ func clientPubcomp(db *gorm.DB, e Event) {
 
 	retry := model.Retry{
 		ClientId:         e.clientId,
-		PacketIdentifier: e.packet.packetIdentifier,
+		PacketIdentifier: e.packet.PacketIdentifier(),
 		ReasonCode:       e.packet.reasonCode,
 	}
 	if db.Find(&retry).RecordNotFound() {

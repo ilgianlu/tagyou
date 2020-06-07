@@ -36,19 +36,15 @@ func publishReq(p Packet, events chan<- Event, session *model.Session) {
 	event.eventType = EVENT_PUBLISH
 	event.clientId = session.ClientId
 	event.session = session
-	event.published.dup = p.Dup()
-	event.published.qos = p.QoS()
-	event.published.retain = p.Retain()
 	i := 0
 	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
+	// variable header
 	topic := string(p.remainingBytes[i : i+tl])
-	event.published.topic = topic
+	event.topic = topic
 	i = i + tl
-	if event.published.qos != 0 {
-		pi := Read2BytesInt(p.remainingBytes, i)
-		p.packetIdentifier = pi
-		i = i + 2
+	if p.QoS() > 0 {
+		i = i + 2 // + 2 for packet identifier
 	}
 	if session.ProtocolVersion >= MQTT_V5 {
 		pl, pp, err := p.parseProperties(i)
@@ -62,7 +58,8 @@ func publishReq(p Packet, events chan<- Event, session *model.Session) {
 		p.propertiesPos = pp
 		i = i + pl
 	}
-	p.applicationMessage = i
+	// payload
+	p.payloadOffset = i
 	event.packet = p
 	events <- event
 }

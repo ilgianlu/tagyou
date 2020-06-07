@@ -13,10 +13,8 @@ func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 	event.eventType = EVENT_SUBSCRIBED
 	event.clientId = session.ClientId
 	event.session = session
-	i := 0
-	pi := Read2BytesInt(p.remainingBytes, i)
-	p.packetIdentifier = pi
-	i = i + 2
+	// variable header
+	i := 2 // 2 bytes for packet identifier
 	if session.ProtocolVersion >= MQTT_V5 {
 		pl, pp, err := p.parseProperties(i)
 		if err != 0 {
@@ -29,6 +27,7 @@ func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 		p.propertiesPos = pp
 		i = i + pl
 	}
+	// payload
 	j := 0
 	for {
 		var subevent Event

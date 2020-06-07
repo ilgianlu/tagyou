@@ -27,7 +27,6 @@ type Event struct {
 	topic        string
 	session      *model.Session
 	subscription model.Subscription
-	published    Published
 	packet       Packet
 	err          uint8
 }

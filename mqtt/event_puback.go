@@ -19,7 +19,7 @@ func clientPuback(db *gorm.DB, e Event) {
 
 	retry := model.Retry{
 		ClientId:         e.clientId,
-		PacketIdentifier: e.packet.packetIdentifier,
+		PacketIdentifier: e.packet.PacketIdentifier(),
 	}
 	if db.Find(&retry).RecordNotFound() {
 		log.Println("puback for invalid retry", retry.ClientId, retry.PacketIdentifier)
