@@ -34,15 +34,13 @@ func pubcompReq(p Packet, events chan<- Event, session *model.Session) {
 		p.reasonCode = p.remainingBytes[i]
 	}
 	if session.ProtocolVersion >= MQTT_V5 {
-		pl, pp, err := p.parseProperties(i)
+		_, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
 			event.err = uint8(err)
 			events <- event
 			return
 		}
-		p.propertiesLength = pl
-		p.propertiesPos = pp
 	}
 	event.packet = p
 	events <- event

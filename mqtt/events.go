@@ -19,16 +19,10 @@ func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQ
 			clientConnection(db, connections, e, outQueue)
 		case EVENT_SUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
-			clientSubscribed(e, outQueue)
-		case EVENT_SUBSCRIPTION:
-			log.Println("//!! EVENT type", e.eventType, e.subscription.ClientId, "client subscription", e.subscription.Topic)
-			clientSubscription(db, e, outQueue)
+			onSubscribe(db, e, outQueue)
 		case EVENT_UNSUBSCRIBED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
-			clientUnsubscribed(e, outQueue)
-		case EVENT_UNSUBSCRIPTION:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscription", e.topic)
-			clientUnsubscription(db, e)
+			onUnsubscribe(db, e, outQueue)
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
 			clientPublish(db, e, outQueue)
@@ -92,36 +86,6 @@ func startSession(db *gorm.DB, session *model.Session) {
 	}
 }
 
-func clientSubscribed(e Event, outQueue chan<- OutData) {
-	var o OutData
-	o.clientId = e.clientId
-	o.packet = Suback(e.packet.PacketIdentifier(), e.packet.subscribedCount, e.subscription.QoS, e.session.ProtocolVersion)
-	outQueue <- o
-}
-
-func clientSubscription(db *gorm.DB, e Event, outQueue chan<- OutData) {
-	db.Create(&e.subscription)
-	sendRetain(db, e, outQueue)
-}
-
-func sendRetain(db *gorm.DB, e Event, outQueue chan<- OutData) {
-	retains := findRetains(db, e.subscription.Topic)
-	if len(retains) == 0 {
-		return
-	}
-	for _, r := range retains {
-		p := Publish(e.subscription.QoS, true, r.Topic, newPacketIdentifier(), r.ApplicationMessage)
-		sendForward(db, r.Topic, p, outQueue)
-	}
-}
-
-func findRetains(db *gorm.DB, subscribedTopic string) []model.Retain {
-	trimmedTopic := trimWildcard(subscribedTopic)
-	var retains []model.Retain
-	db.Where("topic LIKE ?", strings.Join([]string{trimmedTopic, "%"}, "")).Find(&retains)
-	return retains
-}
-
 func trimWildcard(topic string) string {
 	lci := len(topic) - 1
 	lc := topic[lci]
@@ -129,21 +93,6 @@ func trimWildcard(topic string) string {
 		topic = topic[:lci]
 	}
 	return topic
-}
-
-func clientUnsubscribed(e Event, outQueue chan<- OutData) {
-	var o OutData
-	o.clientId = e.clientId
-	o.packet = Unsuback(e.packet.PacketIdentifier(), e.packet.subscribedCount, e.session.ProtocolVersion)
-	outQueue <- o
-}
-
-func clientUnsubscription(db *gorm.DB, e Event) {
-	var sub model.Subscription
-	if db.Where("topic = ? and client_id = ?", e.topic, e.clientId).First(&sub).RecordNotFound() {
-		log.Println("no subscription to unsubscribe", e.topic, e.clientId)
-	}
-	db.Delete(sub)
 }
 
 func clientPing(e Event, outQueue chan<- OutData) {

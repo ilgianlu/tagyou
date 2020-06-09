@@ -14,28 +14,24 @@ func unsubscribeReq(p Packet, events chan<- Event, session *model.Session) {
 	event.packet = p
 	i := 2 // 2 bytes for packet identifier
 	if session.ProtocolVersion >= MQTT_V5 {
-		pl, pp, err := p.parseProperties(i)
+		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
 			event.err = uint8(err)
 			events <- event
 			return
 		}
-		p.propertiesLength = pl
-		p.propertiesPos = pp
 		i = i + pl
 	}
-	unsubs := make([]string, 10)
+	event.subscriptions = make([]model.Subscription, 0)
 	j := 0
 	for {
-		var unsubevent Event
-		unsubevent.eventType = EVENT_UNSUBSCRIPTION
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		unsubs[j] = string(p.remainingBytes[i : i+sl])
-		unsubevent.clientId = session.ClientId
-		unsubevent.topic = unsubs[j]
-		events <- unsubevent
+		unsub := model.Subscription{
+			Topic: string(p.remainingBytes[i : i+sl]),
+		}
+		event.subscriptions = append(event.subscriptions, unsub)
 		i = i + sl
 		if i >= len(p.remainingBytes)-1 {
 			break
@@ -45,6 +41,5 @@ func unsubscribeReq(p Packet, events chan<- Event, session *model.Session) {
 			break
 		}
 	}
-	p.subscribedCount = j
 	events <- event
 }

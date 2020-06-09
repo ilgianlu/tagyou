@@ -47,15 +47,13 @@ func publishReq(p Packet, events chan<- Event, session *model.Session) {
 		i = i + 2 // + 2 for packet identifier
 	}
 	if session.ProtocolVersion >= MQTT_V5 {
-		pl, pp, err := p.parseProperties(i)
+		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
 			event.err = uint8(err)
 			events <- event
 			return
 		}
-		p.propertiesLength = pl
-		p.propertiesPos = pp
 		i = i + pl
 	}
 	// payload
