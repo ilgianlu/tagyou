@@ -9,19 +9,15 @@ import (
 func Pubcomp(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_PUBCOMP) << 4
-	if reasonCode == 0 {
-		p.remainingLength = 2
-		p.remainingBytes = Write2BytesInt(packetIdentifier)
-	} else {
-		p.remainingLength = 3
-		p.remainingBytes = Write2BytesInt(packetIdentifier)
+	p.remainingBytes = Write2BytesInt(packetIdentifier)
+	if reasonCode != 0 {
 		p.remainingBytes = append(p.remainingBytes, reasonCode)
 	}
 	if protocolVersion >= MQTT_V5 {
 		// properties
-		p.remainingLength = p.remainingLength + 1
 		p.remainingBytes = append(p.remainingBytes, 0)
 	}
+	p.remainingLength = len(p.remainingBytes)
 	return p
 }
 func pubcompReq(p Packet, events chan<- Event, session *model.Session) {

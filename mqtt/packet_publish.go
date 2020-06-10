@@ -14,9 +14,6 @@ func Publish(qos uint8, retain bool, topic string, packetIdentifier int, payload
 	if retain {
 		p.header = p.header | 1
 	}
-	// write var int length 2 + len(topic) + len(payload)
-	p.remainingLength = 2 + len(topic) + len(payload)
-
 	// write topic length
 	p.remainingBytes = Write2BytesInt(len(topic))
 	// write topic string
@@ -24,10 +21,10 @@ func Publish(qos uint8, retain bool, topic string, packetIdentifier int, payload
 	// write packet identifier only if qos > 0
 	if qos != 0 {
 		p.remainingBytes = append(p.remainingBytes, Write2BytesInt(packetIdentifier)...)
-		p.remainingLength = p.remainingLength + 2
 	}
 	// write payload
 	p.remainingBytes = append(p.remainingBytes, payload...)
+	p.remainingLength = len(p.remainingBytes)
 	return p
 }
 
