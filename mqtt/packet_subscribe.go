@@ -47,6 +47,7 @@ func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 		sub.QoS = p.remainingBytes[i] & 0x03
 		sub.Enabled = true
 		sub.CreatedAt = time.Now()
+		event.subscriptions = append(event.subscriptions, sub)
 		i++
 		if i >= len(p.remainingBytes)-1 {
 			break
