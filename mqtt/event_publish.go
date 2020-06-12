@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func clientPublish(db *gorm.DB, e Event, outQueue chan<- OutData) {
+func onPublish(db *gorm.DB, e Event, outQueue chan<- OutData) {
 	if e.packet.Retain() {
 		saveRetain(db, e)
 	}

@@ -25,7 +25,7 @@ func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQ
 			onUnsubscribe(db, e, outQueue)
 		case EVENT_PUBLISH:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
-			clientPublish(db, e, outQueue)
+			onPublish(db, e, outQueue)
 		case EVENT_PUBACKED:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.PacketIdentifier())
 			clientPuback(db, e)
@@ -40,7 +40,7 @@ func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQ
 			clientPubcomp(db, e)
 		case EVENT_PING:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
-			clientPing(e, outQueue)
+			onPing(e, outQueue)
 		case EVENT_DISCONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
 			clientDisconnect(db, connections, e)
@@ -63,7 +63,7 @@ func trimWildcard(topic string) string {
 	return topic
 }
 
-func clientPing(e Event, outQueue chan<- OutData) {
+func onPing(e Event, outQueue chan<- OutData) {
 	var o OutData
 	o.clientId = e.clientId
 	o.packet = PingResp()
