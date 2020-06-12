@@ -49,7 +49,7 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 	i = i + 2
 	event.clientId = string(p.remainingBytes[i : i+cil])
 	session.ClientId = event.clientId
-	log.Printf("%d bytes, clientId %s\n", cil, event.clientId)
+	// log.Printf("%d bytes, clientId %s\n", cil, event.clientId)
 	i = i + cil
 	if session.WillFlag() {
 		if session.ProtocolVersion >= MQTT_V5 {
