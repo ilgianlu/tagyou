@@ -1,16 +1,16 @@
 package mqtt
 
-func Unsuback(packetIdentifier int, unsubscribed int, protocolVersion uint8) Packet {
+func Unsuback(packetIdentifier int, reasonCodes []uint8, protocolVersion uint8) Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_UNSUBACK) << 4
-	p.remainingLength = 2 + unsubscribed
-	p.remainingBytes = make([]byte, 2+unsubscribed)
-	p.remainingBytes[0] = byte(packetIdentifier & 0xFF00 >> 8)
-	p.remainingBytes[1] = byte(packetIdentifier & 0x00FF)
+	// var header
+	p.remainingBytes = Write2BytesInt(packetIdentifier)
 	if protocolVersion >= MQTT_V5 {
-		// properties
-		p.remainingLength = p.remainingLength + 1
+		// TODO: encode properties ...
+		// no properties
 		p.remainingBytes = append(p.remainingBytes, 0)
 	}
+	p.remainingBytes = append(p.remainingBytes, reasonCodes...)
+	p.remainingLength = len(p.remainingBytes)
 	return p
 }

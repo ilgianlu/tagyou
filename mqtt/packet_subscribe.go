@@ -13,44 +13,41 @@ func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 	event.eventType = EVENT_SUBSCRIBED
 	event.clientId = session.ClientId
 	event.session = session
-	i := 0
-	pi := Read2BytesInt(p.remainingBytes, i)
-	p.packetIdentifier = pi
-	i = i + 2
+	// variable header
+	i := 2 // 2 bytes for packet identifier
 	if session.ProtocolVersion >= MQTT_V5 {
-		pl, pp, err := p.parseProperties(i)
+		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
 			event.err = uint8(err)
 			events <- event
 			return
 		}
-		p.propertiesLength = pl
-		p.propertiesPos = pp
 		i = i + pl
 	}
+	// payload
 	j := 0
+	event.subscriptions = make([]model.Subscription, 0)
 	for {
-		var subevent Event
-		subevent.eventType = EVENT_SUBSCRIPTION
-		subevent.session = session
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
-		subevent.subscription.ClientId = session.ClientId
-		subevent.subscription.Topic = s
+		sub := model.Subscription{
+			ClientId: session.ClientId,
+			Topic:    s,
+		}
 		i = i + sl
 		if p.remainingBytes[i]&0x12 != 0 {
 			log.Println("ignore this subscription & stop")
 			break
 		}
-		subevent.subscription.RetainHandling = p.remainingBytes[i] & 0x30 >> 4
-		subevent.subscription.RetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
-		subevent.subscription.NoLocal = p.remainingBytes[i] & 0x04 >> 2
-		subevent.subscription.QoS = p.remainingBytes[i] & 0x03
-		subevent.subscription.Enabled = true
-		subevent.subscription.CreatedAt = time.Now()
-		events <- subevent
+		sub.RetainHandling = p.remainingBytes[i] & 0x30 >> 4
+		sub.RetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
+		sub.NoLocal = p.remainingBytes[i] & 0x04 >> 2
+		sub.QoS = p.remainingBytes[i] & 0x03
+		sub.Enabled = true
+		sub.CreatedAt = time.Now()
+		event.subscriptions = append(event.subscriptions, sub)
 		i++
 		if i >= len(p.remainingBytes)-1 {
 			break
@@ -60,7 +57,6 @@ func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 			break
 		}
 	}
-	p.subscribedCount = j
 	event.packet = p
 	events <- event
 }

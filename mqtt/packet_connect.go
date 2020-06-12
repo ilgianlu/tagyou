@@ -33,18 +33,18 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 	// log.Println("keepAlive", Read2BytesInt(ka, 0))
 	i = i + 2
 	if session.ProtocolVersion >= MQTT_V5 {
-		pl, pp, err := p.parseProperties(i)
+		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
 			event.err = uint8(err)
 			events <- event
 			return
 		}
-		p.propertiesPos = pp
 		i = i + pl
 	}
 	// END VARIABLE HEADER
 	// START PAYLOAD
+	p.payloadOffset = i
 	cil := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	event.clientId = string(p.remainingBytes[i : i+cil])
@@ -53,15 +53,13 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 	i = i + cil
 	if session.WillFlag() {
 		if session.ProtocolVersion >= MQTT_V5 {
-			pl, pp, err := p.parseProperties(i)
+			pl, err := p.parseWillProperties(i)
 			if err != 0 {
 				log.Println("err reading properties", err)
 				event.err = uint8(err)
 				events <- event
 				return
 			}
-			p.willPropertiesLength = pl
-			p.willPropertiesPos = pp
 			i = i + pl
 		}
 		// read will topic

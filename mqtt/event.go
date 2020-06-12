@@ -22,12 +22,11 @@ const EVENT_WILL_SEND = 102
 const EVENT_PACKET_ERR = 1000
 
 type Event struct {
-	eventType    int
-	clientId     string
-	topic        string
-	session      *model.Session
-	subscription model.Subscription
-	published    Published
-	packet       Packet
-	err          uint8
+	eventType     int
+	clientId      string
+	topic         string
+	session       *model.Session
+	subscriptions []model.Subscription
+	packet        Packet
+	err           uint8
 }

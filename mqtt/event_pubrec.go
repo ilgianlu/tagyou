@@ -33,7 +33,7 @@ func clientPubrec(db *gorm.DB, e Event, outQueue chan<- OutData) {
 
 	retry := model.Retry{
 		ClientId:         e.clientId,
-		PacketIdentifier: e.packet.packetIdentifier,
+		PacketIdentifier: e.packet.PacketIdentifier(),
 		ReasonCode:       e.packet.reasonCode,
 	}
 	if db.Find(&retry).RecordNotFound() {

@@ -8,12 +8,9 @@ func TestParseProperties(t *testing.T) {
 	p := Packet{
 		remainingBytes: []byte{},
 	}
-	a, b, c := p.parseProperties(0)
+	a, c := p.parseProperties(0)
 	if a != 0 {
 		t.Errorf("expected a %d: %d", a, 0)
-	}
-	if b != 0 {
-		t.Errorf("expected b %d: %d", b, 0)
 	}
 	if c != MALFORMED_PACKET {
 		t.Errorf("expected c %d: %d", c, MALFORMED_PACKET)
@@ -24,12 +21,9 @@ func TestParseProperties(t *testing.T) {
 			SESSION_EXPIRY_INTERVAL, 0, 0, 0, 0xA,
 			SHARED_SUBSCRIPTION_AVAILABLE, 0},
 	}
-	a0, b0, c0 := p0.parseProperties(0)
+	a0, c0 := p0.parseProperties(0)
 	if a0 != 8 {
 		t.Errorf("expected a0 %d: %d", a0, 8)
-	}
-	if b0 != 8 {
-		t.Errorf("expected b0 %d: %d", b0, 8)
 	}
 	if c0 != 0 {
 		t.Errorf("expected c0 %d: %d", c0, 0)

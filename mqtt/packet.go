@@ -37,20 +37,24 @@ const PUBREL_SUCCESS = 0x00
 const PUBREC_SUCCESS = 0x00
 
 type Packet struct {
+	// header
 	header               byte
 	remainingLength      int
 	remainingLengthBytes int
-	remainingBytes       []byte
-	applicationMessage   int
-	packetIdentifier     int
-	reasonCode           uint8
-	subscribedCount      int
-	err                  error
-	propertiesPos        int
-	propertiesLength     int
-	willPropertiesPos    int
-	willPropertiesLength int
-	properties           Properties
+	// packet remaining bytes
+	remainingBytes []byte
+
+	// variable header offset in remaining bytes
+	// varHeaderOffset int always 0
+	properties Properties
+	// CONNACK, PUBACK, PUBREC, PUBREL, PUBCOMP, DISCONNECT
+	reasonCode uint8
+
+	// payload
+	payloadOffset  int
+	willProperties Properties
+
+	err error
 }
 
 func (p *Packet) PacketType() byte {
@@ -82,6 +86,22 @@ func (p *Packet) Retain() bool {
 	return false
 }
 
+func (p *Packet) PublishTopic() []byte {
+	if p.PacketType() == PACKET_TYPE_PUBLISH {
+		tl := Read2BytesInt(p.remainingBytes, 0)
+		return p.remainingBytes[:tl]
+	}
+	return []byte{}
+}
+
+func (p *Packet) PacketIdentifier() int {
+	var offset int
+	if p.PacketType() == PACKET_TYPE_PUBLISH {
+		offset = Read2BytesInt(p.remainingBytes, 0)
+	}
+	return Read2BytesInt(p.remainingBytes, offset)
+}
+
 func (p *Packet) PacketLength() int {
 	return 1 + p.remainingLengthBytes + len(p.remainingBytes)
 }
@@ -94,9 +114,13 @@ func (p *Packet) missingBytes() int {
 	return p.remainingLength - len(p.remainingBytes)
 }
 
+func (p *Packet) Payload() []byte {
+	return p.remainingBytes[p.payloadOffset:]
+}
+
 func (p *Packet) ApplicationMessage() []byte {
 	if p.PacketType() == PACKET_TYPE_PUBLISH && p.PacketComplete() {
-		return p.remainingBytes[p.applicationMessage:]
+		return p.remainingBytes[p.payloadOffset:]
 	}
 	return []byte{}
 }
