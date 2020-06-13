@@ -44,7 +44,7 @@ func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 		sub.RetainHandling = p.remainingBytes[i] & 0x30 >> 4
 		sub.RetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
 		sub.NoLocal = p.remainingBytes[i] & 0x04 >> 2
-		sub.QoS = p.remainingBytes[i] & 0x03
+		sub.Qos = p.remainingBytes[i] & 0x03
 		sub.Enabled = true
 		sub.CreatedAt = time.Now()
 		event.subscriptions = append(event.subscriptions, sub)

@@ -112,7 +112,7 @@ func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
 
 func sendSubscribers(db *gorm.DB, protocolVersion uint8, topic string, subscribers []model.Subscription, packet Packet, outQueue chan<- OutData) {
 	for _, s := range subscribers {
-		qos := getQos(packet.QoS(), s.QoS)
+		qos := getQos(packet.QoS(), s.Qos)
 		if qos == conf.QOS0 {
 			// prepare publish packet qos 0 no packet identifier
 			p := Publish(protocolVersion, conf.QOS0, packet.Retain(), topic, 0, packet.ApplicationMessage())

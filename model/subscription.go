@@ -9,7 +9,7 @@ type Subscription struct {
 	RetainHandling    uint8
 	RetainAsPublished uint8
 	NoLocal           uint8
-	QoS               uint8
+	Qos               uint8
 	Enabled           bool
 	CreatedAt         time.Time
 	SessionID         uint
