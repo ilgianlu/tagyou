@@ -10,7 +10,7 @@ import (
 func onSubscribe(db *gorm.DB, e Event, outQueue chan<- OutData) {
 	reasonCodes := []uint8{}
 	for _, subscription := range e.subscriptions {
-		rCode := clientSubscription(db, &subscription, outQueue)
+		rCode := clientSubscription(db, e.session.ProtocolVersion, &subscription, outQueue)
 		reasonCodes = append(reasonCodes, rCode)
 	}
 	clientSubscribed(e, reasonCodes, outQueue)
@@ -23,21 +23,21 @@ func clientSubscribed(e Event, reasonCodes []uint8, outQueue chan<- OutData) {
 	outQueue <- o
 }
 
-func clientSubscription(db *gorm.DB, subscription *model.Subscription, outQueue chan<- OutData) uint8 {
+func clientSubscription(db *gorm.DB, protocolVersion uint8, subscription *model.Subscription, outQueue chan<- OutData) uint8 {
 	// check subscr qos, topic valid...
 	db.Create(subscription)
-	sendRetain(db, subscription, outQueue)
+	sendRetain(db, protocolVersion, subscription, outQueue)
 	return 0
 }
 
-func sendRetain(db *gorm.DB, subscription *model.Subscription, outQueue chan<- OutData) {
+func sendRetain(db *gorm.DB, protocolVersion uint8, subscription *model.Subscription, outQueue chan<- OutData) {
 	retains := findRetains(db, subscription.Topic)
 	if len(retains) == 0 {
 		return
 	}
 	for _, r := range retains {
-		p := Publish(subscription.QoS, true, r.Topic, newPacketIdentifier(), r.ApplicationMessage)
-		sendForward(db, r.Topic, p, outQueue)
+		p := Publish(protocolVersion, subscription.QoS, true, r.Topic, newPacketIdentifier(), r.ApplicationMessage)
+		sendForward(db, protocolVersion, r.Topic, p, outQueue)
 	}
 }
 

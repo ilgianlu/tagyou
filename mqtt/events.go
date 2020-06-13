@@ -89,10 +89,10 @@ func removeClient(clientId string, connections Connections) {
 	delete(connections, clientId)
 }
 
-func sendForward(db *gorm.DB, topic string, packet Packet, outQueue chan<- OutData) {
+func sendForward(db *gorm.DB, protocolVersion uint8, topic string, packet Packet, outQueue chan<- OutData) {
 	topicSegments := strings.Split(topic, TOPIC_SEPARATOR)
 	subs := findDests(db, topicSegments)
-	sendSubscribers(db, topic, subs, packet, outQueue)
+	sendSubscribers(db, protocolVersion, topic, subs, packet, outQueue)
 }
 
 func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
@@ -110,16 +110,16 @@ func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
 	return subs
 }
 
-func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, packet Packet, outQueue chan<- OutData) {
+func sendSubscribers(db *gorm.DB, protocolVersion uint8, topic string, subscribers []model.Subscription, packet Packet, outQueue chan<- OutData) {
 	for _, s := range subscribers {
 		qos := getQos(packet.QoS(), s.QoS)
 		if qos == conf.QOS0 {
 			// prepare publish packet qos 0 no packet identifier
-			p := Publish(conf.QOS0, packet.Retain(), topic, 0, packet.ApplicationMessage())
+			p := Publish(protocolVersion, conf.QOS0, packet.Retain(), topic, 0, packet.ApplicationMessage())
 			sendSimple(s.ClientId, p, outQueue)
 		} else if qos == conf.QOS1 {
 			// prepare publish packet qos 1 (if sub permit) new packet identifier
-			p := Publish(qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
+			p := Publish(protocolVersion, qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
 			r := model.Retry{
 				ClientId:           s.ClientId,
 				PacketIdentifier:   packet.PacketIdentifier(),
@@ -133,7 +133,7 @@ func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription
 			sendSimple(r.ClientId, p, outQueue)
 		} else if qos == 2 {
 			// prepare publish packet qos 2 (if sub permit) new packet identifier
-			p := Publish(qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
+			p := Publish(protocolVersion, qos, packet.Retain(), topic, newPacketIdentifier(), packet.ApplicationMessage())
 			r := model.Retry{
 				ClientId:           s.ClientId,
 				PacketIdentifier:   packet.PacketIdentifier(),
@@ -182,7 +182,7 @@ func sendWill(db *gorm.DB, e Event, outQueue chan<- OutData) {
 		return
 	}
 	if s.WillTopic != "" {
-		p := Publish(s.WillQoS(), s.WillRetain(), s.WillTopic, newPacketIdentifier(), s.WillMessage)
-		sendForward(db, s.WillTopic, p, outQueue)
+		p := Publish(e.session.ProtocolVersion, s.WillQoS(), s.WillRetain(), s.WillTopic, newPacketIdentifier(), s.WillMessage)
+		sendForward(db, e.session.ProtocolVersion, s.WillTopic, p, outQueue)
 	}
 }

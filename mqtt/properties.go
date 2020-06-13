@@ -33,6 +33,18 @@ type Properties map[int]Property
 type Property struct {
 	position int
 	length   int
+	value    []byte
+}
+
+func (p *Packet) encodeProperties() []byte {
+	if len(p.properties) == 0 {
+		return []byte{0}
+	}
+	props := make([]byte, 0)
+	for propId, prop := range p.properties {
+		props = append(props, encodeProp(propId, prop)...)
+	}
+	return props
 }
 
 func (p *Packet) parseProperties(i int) (int, int) {
@@ -64,6 +76,12 @@ func (p *Packet) parseProps(i int) (Properties, int, int) {
 		j = j + fw
 	}
 	return properties, j, 0
+}
+
+func encodeProp(propId int, prop Property) []byte {
+	p := WriteVarInt(propId)
+	p = append(p, prop.value...)
+	return p
 }
 
 func parseProp(buffer []byte, i int) (int, Property, int) {

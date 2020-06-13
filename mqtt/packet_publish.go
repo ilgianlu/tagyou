@@ -7,13 +7,14 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func Publish(qos uint8, retain bool, topic string, packetIdentifier int, payload []byte) Packet {
+func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packetIdentifier int, payload []byte) Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_PUBLISH) << 4
 	p.header = p.header | qos<<1
 	if retain {
 		p.header = p.header | 1
 	}
+	// variable header
 	// write topic length
 	p.remainingBytes = Write2BytesInt(len(topic))
 	// write topic string
@@ -21,6 +22,9 @@ func Publish(qos uint8, retain bool, topic string, packetIdentifier int, payload
 	// write packet identifier only if qos > 0
 	if qos != 0 {
 		p.remainingBytes = append(p.remainingBytes, Write2BytesInt(packetIdentifier)...)
+	}
+	if protocolVersion >= MQTT_V5 {
+		p.remainingBytes = append(p.remainingBytes, p.encodeProperties()...)
 	}
 	// write payload
 	p.remainingBytes = append(p.remainingBytes, payload...)
