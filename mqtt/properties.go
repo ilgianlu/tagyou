@@ -152,5 +152,10 @@ func (p *Packet) getPropertyRaw(propId int) []byte {
 }
 
 func (p *Packet) SessionExpiryInterval() uint32 {
-	return Read4BytesInt(p.getPropertyRaw(SESSION_EXPIRY_INTERVAL))
+	propRawVal := p.getPropertyRaw(SESSION_EXPIRY_INTERVAL)
+	if len(propRawVal) == 0 {
+		return 0
+	} else {
+		return Read4BytesInt(propRawVal)
+	}
 }
