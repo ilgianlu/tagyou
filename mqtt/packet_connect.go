@@ -87,5 +87,6 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 		log.Printf("username \"%s\"\nlogging with password \"%s\"\n", session.Username, session.Password)
 	}
 	event.session = session
+	event.packet = p
 	events <- event
 }
