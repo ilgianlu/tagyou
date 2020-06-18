@@ -55,6 +55,10 @@ func (s Session) HaveUser() bool {
 	return (s.ConnectFlags & 0x80) > 0
 }
 
+func (s Session) Expired() bool {
+	return s.ExpireAt.Before(time.Now())
+}
+
 func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
 	tx.Where("session_id = ?", s.ID).Delete(Subscription{})
 	tx.Where("session_id = ?", s.ID).Delete(Retry{})
@@ -63,6 +67,15 @@ func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
 
 func CleanSession(db *gorm.DB, clientId string) {
 	db.Where("client_id = ?", clientId).Delete(Session{})
+}
+
+func SessionExists(db *gorm.DB, clientId string) (Session, bool) {
+	session := Session{}
+	if db.Where("client_id = ?", clientId).First(&session).RecordNotFound() {
+		return session, false
+	} else {
+		return session, true
+	}
 }
 
 func DisconnectSession(db *gorm.DB, clientId string) {
