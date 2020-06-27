@@ -1,3 +1,3 @@
 package conf
 
-var DISALLOW_ANONYMOUS_LOGIN bool = true
+var FORBID_ANONYMOUS_LOGIN bool = true
