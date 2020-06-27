@@ -9,7 +9,7 @@ import (
 )
 
 func onConnect(db *gorm.DB, connections Connections, e Event, outQueue chan<- OutData) {
-	if conf.DISALLOW_ANONYMOUS_LOGIN && !model.CheckAuth(db, e.clientId, e.session.Username, e.session.Password) {
+	if conf.FORBID_ANONYMOUS_LOGIN && !model.CheckAuth(db, e.clientId, e.session.Username, e.session.Password) {
 		log.Println("wrong connect credentials")
 		return
 	}
