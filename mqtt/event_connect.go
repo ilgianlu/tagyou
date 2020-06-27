@@ -13,29 +13,42 @@ func onConnect(db *gorm.DB, connections Connections, e Event, outQueue chan<- Ou
 		log.Println("wrong connect credentials")
 		return
 	}
-
-	if c, ok := connections[e.clientId]; ok {
-		log.Println("session taken over")
-		p := Connack(false, SESSION_TAKEN_OVER, e.session.ProtocolVersion)
-		sendSimple(e.clientId, p, outQueue)
-		closeClient(c)
-		removeClient(e.clientId, connections)
+	taken := checkConnectionTakeOver(e, connections, outQueue)
+	if taken {
+		log.Printf("%s reconnecting", e.clientId)
 	}
-	connections[e.clientId] = e.session.Conn
-	sendSimple(e.clientId, Connack(false, CONNECT_OK, e.session.ProtocolVersion), outQueue)
+	connections.Add(e.clientId, e.session.Conn)
 
 	startSession(db, e.session)
+
+	sendSimple(e.clientId, Connack(false, CONNECT_OK, e.session.ProtocolVersion), outQueue)
+}
+
+func checkConnectionTakeOver(e Event, connections Connections, outQueue chan<- OutData) bool {
+	if _, ok := connections.Exists(e.clientId); !ok {
+		return false
+	}
+
+	p := Connack(false, SESSION_TAKEN_OVER, e.session.ProtocolVersion)
+	sendSimple(e.clientId, p, outQueue)
+
+	err := connections.Close(e.clientId)
+	if err != nil {
+		log.Printf("%s : error taking over another connection; %s", e.clientId, err)
+	}
+	connections.Remove(e.clientId)
+	return true
 }
 
 func startSession(db *gorm.DB, session *model.Session) {
-	if db.Where("client_id = ?", session.ClientId).First(&session).RecordNotFound() {
-		db.Create(&session)
-	} else {
-		if session.CleanStart() {
+	if prevSession, ok := model.SessionExists(db, session.ClientId); ok {
+		if session.CleanStart() || prevSession.Expired() {
 			model.CleanSession(db, session.ClientId)
-			db.Create(&session)
-		} else {
-			db.Save(&session)
 		}
+		prevSession.MergeSession(*session)
+		session = &prevSession
+		db.Save(&session)
+	} else {
+		db.Create(&session)
 	}
 }

@@ -59,10 +59,10 @@ func startTCP(events chan<- Event, port string) {
 func handleConnection(conn net.Conn, events chan<- Event) {
 	defer conn.Close()
 	session := model.Session{
-		Connected: true,
-		KeepAlive: conf.DEFAULT_KEEPALIVE,
-		ExpireAt:  time.Now().Add(time.Duration(conf.SESSION_MAX_DURATION_HOURS) * time.Hour),
-		Conn:      conn,
+		Connected:      true,
+		KeepAlive:      conf.DEFAULT_KEEPALIVE,
+		ExpiryInterval: conf.SESSION_MAX_DURATION_SECONDS,
+		Conn:           conn,
 	}
 	buffers := make(chan []byte, 1)
 	packets := make(chan Packet, 1)

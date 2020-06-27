@@ -2,7 +2,6 @@ package mqtt
 
 import (
 	"log"
-	"net"
 	"strings"
 	"time"
 
@@ -43,13 +42,13 @@ func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQ
 			onPing(e, outQueue)
 		case EVENT_DISCONNECT:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
-			clientDisconnect(db, connections, e)
+			clientDisconnect(db, connections, e.clientId)
 		case EVENT_WILL_SEND:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "sending will message")
 			sendWill(db, e, outQueue)
 		case EVENT_PACKET_ERR:
 			log.Println("//!! EVENT type", e.eventType, e.clientId, "packet error")
-			clientDisconnect(db, connections, e)
+			clientDisconnect(db, connections, e.clientId)
 		}
 	}
 }
@@ -70,23 +69,12 @@ func onPing(e Event, outQueue chan<- OutData) {
 	outQueue <- o
 }
 
-func clientDisconnect(db *gorm.DB, connections Connections, e Event) {
-	if conn, ok := connections[e.clientId]; ok {
-		closeClient(conn)
-		removeClient(e.clientId, connections)
-		model.DisconnectSession(db, e.clientId)
+func clientDisconnect(db *gorm.DB, connections Connections, clientId string) {
+	if _, ok := connections.Exists(clientId); ok {
+		connections.Close(clientId)
+		connections.Remove(clientId)
+		model.DisconnectSession(db, clientId)
 	}
-}
-
-func closeClient(connection net.Conn) {
-	err := connection.Close()
-	if err != nil {
-		log.Println("could not close conn", err)
-	}
-}
-
-func removeClient(clientId string, connections Connections) {
-	delete(connections, clientId)
 }
 
 func sendForward(db *gorm.DB, protocolVersion uint8, topic string, packet Packet, outQueue chan<- OutData) {

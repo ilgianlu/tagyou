@@ -68,7 +68,7 @@ func (p *Packet) parseProps(i int) (Properties, int, int) {
 	properties := make(map[int]Property)
 	j := k
 	for j < propertiesLength {
-		propId, property, fw := parseProp(alignProp, j)
+		propId, property, fw := parseProp(alignProp, j, i)
 		if fw == 0 {
 			return Properties{}, 0, MALFORMED_PACKET
 		}
@@ -84,9 +84,9 @@ func encodeProp(propId int, prop Property) []byte {
 	return p
 }
 
-func parseProp(buffer []byte, i int) (int, Property, int) {
+func parseProp(buffer []byte, relativeOffset int, absoluteOffset int) (int, Property, int) {
 	// tab 2.4 p.25
-	propId, l, _ := ReadVarInt(buffer[i:])
+	propId, l, _ := ReadVarInt(buffer[relativeOffset:])
 	switch propId {
 	case PAYLOAD_FORMAT_INDICATOR,
 		REQUEST_PROBLEM_INFORMATION,
@@ -96,7 +96,7 @@ func parseProp(buffer []byte, i int) (int, Property, int) {
 		SUBSCRIPTION_IDENTIFIER_AVAILABLE,
 		SHARED_SUBSCRIPTION_AVAILABLE:
 		// type byte
-		p := Property{position: i + l}
+		p := Property{position: absoluteOffset + relativeOffset + l}
 		p.length = 1
 		return propId, p, l + 1
 	case MESSAGE_EXPIRY_INTERVAL,
@@ -104,7 +104,7 @@ func parseProp(buffer []byte, i int) (int, Property, int) {
 		WILL_DELAY_INTERVAL,
 		MAXIMUM_PACKET_SIZE:
 		// type 4 bytes int
-		p := Property{position: i + l}
+		p := Property{position: absoluteOffset + relativeOffset + l}
 		p.length = 4
 		return propId, p, l + 4
 	case CONTENT_TYPE,
@@ -116,13 +116,13 @@ func parseProp(buffer []byte, i int) (int, Property, int) {
 		REASON_STRING,
 		USER_PROPERTY:
 		// type string
-		p := Property{position: i + l + 2}
+		p := Property{position: absoluteOffset + relativeOffset + l + 2}
 		p.length = Read2BytesInt(buffer, l)
 		return propId, p, l + 2 + p.length
 	case CORRELATION_DATA,
 		AUTHENTICATION_DATA:
 		// type binary data
-		p := Property{position: i + l + 2}
+		p := Property{position: absoluteOffset + relativeOffset + l + 2}
 		p.length = Read2BytesInt(buffer, l)
 		return propId, p, l + 2 + p.length
 	case SERVER_KEEP_ALIVE,
@@ -130,12 +130,12 @@ func parseProp(buffer []byte, i int) (int, Property, int) {
 		TOPIC_ALIAS_MAXIMUM,
 		TOPIC_ALIAS:
 		// type 2 bytes int
-		p := Property{position: i + l}
+		p := Property{position: absoluteOffset + relativeOffset + l}
 		p.length = 2
 		return propId, p, l + 2
 	case SUBSCRIPTION_IDENTIFIER:
 		// type var int
-		p := Property{position: i + l}
+		p := Property{position: absoluteOffset + relativeOffset + l}
 		_, k, _ := ReadVarInt(buffer[l:])
 		p.length = k
 		return propId, p, l + k
@@ -152,5 +152,10 @@ func (p *Packet) getPropertyRaw(propId int) []byte {
 }
 
 func (p *Packet) SessionExpiryInterval() uint32 {
-	return Read4BytesInt(p.getPropertyRaw(SESSION_EXPIRY_INTERVAL))
+	propRawVal := p.getPropertyRaw(SESSION_EXPIRY_INTERVAL)
+	if len(propRawVal) == 0 {
+		return 0
+	} else {
+		return Read4BytesInt(propRawVal)
+	}
 }
