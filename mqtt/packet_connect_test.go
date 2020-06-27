@@ -1,6 +1,7 @@
 package mqtt
 
 import (
+	"log"
 	"testing"
 
 	"github.com/ilgianlu/tagyou/model"
@@ -56,5 +57,9 @@ func connectSuccessEventWithProperties(t *testing.T, e chan Event) {
 	}
 	if len(event.packet.properties) != 1 {
 		t.Errorf("expected 1 property, found %d", len(event.packet.properties))
+	}
+	if event.packet.SessionExpiryInterval() != 60 {
+		log.Println(event.packet.properties)
+		t.Errorf("expected sessione expiry interval 60 sec, found %d", event.packet.SessionExpiryInterval())
 	}
 }

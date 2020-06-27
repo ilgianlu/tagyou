@@ -86,6 +86,9 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 		session.Password = string(p.remainingBytes[i : i+pwdl])
 		log.Printf("username \"%s\"\nlogging with password \"%s\"\n", session.Username, session.Password)
 	}
+	if session.ProtocolVersion >= MQTT_V5 {
+		session.ExpiryInterval = p.SessionExpiryInterval()
+	}
 	event.session = session
 	event.packet = p
 	events <- event

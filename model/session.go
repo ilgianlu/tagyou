@@ -4,25 +4,25 @@ import (
 	"net"
 	"time"
 
-	"github.com/ilgianlu/tagyou/conf"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 type Session struct {
 	ID              uint `gorm:"primary_key"`
-	ExpireAt        time.Time
+	LastSeen        time.Time
+	ExpiryInterval  uint32
 	ClientId        string `gorm:"unique_index"`
 	Connected       bool
-	ProtocolVersion uint8
-	ConnectFlags    uint8
-	KeepAlive       int
-	WillTopic       string
-	WillDelay       time.Time
-	WillMessage     []byte
+	ProtocolVersion uint8     `gorm:"-"`
+	ConnectFlags    uint8     `gorm:"-"`
+	KeepAlive       int       `gorm:"-"`
+	WillTopic       string    `gorm:"-"`
+	WillDelay       time.Time `gorm:"-"`
+	WillMessage     []byte    `gorm:"-"`
 	Subscriptions   []Subscription
 	Retries         []Retry
-	Username        string
+	Username        string   `gorm:"-"`
 	Password        string   `gorm:"-"`
 	Conn            net.Conn `gorm:"-"`
 }
@@ -56,13 +56,26 @@ func (s Session) HaveUser() bool {
 }
 
 func (s Session) Expired() bool {
-	return s.ExpireAt.Before(time.Now())
+	return s.LastSeen.Add(time.Duration(s.ExpiryInterval) * time.Second).Before(time.Now())
 }
 
 func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
 	tx.Where("session_id = ?", s.ID).Delete(Subscription{})
 	tx.Where("session_id = ?", s.ID).Delete(Retry{})
 	return nil
+}
+
+func (s *Session) MergeSession(newSession Session) {
+	s.ProtocolVersion = newSession.ProtocolVersion
+	s.ConnectFlags = newSession.ConnectFlags
+	s.KeepAlive = newSession.KeepAlive
+	s.WillTopic = newSession.WillTopic
+	s.WillDelay = newSession.WillDelay
+	s.WillMessage = newSession.WillMessage
+	s.Username = newSession.Username
+	s.Password = newSession.Password
+	s.ExpiryInterval = newSession.ExpiryInterval
+	s.Conn = newSession.Conn
 }
 
 func CleanSession(db *gorm.DB, clientId string) {
@@ -81,6 +94,6 @@ func SessionExists(db *gorm.DB, clientId string) (Session, bool) {
 func DisconnectSession(db *gorm.DB, clientId string) {
 	db.Model(&Session{}).Where("client_id = ?", clientId).Updates(map[string]interface{}{
 		"Connected": false,
-		"ExpireAt":  time.Now().Add(time.Duration(conf.SESSION_MAX_DURATION_HOURS) * time.Hour),
+		"LastSeen":  time.Now(),
 	})
 }
