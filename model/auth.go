@@ -31,15 +31,15 @@ func (a *Auth) setPassword(password string) error {
 	return nil
 }
 
-func CheckAuth(db *gorm.DB, clientId string, username string, password string) bool {
+func CheckAuth(db *gorm.DB, clientId string, username string, password string) (bool, string, string) {
 	var auth Auth
 	if db.First(&auth, "client_id = ? and username = ?", clientId, username).RecordNotFound() {
-		return false
+		return false, "", ""
 	}
 
 	if err := auth.checkPassword(password); err != nil {
-		return false
+		return false, "", ""
 	}
 
-	return true
+	return true, auth.PublishAcl, auth.SubscribeAcl
 }
