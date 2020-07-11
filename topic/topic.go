@@ -24,3 +24,26 @@ func Match(topic string, matcher string) bool {
 	}
 	return true
 }
+
+func MatcherSubset(subSet string, set string) bool {
+	if set == "#" {
+		return true
+	}
+	if set == "" {
+		return false
+	}
+	subsetRoad := strings.Split(subSet, TOPIC_SEPARATOR)
+	setRoad := strings.Split(set, TOPIC_SEPARATOR)
+	if len(setRoad) > len(subsetRoad) {
+		return false
+	}
+	if len(setRoad) < len(subsetRoad) && setRoad[len(setRoad)-1] != "#" {
+		return false
+	}
+	for i := 0; i < len(setRoad); i++ {
+		if setRoad[i] != "+" && setRoad[i] != "#" && setRoad[i] != subsetRoad[i] {
+			return false
+		}
+	}
+	return true
+}
