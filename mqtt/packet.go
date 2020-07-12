@@ -30,11 +30,13 @@ const SESSION_TAKEN_OVER = 0x8E
 // publish ack in QoS 1
 const PUBACK_SUCCESS = 0x00
 const PUBACK_NO_MATCHING_SUBSCRIBERS = 0x10
+const PUBACK_NOT_AUTHORIZED = 0x87
 
 // publish in QoS 2
 const PUBCOMP_SUCCESS = 0x00
 const PUBREL_SUCCESS = 0x00
 const PUBREC_SUCCESS = 0x00
+const PUBREC_NOT_AUTHORIZED = 0x87
 
 type Packet struct {
 	// header

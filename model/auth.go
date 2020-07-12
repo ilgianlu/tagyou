@@ -8,6 +8,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+/**
+Acl
+
+[{"pattern": "/topic/1"}, {"pattern": "/topic/2"}]
+
+*/
+
 type Auth struct {
 	ClientId     string `gorm:"primary_key"`
 	Username     string `gorm:"primary_key"`
