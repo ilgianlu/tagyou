@@ -21,6 +21,7 @@ const TOPIC_WILDCARD = "#"
 
 func StartMQTT(port string) {
 	conf.FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") == "true"
+	conf.ACL_ON = os.Getenv("ACL_ON") == "true"
 	db, err := gorm.Open("sqlite3", "sqlite.db3")
 	if err != nil {
 		log.Fatal("failed to connect database")

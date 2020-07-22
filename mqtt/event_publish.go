@@ -3,27 +3,29 @@ package mqtt
 import (
 	"time"
 
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/jinzhu/gorm"
 )
 
 func onPublish(db *gorm.DB, e Event, outQueue chan<- OutData) {
-	if CheckAcl(e.topic, e.session.PublishAcl) {
-		if e.packet.Retain() {
-			saveRetain(db, e)
-		}
-		sendForward(db, e.session.ProtocolVersion, e.topic, e.packet, outQueue)
-		if e.packet.QoS() == 1 {
-			sendAck(db, e, PUBACK_SUCCESS, outQueue)
-		} else {
-			sendPubrec(db, e, PUBREC_SUCCESS, outQueue)
-		}
-	} else {
+	if conf.ACL_ON && !CheckAcl(e.topic, e.session.PublishAcl) {
 		if e.packet.QoS() == 1 {
 			sendAck(db, e, PUBACK_NOT_AUTHORIZED, outQueue)
 		} else {
 			sendPubrec(db, e, PUBREC_NOT_AUTHORIZED, outQueue)
 		}
+		return
+	}
+
+	if e.packet.Retain() {
+		saveRetain(db, e)
+	}
+	sendForward(db, e.session.ProtocolVersion, e.topic, e.packet, outQueue)
+	if e.packet.QoS() == 1 {
+		sendAck(db, e, PUBACK_SUCCESS, outQueue)
+	} else {
+		sendPubrec(db, e, PUBREC_SUCCESS, outQueue)
 	}
 }
 
