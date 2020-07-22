@@ -3,6 +3,7 @@ package mqtt
 import (
 	"strings"
 
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/jinzhu/gorm"
 )
@@ -10,7 +11,7 @@ import (
 func onSubscribe(db *gorm.DB, e Event, outQueue chan<- OutData) {
 	reasonCodes := []uint8{}
 	for _, subscription := range e.subscriptions {
-		rCode := clientSubscription(db, e.session.ProtocolVersion, &subscription, outQueue)
+		rCode := clientSubscription(db, e.session, &subscription, outQueue)
 		reasonCodes = append(reasonCodes, rCode)
 	}
 	clientSubscribed(e, reasonCodes, outQueue)
@@ -23,10 +24,13 @@ func clientSubscribed(e Event, reasonCodes []uint8, outQueue chan<- OutData) {
 	outQueue <- o
 }
 
-func clientSubscription(db *gorm.DB, protocolVersion uint8, subscription *model.Subscription, outQueue chan<- OutData) uint8 {
+func clientSubscription(db *gorm.DB, session *model.Session, subscription *model.Subscription, outQueue chan<- OutData) uint8 {
 	// check subscr qos, topic valid...
+	if conf.ACL_ON && !CheckAcl(subscription.Topic, session.SubscribeAcl) {
+		return conf.SUB_TOPIC_FILTER_INVALID
+	}
 	db.Create(subscription)
-	sendRetain(db, protocolVersion, subscription, outQueue)
+	sendRetain(db, session.ProtocolVersion, subscription, outQueue)
 	return 0
 }
 

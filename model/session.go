@@ -24,6 +24,8 @@ type Session struct {
 	Retries         []Retry
 	Username        string   `gorm:"-"`
 	Password        string   `gorm:"-"`
+	SubscribeAcl    string   `gorm:"-"`
+	PublishAcl      string   `gorm:"-"`
 	Conn            net.Conn `gorm:"-"`
 }
 

@@ -9,9 +9,16 @@ import (
 )
 
 func onConnect(db *gorm.DB, connections Connections, e Event, outQueue chan<- OutData) {
-	if conf.FORBID_ANONYMOUS_LOGIN && !model.CheckAuth(db, e.clientId, e.session.Username, e.session.Password) {
-		log.Println("wrong connect credentials")
-		return
+	if conf.FORBID_ANONYMOUS_LOGIN {
+		ok, pubAcl, subAcl := model.CheckAuth(db, e.clientId, e.session.Username, e.session.Password)
+		if !ok {
+			log.Println("wrong connect credentials")
+			return
+		} else {
+			e.session.PublishAcl = pubAcl
+			e.session.SubscribeAcl = subAcl
+			log.Printf("auth ok, imported acls %s, %s\n", pubAcl, subAcl)
+		}
 	}
 	taken := checkConnectionTakeOver(e, connections, outQueue)
 	if taken {
