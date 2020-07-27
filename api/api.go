@@ -19,6 +19,7 @@ func StartApi(httpPort string) {
 	r := httprouter.New()
 	uc := controllers.NewAuthController(db)
 
+	r.GET("/auths", uc.GetAuths)
 	r.GET("/auths/:id", uc.GetAuth)
 	r.POST("/auths", uc.CreateAuth)
 	r.DELETE("/auths/:id", uc.RemoveAuth)
