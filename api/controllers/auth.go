@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -46,26 +47,11 @@ func (uc AuthController) GetAuths(w http.ResponseWriter, r *http.Request, p http
 }
 
 func (uc AuthController) GetAuth(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id := p.ByName("id")
-	authId, err := strconv.Atoi(id)
+	auth, err := uc.getOne(w, r, p)
 	if err != nil {
-		log.Printf("passing bad id: %s\n", err)
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	auth := model.Auth{}
-	if err := uc.db.Where("id = ?", authId).First(&auth).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			log.Printf("error getting auth row: %s\n", err)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		} else {
-			log.Printf("error getting auth row: %s\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	}
 	if res, err := json.Marshal(auth); err != nil {
 		log.Printf("error marshaling auth row: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -123,27 +109,36 @@ func (uc AuthController) CreateAuth(w http.ResponseWriter, r *http.Request, p ht
 	}
 }
 
-// RemoveUser removes an existing user resource
-func (uc AuthController) RemoveAuth(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id := p.ByName("id")
-	authId, err := strconv.Atoi(id)
+func (uc AuthController) UpdateAuth(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	auth, err := uc.getOne(w, r, p)
 	if err != nil {
-		log.Printf("passing bad id: %s\n", err)
+		return
+	}
+
+	update := make(map[string]interface{})
+	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
+		log.Printf("error decoding json input: %s\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	auth := model.Auth{}
-	if err := uc.db.Where("id = ?", authId).First(&auth).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			log.Printf("error getting auth row: %s\n", err)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		} else {
-			log.Printf("error getting auth row: %s\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	tx := uc.db.Begin()
+	tx.Model(&auth).Omit("password").Updates(update)
+
+	if auth.Validate() {
+		tx.Commit()
+		w.WriteHeader(http.StatusOK)
+	} else {
+		tx.Rollback()
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
+// RemoveUser removes an existing user resource
+func (uc AuthController) RemoveAuth(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	auth, err := uc.getOne(w, r, p)
+	if err != nil {
+		return
 	}
 	if err := uc.db.Delete(&auth).Error; err != nil {
 		log.Printf("error deleting auth row: %s\n", err)
@@ -152,4 +147,28 @@ func (uc AuthController) RemoveAuth(w http.ResponseWriter, r *http.Request, p ht
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (uc AuthController) getOne(w http.ResponseWriter, r *http.Request, p httprouter.Params) (model.Auth, error) {
+	auth := model.Auth{}
+
+	id := p.ByName("id")
+	authId, err := strconv.Atoi(id)
+	if err != nil {
+		log.Printf("passing bad id: %s\n", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return auth, fmt.Errorf("passing bad id: %s\n", err)
+	}
+
+	if err := uc.db.Where("id = ?", authId).First(&auth).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			w.WriteHeader(http.StatusNoContent)
+			return auth, fmt.Errorf("error getting auth row: %s\n", err)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			return auth, fmt.Errorf("error getting auth row: %s\n", err)
+		}
+	}
+
+	return auth, nil
 }

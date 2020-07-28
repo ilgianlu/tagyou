@@ -14,6 +14,7 @@ func StartApi(httpPort string) {
 	if err != nil {
 		log.Fatal("failed to connect database")
 	}
+	db.LogMode(true)
 	defer db.Close()
 
 	r := httprouter.New()
@@ -22,6 +23,7 @@ func StartApi(httpPort string) {
 	r.GET("/auths", uc.GetAuths)
 	r.GET("/auths/:id", uc.GetAuth)
 	r.POST("/auths", uc.CreateAuth)
+	r.PUT("/auths/:id", uc.UpdateAuth)
 	r.DELETE("/auths/:id", uc.RemoveAuth)
 
 	log.Printf("http listening on %s", httpPort)
