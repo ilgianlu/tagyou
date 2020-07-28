@@ -14,17 +14,12 @@ func StartApi(httpPort string) {
 	if err != nil {
 		log.Fatal("failed to connect database")
 	}
-	db.LogMode(true)
+	// db.LogMode(true)
 	defer db.Close()
 
 	r := httprouter.New()
 	uc := controllers.NewAuthController(db)
-
-	r.GET("/auths", uc.GetAuths)
-	r.GET("/auths/:id", uc.GetAuth)
-	r.POST("/auths", uc.CreateAuth)
-	r.PUT("/auths/:id", uc.UpdateAuth)
-	r.DELETE("/auths/:id", uc.RemoveAuth)
+	uc.RegisterRoutes(r)
 
 	log.Printf("http listening on %s", httpPort)
 	if err := http.ListenAndServe(httpPort, r); err != nil {

@@ -23,6 +23,14 @@ func NewAuthController(db *gorm.DB) *AuthController {
 	return &AuthController{db}
 }
 
+func (uc AuthController) RegisterRoutes(r *httprouter.Router) {
+	r.GET("/auths", uc.GetAuths)
+	r.GET("/auths/:id", uc.GetAuth)
+	r.POST("/auths", uc.CreateAuth)
+	r.PUT("/auths/:id", uc.UpdateAuth)
+	r.DELETE("/auths/:id", uc.RemoveAuth)
+}
+
 func (uc AuthController) GetAuths(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	auths := []model.Auth{}
 	if err := uc.db.Find(&auths).Error; err != nil {
