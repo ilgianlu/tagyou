@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ilgianlu/tagyou/api/controllers"
+	AuthController "github.com/ilgianlu/tagyou/api/controllers/auth"
 	"github.com/jinzhu/gorm"
 	"github.com/julienschmidt/httprouter"
 )
@@ -18,7 +18,7 @@ func StartApi(httpPort string) {
 	defer db.Close()
 
 	r := httprouter.New()
-	uc := controllers.NewAuthController(db)
+	uc := AuthController.New(db)
 	uc.RegisterRoutes(r)
 
 	log.Printf("http listening on %s", httpPort)
