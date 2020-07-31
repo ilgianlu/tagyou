@@ -14,19 +14,19 @@ type Session struct {
 	ExpiryInterval  uint32
 	ClientId        string `gorm:"unique_index"`
 	Connected       bool
-	ProtocolVersion uint8     `gorm:"-"`
-	ConnectFlags    uint8     `gorm:"-"`
-	KeepAlive       int       `gorm:"-"`
-	WillTopic       string    `gorm:"-"`
-	WillDelay       time.Time `gorm:"-"`
-	WillMessage     []byte    `gorm:"-"`
-	Subscriptions   []Subscription
-	Retries         []Retry
-	Username        string   `gorm:"-"`
-	Password        string   `gorm:"-"`
-	SubscribeAcl    string   `gorm:"-"`
-	PublishAcl      string   `gorm:"-"`
-	Conn            net.Conn `gorm:"-"`
+	ProtocolVersion uint8          `gorm:"-" json:"-"`
+	ConnectFlags    uint8          `gorm:"-" json:"-"`
+	KeepAlive       int            `gorm:"-" json:"-"`
+	WillTopic       string         `gorm:"-" json:"-"`
+	WillDelay       time.Time      `gorm:"-" json:"-"`
+	WillMessage     []byte         `gorm:"-" json:"-"`
+	Subscriptions   []Subscription `json:"-"`
+	Retries         []Retry        `json:"-"`
+	Username        string         `gorm:"-" json:"-"`
+	Password        string         `gorm:"-" json:"-"`
+	SubscribeAcl    string         `gorm:"-" json:"-"`
+	PublishAcl      string         `gorm:"-" json:"-"`
+	Conn            net.Conn       `gorm:"-" json:"-"`
 }
 
 func (s Session) ReservedBit() bool {
