@@ -21,7 +21,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: ilgialu/tagyou
+        repository: ilgianlu/tagyou
         tag_with_ref: true
         tag_with_sha: true
 
