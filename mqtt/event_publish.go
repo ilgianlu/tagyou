@@ -9,7 +9,7 @@ import (
 )
 
 func onPublish(db *gorm.DB, e Event, outQueue chan<- OutData) {
-	if conf.ACL_ON && !CheckAcl(e.topic, e.session.PublishAcl) {
+	if (conf.ACL_ON || !e.session.FromLocalhost()) && !CheckAcl(e.topic, e.session.PublishAcl) {
 		if e.packet.QoS() == 1 {
 			sendAck(db, e, PUBACK_NOT_AUTHORIZED, outQueue)
 		} else {

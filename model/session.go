@@ -2,8 +2,10 @@ package model
 
 import (
 	"net"
+	"strings"
 	"time"
 
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
@@ -59,6 +61,10 @@ func (s Session) HaveUser() bool {
 
 func (s Session) Expired() bool {
 	return s.LastSeen.Add(time.Duration(s.ExpiryInterval) * time.Second).Before(time.Now())
+}
+
+func (s Session) FromLocalhost() bool {
+	return strings.Index(s.Conn.RemoteAddr().String(), conf.LOCALHOST) == 0
 }
 
 func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
