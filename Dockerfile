@@ -12,9 +12,9 @@ ENV CGO_ENABLED=1
 ENV GOOS=linux
 ENV GOARCH=amd64
 
-RUN go test ./...
-
 RUN go build -a -ldflags="-w -s" -o tagyou 
+
+RUN go test ./...
 
 # final stage
 FROM alpine
