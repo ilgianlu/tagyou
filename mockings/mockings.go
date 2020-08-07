@@ -26,7 +26,6 @@ func (mt *MockToken) Error() error {
 type MockClient struct {
 	isConnected bool
 	token       MQTT.Token
-	Published   int
 }
 
 func (mc MockClient) IsConnected() bool {
@@ -45,7 +44,6 @@ func (mc MockClient) Disconnect(quiesce uint) {
 }
 
 func (mc MockClient) Publish(topic string, qos byte, retained bool, payload interface{}) MQTT.Token {
-	mc.Published = mc.Published + 1
 	return mc.token
 }
 
@@ -66,8 +64,4 @@ func (mc MockClient) AddRoute(topic string, callback MQTT.MessageHandler) {
 
 func (mc MockClient) OptionsReader() MQTT.ClientOptionsReader {
 	return MQTT.ClientOptionsReader{}
-}
-
-func (mc MockClient) GetPublished() int {
-	return mc.Published
 }

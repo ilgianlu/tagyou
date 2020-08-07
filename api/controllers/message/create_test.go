@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -34,7 +35,9 @@ func TestPostMessage(t *testing.T) {
 	if recorder.Code != 200 {
 		t.Errorf("expecting code 200, received %d", recorder.Code)
 	}
-	if c.GetPublished() != 1 {
-		t.Errorf("expecting 1 message published, published %d", c.GetPublished())
+
+	resultMessage := recorder.Body.String()
+	if !strings.EqualFold(resultMessage, "\"message published\"") {
+		t.Errorf("expecting \"message published\", received %s", resultMessage)
 	}
 }
