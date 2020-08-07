@@ -15,21 +15,22 @@ import (
 )
 
 func StartApi(httpPort string) {
-	db, err := gorm.Open("sqlite3", "sqlite.db3")
+	db, err := gorm.Open("sqlite3", os.Getenv("DB_PATH")+os.Getenv("DB_NAME"))
 	if err != nil {
-		log.Fatal("failed to connect database")
+		log.Fatalf("[API] failed to connect database %s", err)
 	}
 	log.Println("[API] db connected !")
 	// db.LogMode(true)
 	defer db.Close()
 
 	clientOptions := mqtt.NewClientOptions().
+		SetClientID("api").
 		AddBroker(os.Getenv("LISTEN_PORT")).
 		SetConnectionLostHandler(connLostHandler).
 		SetConnectTimeout(1 * time.Second).
 		SetOnConnectHandler(onConnectHandler)
 
-	mqtt.DEBUG = log.New(os.Stderr, "DEBUG    ", log.Ltime)
+	// mqtt.DEBUG = log.New(os.Stderr, "DEBUG    ", log.Ltime)
 	c := mqtt.NewClient(clientOptions)
 	go mqttConnect(c)
 
@@ -41,7 +42,7 @@ func StartApi(httpPort string) {
 	mc := MessageController.New(c)
 	mc.RegisterRoutes(r)
 
-	log.Printf("http listening on %s", httpPort)
+	log.Printf("[API] http listening on %s", httpPort)
 	if err := http.ListenAndServe(httpPort, r); err != nil {
 		log.Panic(err)
 	}
@@ -51,7 +52,6 @@ func mqttConnect(c mqtt.Client) {
 	i := 0
 	success := false
 	for !success {
-		log.Println(i)
 		token := c.Connect()
 		token.WaitTimeout(5 * time.Second)
 		if token.Wait() && token.Error() != nil {

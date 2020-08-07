@@ -15,6 +15,7 @@ RUN go build -a -ldflags="-w -s" -o tagyou
 
 # final stage
 FROM alpine
+EXPOSE 1883 80
 WORKDIR /app
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 RUN apk add --no-cache tzdata

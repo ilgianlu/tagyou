@@ -22,10 +22,11 @@ const TOPIC_WILDCARD = "#"
 func StartMQTT(port string) {
 	conf.FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") == "true"
 	conf.ACL_ON = os.Getenv("ACL_ON") == "true"
-	db, err := gorm.Open("sqlite3", "sqlite.db3")
+	db, err := gorm.Open("sqlite3", os.Getenv("DB_PATH")+os.Getenv("DB_NAME"))
 	if err != nil {
-		log.Fatal("failed to connect database")
+		log.Fatalf("[MQTT] failed to connect database %s", err)
 	}
+	log.Println("[MQTT] db connected !")
 	defer db.Close()
 
 	model.Migrate(db)
@@ -44,10 +45,10 @@ func startTCP(events chan<- Event, port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Println("tcp listen error", err)
+		log.Println("[MQTT] tcp listen error", err)
 		return
 	}
-	log.Println("mqtt listening on", port)
+	log.Println("[MQTT] mqtt listening on", port)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
