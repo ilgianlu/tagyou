@@ -17,6 +17,7 @@
 # data files
 *.db
 *.db3
+!*.test.db
 
 # only default env
 .env.*

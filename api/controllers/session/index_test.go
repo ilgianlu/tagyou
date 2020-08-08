@@ -11,7 +11,7 @@ import (
 )
 
 func TestGetSessions(t *testing.T) {
-	db, err := gorm.Open("sqlite3", "testdata/sqlite.test")
+	db, err := gorm.Open("sqlite3", "sqlite3.test.db")
 	if err != nil {
 		log.Fatalf("[API] [TEST] failed to connect database %s", err)
 	}
