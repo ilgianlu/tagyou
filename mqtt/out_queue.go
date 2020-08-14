@@ -14,7 +14,9 @@ func rangeOutQueue(connections Connections, db *gorm.DB, outQueue <-chan OutData
 
 func simpleSend(connections Connections, db *gorm.DB, clientId string, packet Packet) {
 	if c, ok := connections[clientId]; ok {
-		n, err := c.Write(packet.toByteSlice())
+		b := packet.ToByteSlice()
+		log.Println(b)
+		n, err := c.Write(b)
 		if err != nil {
 			log.Println("cannot write to", clientId, ":", err)
 		} else {

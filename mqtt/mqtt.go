@@ -1,7 +1,7 @@
 package mqtt
 
 import (
-	"io"
+	"bufio"
 	"log"
 	"net"
 	"os"
@@ -52,7 +52,7 @@ func startTCP(events chan<- Event, port string) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Println("tcp accept error", err)
+			log.Println("[MQTT] tcp accept error", err)
 		}
 		go handleConnection(conn, events)
 	}
@@ -60,49 +60,93 @@ func startTCP(events chan<- Event, port string) {
 
 func handleConnection(conn net.Conn, events chan<- Event) {
 	defer conn.Close()
+
 	session := model.Session{
 		Connected:      true,
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
 		ExpiryInterval: conf.SESSION_MAX_DURATION_SECONDS,
 		Conn:           conn,
 	}
-	buffers := make(chan []byte, 1)
-	packets := make(chan Packet, 1)
-	for {
-		buffer := make([]byte, 1024)
-		bytesCount, err := conn.Read(buffer)
-		if err != nil {
-			log.Println("could read packet", err)
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				log.Println("keepalive not respected!")
-				if session.ClientId != "" {
-					willEvent(session.ClientId, events)
-					disconnectClient(session.ClientId, events)
-				}
-				break
-			}
-			if err == io.EOF {
-				log.Println("connection closed!")
-				if session.ClientId != "" {
-					willEvent(session.ClientId, events)
-					disconnectClient(session.ClientId, events)
-				}
-				break
-			}
-		}
-		buffers <- buffer[:bytesCount]
 
-		go rangeBuffers(buffers, packets)
-		go rangePackets(packets, events, &session)
-
-		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
-		if derr != nil {
-			log.Println("cannot set read deadline", derr)
-			defer conn.Close()
-			break
-		}
+	derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
+	if derr != nil {
+		log.Println("[MQTT] cannot set read deadline", derr)
+		defer conn.Close()
 	}
-	log.Println("abandon closed connection!")
+
+	packets := make(chan Packet)
+	go rangePackets(packets, events, &session)
+
+	scanner := bufio.NewScanner(conn)
+	packetSplit := func(b []byte, atEOF bool) (advance int, token []byte, err error) {
+		log.Println(len(b), b, atEOF)
+		pb, err := ReadFromByteSlice(b)
+		if err != nil {
+			log.Printf("[MQTT] %s\n", err)
+			if !atEOF {
+				return 0, nil, nil
+			}
+			return 0, pb, bufio.ErrFinalToken
+		}
+		return len(pb), pb, nil
+	}
+	scanner.Split(packetSplit)
+
+	for scanner.Scan() {
+		b := scanner.Bytes()
+		// packet as a []bytes
+		p, err := Start(b)
+		if err != nil {
+			log.Printf("[MQTT] %s\n", err)
+			return
+		}
+		packets <- p
+	}
+
+	// err := scanner.Err()
+	// if err != nil {
+	// 	log.Println("could read packet", err)
+	// 	if err, ok := err.(net.Error); ok && err.Timeout() {
+	// 		log.Println("keepalive not respected!")
+	// 		if session.ClientId != "" {
+	// 			willEvent(session.ClientId, events)
+	// 			disconnectClient(session.ClientId, events)
+	// 		}
+	// 	}
+
+	// }
+
+	// buffers := make(chan []byte, 1)
+
+	// for {
+	// 	buffer := make([]byte, 1024)
+	// 	bytesCount, err := conn.Read(buffer)
+
+	// 	if err != nil {
+	// 		log.Println("could read packet", err)
+	// 		if err, ok := err.(net.Error); ok && err.Timeout() {
+	// 			log.Println("keepalive not respected!")
+	// 			if session.ClientId != "" {
+	// 				willEvent(session.ClientId, events)
+	// 				disconnectClient(session.ClientId, events)
+	// 			}
+	// 			break
+	// 		}
+	// 		if err == io.EOF {
+	// 			log.Println("connection closed!")
+	// 			if session.ClientId != "" {
+	// 				willEvent(session.ClientId, events)
+	// 				disconnectClient(session.ClientId, events)
+	// 			}
+	// 			break
+	// 		}
+	// 	}
+	// 	buffers <- buffer[:bytesCount]
+
+	// 	go rangeBuffers(buffers, packets)
+
+	// }
+	// log.Println("abandon closed connection!")
 }
 
 func willEvent(clientId string, e chan<- Event) {

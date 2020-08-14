@@ -10,6 +10,7 @@ import (
 	AuthController "github.com/ilgianlu/tagyou/api/controllers/auth"
 	MessageController "github.com/ilgianlu/tagyou/api/controllers/message"
 	SessionController "github.com/ilgianlu/tagyou/api/controllers/session"
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/jinzhu/gorm"
 	"github.com/julienschmidt/httprouter"
 )
@@ -28,9 +29,10 @@ func StartApi(httpPort string) {
 		AddBroker(os.Getenv("LISTEN_PORT")).
 		SetConnectionLostHandler(connLostHandler).
 		SetConnectTimeout(1 * time.Second).
-		SetOnConnectHandler(onConnectHandler)
+		SetOnConnectHandler(onConnectHandler).
+		SetKeepAlive(time.Duration(conf.DEFAULT_KEEPALIVE) * time.Second)
 
-	// mqtt.DEBUG = log.New(os.Stderr, "DEBUG    ", log.Ltime)
+	mqtt.DEBUG = log.New(os.Stderr, "DEBUG    ", log.Ltime)
 	c := mqtt.NewClient(clientOptions)
 	go mqttConnect(c)
 
@@ -49,17 +51,19 @@ func StartApi(httpPort string) {
 }
 
 func mqttConnect(c mqtt.Client) {
+	time.Sleep(5 * time.Second)
 	i := 0
 	success := false
 	for !success {
 		token := c.Connect()
 		token.WaitTimeout(5 * time.Second)
 		if token.Wait() && token.Error() != nil {
-			log.Println(token.Error())
+			log.Printf("[API] mqtt connect error %s\n", token.Error())
 		} else {
 			success = true
 		}
 		if i == 3 {
+			log.Printf("[API] panicking after too many connect errors %s\n", token.Error())
 			panic(token.Error())
 		}
 		i = i + 1
@@ -67,11 +71,11 @@ func mqttConnect(c mqtt.Client) {
 }
 
 func connLostHandler(c mqtt.Client, err error) {
-	log.Printf("Connection lost, reason: %v\n", err)
+	log.Printf("[API] MQTT Connection lost, reason: %v\n", err)
 	//Perform additional action...
 }
 
 func onConnectHandler(c mqtt.Client) {
-	log.Println("Client Connected")
+	log.Println("[API] MQTT Client Connected")
 	//Perform additional action...
 }
