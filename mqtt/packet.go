@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"fmt"
+	"log"
 )
 
 const PACKET_TYPE_CONNECT = 1
@@ -55,8 +56,6 @@ type Packet struct {
 	// payload
 	payloadOffset  int
 	willProperties Properties
-
-	err error
 }
 
 func (p *Packet) PacketType() byte {
@@ -139,6 +138,9 @@ func (p *Packet) CompletePacket(buff []byte) int {
 
 func Start(buff []byte) (Packet, error) {
 	var p Packet
+	if len(buff) < 2 {
+		return p, fmt.Errorf("Start: buffer too short\n")
+	}
 	i := 0
 	p.header = buff[i]
 	i++
@@ -205,7 +207,26 @@ func (p *Packet) checkHeader() bool {
 	}
 }
 
-func (p *Packet) toByteSlice() []byte {
+func ReadFromByteSlice(buff []byte) ([]byte, error) {
+	if len(buff) < 2 {
+		return nil, fmt.Errorf("header: not enough bytes in buffer\n")
+	}
+	i := 1
+	rl, k, err := ReadVarInt(buff[i:])
+	if err != nil {
+		log.Printf("header: malformed remainingLength format: %s\n", err)
+		return nil, err
+	}
+	i = i + k
+	if len(buff[i:]) < rl {
+		log.Println("remaining bytes: not enough bytes in buffer")
+		return nil, fmt.Errorf("remaining bytes: not enough bytes in buffer\n")
+	}
+	i = i + rl
+	return buff[:i], nil
+}
+
+func (p *Packet) ToByteSlice() []byte {
 	res := make([]byte, 1)
 	res[0] = p.header
 	res = append(res, WriteVarInt(p.remainingLength)...)
