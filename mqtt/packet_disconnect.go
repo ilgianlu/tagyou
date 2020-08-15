@@ -6,7 +6,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func disconnectReq(p Packet, events chan<- Event, session *model.Session) {
+func disconnectReq(p *Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_DISCONNECT
 	event.clientId = session.ClientId

@@ -21,7 +21,7 @@ func Pubrel(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Packe
 	return p
 }
 
-func pubrelReq(p Packet, events chan<- Event, session *model.Session) {
+func pubrelReq(p *Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_PUBRELED
 	event.clientId = session.ClientId
@@ -39,6 +39,6 @@ func pubrelReq(p Packet, events chan<- Event, session *model.Session) {
 			return
 		}
 	}
-	event.packet = p
+	event.packet = *p
 	events <- event
 }

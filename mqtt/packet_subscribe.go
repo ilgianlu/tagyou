@@ -8,7 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
+func subscribeReq(p *Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_SUBSCRIBED
 	event.clientId = session.ClientId
@@ -57,6 +57,6 @@ func subscribeReq(p Packet, events chan<- Event, session *model.Session) {
 			break
 		}
 	}
-	event.packet = p
+	event.packet = *p
 	events <- event
 }

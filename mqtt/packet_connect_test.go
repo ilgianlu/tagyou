@@ -16,7 +16,7 @@ func TestConnectSuccess(t *testing.T) {
 		remainingBytes:  []byte{0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 0, 0, 7, 99, 108, 105, 101, 110, 116, 88},
 	}
 	go connectSuccessEvent(t, e)
-	connectReq(p, e, &s)
+	connectReq(&p, e, &s)
 }
 
 func connectSuccessEvent(t *testing.T, e chan Event) {
@@ -41,7 +41,7 @@ func TestConnectSuccessWithProperties(t *testing.T) {
 		remainingBytes:  []byte{0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 5, 17, 0, 0, 0, 60, 0, 7, 99, 108, 105, 101, 110, 116, 88},
 	}
 	go connectSuccessEventWithProperties(t, e)
-	connectReq(p, e, &s)
+	connectReq(&p, e, &s)
 }
 
 func connectSuccessEventWithProperties(t *testing.T, e chan Event) {

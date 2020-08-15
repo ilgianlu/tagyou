@@ -20,7 +20,7 @@ func Pubcomp(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Pack
 	p.remainingLength = len(p.remainingBytes)
 	return p
 }
-func pubcompReq(p Packet, events chan<- Event, session *model.Session) {
+func pubcompReq(p *Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_PUBCOMPED
 	event.clientId = session.ClientId
@@ -38,6 +38,6 @@ func pubcompReq(p Packet, events chan<- Event, session *model.Session) {
 			return
 		}
 	}
-	event.packet = p
+	event.packet = *p
 	events <- event
 }

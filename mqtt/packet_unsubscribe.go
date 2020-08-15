@@ -6,12 +6,12 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func unsubscribeReq(p Packet, events chan<- Event, session *model.Session) {
+func unsubscribeReq(p *Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_UNSUBSCRIBED
 	event.clientId = session.ClientId
 	event.session = session
-	event.packet = p
+	event.packet = *p
 	i := 2 // 2 bytes for packet identifier
 	if session.ProtocolVersion >= MQTT_V5 {
 		pl, err := p.parseProperties(i)

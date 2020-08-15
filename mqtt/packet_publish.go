@@ -32,7 +32,7 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 	return p
 }
 
-func publishReq(p Packet, events chan<- Event, session *model.Session) {
+func publishReq(p *Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_PUBLISH
 	event.clientId = session.ClientId
@@ -59,7 +59,7 @@ func publishReq(p Packet, events chan<- Event, session *model.Session) {
 	}
 	// payload
 	p.payloadOffset = i
-	event.packet = p
+	event.packet = *p
 	events <- event
 }
 

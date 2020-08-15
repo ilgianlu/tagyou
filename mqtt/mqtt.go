@@ -68,13 +68,16 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 		Conn:           conn,
 	}
 
-	packets := make(chan Packet)
-	go rangePackets(packets, events, &session)
-
 	scanner := bufio.NewScanner(conn)
 	packetSplit := func(b []byte, atEOF bool) (advance int, token []byte, err error) {
 		log.Println(len(b), b, atEOF)
 		if len(b) == 0 && atEOF {
+			// socket down - closed
+			if session.ClientId != "" {
+				willEvent(session.ClientId, events)
+				disconnectClient(session.ClientId, events)
+				return
+			}
 			return 0, b, bufio.ErrFinalToken
 		}
 		pb, err := ReadFromByteSlice(b)
@@ -91,9 +94,10 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 
 	for scanner.Scan() {
 		err := scanner.Err()
+		log.Println("Scanner err", err)
 		if err != nil {
-			log.Println("Scanner err", err)
 			if err, ok := err.(net.Error); ok && err.Timeout() {
+				// socket up but silent
 				log.Println("[MQTT] keepalive not respected!")
 				if session.ClientId != "" {
 					willEvent(session.ClientId, events)
@@ -116,7 +120,7 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 			log.Printf("[MQTT] %s\n", err)
 			return
 		}
-		packets <- p
+		p.Parse(events, &session)
 	}
 
 	log.Println("Out of Scan loop!")

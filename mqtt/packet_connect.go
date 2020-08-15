@@ -7,7 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func connectReq(p Packet, events chan<- Event, session *model.Session) {
+func connectReq(p *Packet, events chan<- Event, session *model.Session) {
 	var event Event
 	event.eventType = EVENT_CONNECT
 	// START VARIABLE HEADER
@@ -90,6 +90,6 @@ func connectReq(p Packet, events chan<- Event, session *model.Session) {
 		session.ExpiryInterval = p.SessionExpiryInterval()
 	}
 	event.session = session
-	event.packet = p
+	event.packet = *p
 	events <- event
 }
