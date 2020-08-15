@@ -68,18 +68,15 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 		Conn:           conn,
 	}
 
-	derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
-	if derr != nil {
-		log.Println("[MQTT] cannot set read deadline", derr)
-		defer conn.Close()
-	}
-
 	packets := make(chan Packet)
 	go rangePackets(packets, events, &session)
 
 	scanner := bufio.NewScanner(conn)
 	packetSplit := func(b []byte, atEOF bool) (advance int, token []byte, err error) {
 		log.Println(len(b), b, atEOF)
+		if len(b) == 0 && atEOF {
+			return 0, b, bufio.ErrFinalToken
+		}
 		pb, err := ReadFromByteSlice(b)
 		if err != nil {
 			log.Printf("[MQTT] %s\n", err)
@@ -93,8 +90,27 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 	scanner.Split(packetSplit)
 
 	for scanner.Scan() {
+		err := scanner.Err()
+		if err != nil {
+			log.Println("Scanner err", err)
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				log.Println("[MQTT] keepalive not respected!")
+				if session.ClientId != "" {
+					willEvent(session.ClientId, events)
+					disconnectClient(session.ClientId, events)
+					return
+				}
+			}
+		}
+
+		// derr := conn.SetReadDeadline(time.Now().Add(time.Duration(5) * time.Second))
+		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
+		if derr != nil {
+			log.Println("[MQTT] cannot set read deadline", derr)
+			defer conn.Close()
+		}
+
 		b := scanner.Bytes()
-		// packet as a []bytes
 		p, err := Start(b)
 		if err != nil {
 			log.Printf("[MQTT] %s\n", err)
@@ -103,50 +119,7 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 		packets <- p
 	}
 
-	// err := scanner.Err()
-	// if err != nil {
-	// 	log.Println("could read packet", err)
-	// 	if err, ok := err.(net.Error); ok && err.Timeout() {
-	// 		log.Println("keepalive not respected!")
-	// 		if session.ClientId != "" {
-	// 			willEvent(session.ClientId, events)
-	// 			disconnectClient(session.ClientId, events)
-	// 		}
-	// 	}
-
-	// }
-
-	// buffers := make(chan []byte, 1)
-
-	// for {
-	// 	buffer := make([]byte, 1024)
-	// 	bytesCount, err := conn.Read(buffer)
-
-	// 	if err != nil {
-	// 		log.Println("could read packet", err)
-	// 		if err, ok := err.(net.Error); ok && err.Timeout() {
-	// 			log.Println("keepalive not respected!")
-	// 			if session.ClientId != "" {
-	// 				willEvent(session.ClientId, events)
-	// 				disconnectClient(session.ClientId, events)
-	// 			}
-	// 			break
-	// 		}
-	// 		if err == io.EOF {
-	// 			log.Println("connection closed!")
-	// 			if session.ClientId != "" {
-	// 				willEvent(session.ClientId, events)
-	// 				disconnectClient(session.ClientId, events)
-	// 			}
-	// 			break
-	// 		}
-	// 	}
-	// 	buffers <- buffer[:bytesCount]
-
-	// 	go rangeBuffers(buffers, packets)
-
-	// }
-	// log.Println("abandon closed connection!")
+	log.Println("Out of Scan loop!")
 }
 
 func willEvent(clientId string, e chan<- Event) {

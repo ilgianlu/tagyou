@@ -32,7 +32,7 @@ func StartApi(httpPort string) {
 		SetOnConnectHandler(onConnectHandler).
 		SetKeepAlive(time.Duration(conf.DEFAULT_KEEPALIVE) * time.Second)
 
-	mqtt.DEBUG = log.New(os.Stderr, "DEBUG    ", log.Ltime)
+	// mqtt.DEBUG = log.New(os.Stderr, "DEBUG    ", log.Ltime)
 	c := mqtt.NewClient(clientOptions)
 	go mqttConnect(c)
 
