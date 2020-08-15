@@ -56,8 +56,6 @@ type Packet struct {
 	// payload
 	payloadOffset  int
 	willProperties Properties
-
-	err error
 }
 
 func (p *Packet) PacketType() byte {
