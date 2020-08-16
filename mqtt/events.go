@@ -10,45 +10,45 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func rangeEvents(connections Connections, db *gorm.DB, events <-chan Event, outQueue chan<- OutData) {
-	for e := range events {
-		switch e.eventType {
+func rangeEvents(connections Connections, db *gorm.DB, events <-chan Packet, outQueue chan<- OutData) {
+	for p := range events {
+		switch p.event {
 		case EVENT_CONNECT:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client connect")
-			onConnect(db, connections, e, outQueue)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "client connect")
+			onConnect(db, connections, p, outQueue)
 		case EVENT_SUBSCRIBED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client subscribed")
-			onSubscribe(db, e, outQueue)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "client subscribed")
+			onSubscribe(db, p, outQueue)
 		case EVENT_UNSUBSCRIBED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client unsubscribed")
-			onUnsubscribe(db, e, outQueue)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "client unsubscribed")
+			onUnsubscribe(db, p, outQueue)
 		case EVENT_PUBLISH:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client published to", e.topic)
-			onPublish(db, e, outQueue)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "client published to", p.topic)
+			onPublish(db, p, outQueue)
 		case EVENT_PUBACKED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client acked message", e.packet.PacketIdentifier())
-			clientPuback(db, e)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "client acked message", p.PacketIdentifier())
+			clientPuback(db, p)
 		case EVENT_PUBRECED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub received message", e.packet.PacketIdentifier())
-			clientPubrec(db, e, outQueue)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "pub received message", p.PacketIdentifier())
+			clientPubrec(db, p, outQueue)
 		case EVENT_PUBRELED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub releases message", e.packet.PacketIdentifier())
-			clientPubrel(db, e, outQueue)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "pub releases message", p.PacketIdentifier())
+			clientPubrel(db, p, outQueue)
 		case EVENT_PUBCOMPED:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "pub complete message", e.packet.PacketIdentifier())
-			clientPubcomp(db, e)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "pub complete message", p.PacketIdentifier())
+			clientPubcomp(db, p)
 		case EVENT_PING:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client ping")
-			onPing(e, outQueue)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "client ping")
+			onPing(p, outQueue)
 		case EVENT_DISCONNECT:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "client disconnect")
-			clientDisconnect(db, connections, e.clientId)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "client disconnect")
+			clientDisconnect(db, connections, p.session.ClientId)
 		case EVENT_WILL_SEND:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "sending will message")
-			sendWill(db, e, outQueue)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "sending will message")
+			sendWill(db, p, outQueue)
 		case EVENT_PACKET_ERR:
-			log.Println("//!! EVENT type", e.eventType, e.clientId, "packet error")
-			clientDisconnect(db, connections, e.clientId)
+			log.Println("//!! EVENT type", p.event, p.session.ClientId, "packet error")
+			clientDisconnect(db, connections, p.session.ClientId)
 		}
 	}
 }
@@ -62,9 +62,9 @@ func trimWildcard(topic string) string {
 	return topic
 }
 
-func onPing(e Event, outQueue chan<- OutData) {
+func onPing(p Packet, outQueue chan<- OutData) {
 	var o OutData
-	o.clientId = e.clientId
+	o.clientId = p.session.ClientId
 	o.packet = PingResp()
 	outQueue <- o
 }
@@ -153,10 +153,10 @@ func sendSimple(clientId string, p Packet, outQueue chan<- OutData) {
 	outQueue <- o
 }
 
-func saveRetain(db *gorm.DB, e Event) {
+func saveRetain(db *gorm.DB, p Packet) {
 	var r model.Retain
-	r.Topic = e.topic
-	r.ApplicationMessage = e.packet.ApplicationMessage()
+	r.Topic = p.topic
+	r.ApplicationMessage = p.ApplicationMessage()
 	r.CreatedAt = time.Now()
 	db.Delete(&r)
 	if len(r.ApplicationMessage) > 0 {
@@ -164,13 +164,13 @@ func saveRetain(db *gorm.DB, e Event) {
 	}
 }
 
-func sendWill(db *gorm.DB, e Event, outQueue chan<- OutData) {
+func sendWill(db *gorm.DB, p Packet, outQueue chan<- OutData) {
 	var s model.Session
-	if db.First(&s, "client_id = ?", e.clientId).RecordNotFound() {
+	if db.First(&s, "client_id = ?", p.session.ClientId).RecordNotFound() {
 		return
 	}
 	if s.WillTopic != "" {
-		p := Publish(e.session.ProtocolVersion, s.WillQoS(), s.WillRetain(), s.WillTopic, newPacketIdentifier(), s.WillMessage)
-		sendForward(db, e.session.ProtocolVersion, s.WillTopic, p, outQueue)
+		p := Publish(p.session.ProtocolVersion, s.WillQoS(), s.WillRetain(), s.WillTopic, newPacketIdentifier(), s.WillMessage)
+		sendForward(db, p.session.ProtocolVersion, s.WillTopic, p, outQueue)
 	}
 }

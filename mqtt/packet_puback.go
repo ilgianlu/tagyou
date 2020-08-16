@@ -2,8 +2,6 @@ package mqtt
 
 import (
 	"log"
-
-	"github.com/ilgianlu/tagyou/model"
 )
 
 func Puback(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Packet {
@@ -21,24 +19,18 @@ func Puback(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Packe
 	return p
 }
 
-func pubackReq(p Packet, events chan<- Event, session *model.Session) {
-	var event Event
-	event.eventType = EVENT_PUBACKED
-	event.clientId = session.ClientId
-	event.session = session
+func (p *Packet) pubackReq() int {
+	p.event = EVENT_PUBACKED
 	i := 2 // expect packet identifier in first 2 bytes
 	if i < len(p.remainingBytes) {
 		p.reasonCode = p.remainingBytes[i]
 	}
-	if session.ProtocolVersion >= MQTT_V5 {
+	if p.session.ProtocolVersion >= MQTT_V5 {
 		_, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
-			event.err = uint8(err)
-			events <- event
-			return
+			return err
 		}
 	}
-	event.packet = p
-	events <- event
+	return 0
 }

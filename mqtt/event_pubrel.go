@@ -7,11 +7,11 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func clientPubrel(db *gorm.DB, e Event, outQueue chan<- OutData) {
+func clientPubrel(db *gorm.DB, p Packet, outQueue chan<- OutData) {
 	sendPubcomp := func(retry model.Retry) {
 		var o OutData
-		o.clientId = e.clientId
-		o.packet = Pubcomp(e.packet.PacketIdentifier(), retry.ReasonCode, e.session.ProtocolVersion)
+		o.clientId = p.session.ClientId
+		o.packet = Pubcomp(p.PacketIdentifier(), retry.ReasonCode, p.session.ProtocolVersion)
 		outQueue <- o
 	}
 
@@ -30,9 +30,9 @@ func clientPubrel(db *gorm.DB, e Event, outQueue chan<- OutData) {
 	}
 
 	retry := model.Retry{
-		ClientId:         e.clientId,
-		PacketIdentifier: e.packet.PacketIdentifier(),
-		ReasonCode:       e.packet.reasonCode,
+		ClientId:         p.session.ClientId,
+		PacketIdentifier: p.PacketIdentifier(),
+		ReasonCode:       p.reasonCode,
 	}
 	if db.Find(&retry).RecordNotFound() {
 		log.Println("pubrel for invalid retry", retry.ClientId, retry.PacketIdentifier)

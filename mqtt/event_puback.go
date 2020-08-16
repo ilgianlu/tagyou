@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func clientPuback(db *gorm.DB, e Event) {
+func clientPuback(db *gorm.DB, p Packet) {
 	onRetryFound := func(db *gorm.DB, retry model.Retry) {
 		// if retry in wait for pub rec -> send pub rel
 		if retry.AckStatus == model.WAIT_FOR_PUB_ACK {
@@ -18,8 +18,8 @@ func clientPuback(db *gorm.DB, e Event) {
 	}
 
 	retry := model.Retry{
-		ClientId:         e.clientId,
-		PacketIdentifier: e.packet.PacketIdentifier(),
+		ClientId:         p.session.ClientId,
+		PacketIdentifier: p.PacketIdentifier(),
 	}
 	if db.Find(&retry).RecordNotFound() {
 		log.Println("puback for invalid retry", retry.ClientId, retry.PacketIdentifier)
