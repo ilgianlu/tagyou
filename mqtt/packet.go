@@ -41,6 +41,24 @@ const PUBREL_SUCCESS = 0x00
 const PUBREC_SUCCESS = 0x00
 const PUBREC_NOT_AUTHORIZED = 0x87
 
+// event type
+const EVENT_CONNECT = 0
+const EVENT_PUBLISH = 2
+const EVENT_PUBACKED = 3
+const EVENT_PUBRECED = 4
+const EVENT_PUBRELED = 5
+const EVENT_PUBCOMPED = 6
+const EVENT_SUBSCRIBED = 10
+const EVENT_SUBSCRIPTION = 11
+const EVENT_PING = 12
+const EVENT_UNSUBSCRIBED = 20
+const EVENT_UNSUBSCRIPTION = 21
+const EVENT_DISCONNECT = 100
+const EVENT_KEEPALIVE_TIMEOUT = 101
+const EVENT_WILL_SEND = 102
+
+const EVENT_PACKET_ERR = 1000
+
 type Packet struct {
 	// header
 	header               byte
@@ -58,6 +76,12 @@ type Packet struct {
 	// payload
 	payloadOffset  int
 	willProperties Properties
+
+	// metadata
+	session       *model.Session
+	subscriptions []model.Subscription
+	topic         string
+	event         int
 }
 
 func (p *Packet) PacketType() byte {
@@ -209,33 +233,31 @@ func (p *Packet) checkHeader() bool {
 	}
 }
 
-func (p *Packet) Parse(events chan<- Event, session *model.Session) {
+func (p *Packet) Parse() int {
 	switch p.PacketType() {
 	case PACKET_TYPE_CONNECT:
-		connectReq(p, events, session)
+		return p.connectReq()
 	case PACKET_TYPE_DISCONNECT:
-		disconnectReq(p, events, session)
+		return p.disconnectReq()
 	case PACKET_TYPE_PUBLISH:
-		publishReq(p, events, session)
+		return p.publishReq()
 	case PACKET_TYPE_PUBACK:
-		pubackReq(p, events, session)
+		return p.pubackReq()
 	case PACKET_TYPE_PUBREC:
-		pubrecReq(p, events, session)
+		return p.pubrecReq()
 	case PACKET_TYPE_PUBREL:
-		pubrelReq(p, events, session)
+		return p.pubrelReq()
 	case PACKET_TYPE_PUBCOMP:
-		pubcompReq(p, events, session)
+		return p.pubcompReq()
 	case PACKET_TYPE_SUBSCRIBE:
-		subscribeReq(p, events, session)
+		return p.subscribeReq()
 	case PACKET_TYPE_UNSUBSCRIBE:
-		unsubscribeReq(p, events, session)
+		return p.unsubscribeReq()
 	case PACKET_TYPE_PINGREQ:
-		pingReq(events, session)
+		return p.pingReq()
 	default:
-		var event Event
-		event.eventType = EVENT_PACKET_ERR
 		log.Printf("Unknown packet type %d\n", p.PacketType())
-		events <- event
+		return MALFORMED_PACKET
 	}
 }
 

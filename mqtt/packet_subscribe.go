@@ -8,32 +8,27 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func subscribeReq(p *Packet, events chan<- Event, session *model.Session) {
-	var event Event
-	event.eventType = EVENT_SUBSCRIBED
-	event.clientId = session.ClientId
-	event.session = session
+func (p *Packet) subscribeReq() int {
+	p.event = EVENT_SUBSCRIBED
 	// variable header
 	i := 2 // 2 bytes for packet identifier
-	if session.ProtocolVersion >= MQTT_V5 {
+	if p.session.ProtocolVersion >= MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
-			event.err = uint8(err)
-			events <- event
-			return
+			return err
 		}
 		i = i + pl
 	}
 	// payload
 	j := 0
-	event.subscriptions = make([]model.Subscription, 0)
+	p.subscriptions = make([]model.Subscription, 0)
 	for {
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
 		sub := model.Subscription{
-			ClientId: session.ClientId,
+			ClientId: p.session.ClientId,
 			Topic:    s,
 		}
 		i = i + sl
@@ -47,7 +42,7 @@ func subscribeReq(p *Packet, events chan<- Event, session *model.Session) {
 		sub.Qos = p.remainingBytes[i] & 0x03
 		sub.Enabled = true
 		sub.CreatedAt = time.Now()
-		event.subscriptions = append(event.subscriptions, sub)
+		p.subscriptions = append(p.subscriptions, sub)
 		i++
 		if i >= len(p.remainingBytes)-1 {
 			break
@@ -57,6 +52,5 @@ func subscribeReq(p *Packet, events chan<- Event, session *model.Session) {
 			break
 		}
 	}
-	event.packet = *p
-	events <- event
+	return 0
 }

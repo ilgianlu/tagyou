@@ -32,7 +32,7 @@ func StartMQTT(port string) {
 	model.Migrate(db)
 
 	connections := make(Connections)
-	events := make(chan Event, 1)
+	events := make(chan Packet, 1)
 	outQueue := make(chan OutData, 1)
 
 	go rangeEvents(connections, db, events, outQueue)
@@ -41,7 +41,7 @@ func StartMQTT(port string) {
 	startTCP(events, port)
 }
 
-func startTCP(events chan<- Event, port string) {
+func startTCP(events chan<- Packet, port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
@@ -58,7 +58,7 @@ func startTCP(events chan<- Event, port string) {
 	}
 }
 
-func handleConnection(conn net.Conn, events chan<- Event) {
+func handleConnection(conn net.Conn, events chan<- Packet) {
 	defer conn.Close()
 
 	session := model.Session{
@@ -74,8 +74,8 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 		if len(b) == 0 && atEOF {
 			// socket down - closed
 			if session.ClientId != "" {
-				willEvent(session.ClientId, events)
-				disconnectClient(session.ClientId, events)
+				willEvent(&session, events)
+				disconnectClient(&session, events)
 				return
 			}
 			return 0, b, bufio.ErrFinalToken
@@ -100,14 +100,13 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 				// socket up but silent
 				log.Println("[MQTT] keepalive not respected!")
 				if session.ClientId != "" {
-					willEvent(session.ClientId, events)
-					disconnectClient(session.ClientId, events)
+					willEvent(&session, events)
+					disconnectClient(&session, events)
 					return
 				}
 			}
 		}
 
-		// derr := conn.SetReadDeadline(time.Now().Add(time.Duration(5) * time.Second))
 		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
 		if derr != nil {
 			log.Println("[MQTT] cannot set read deadline", derr)
@@ -120,22 +119,23 @@ func handleConnection(conn net.Conn, events chan<- Event) {
 			log.Printf("[MQTT] %s\n", err)
 			return
 		}
-		p.Parse(events, &session)
+		p.session = &session
+		parseErr := p.Parse()
+		if parseErr != 0 {
+			log.Printf("[MQTT] %d\n", parseErr)
+		}
+		events <- p
 	}
 
 	log.Println("Out of Scan loop!")
 }
 
-func willEvent(clientId string, e chan<- Event) {
-	var event Event
-	event.eventType = EVENT_WILL_SEND
-	event.clientId = clientId
-	e <- event
+func willEvent(session *model.Session, e chan<- Packet) {
+	p := Packet{session: session, event: EVENT_WILL_SEND}
+	e <- p
 }
 
-func disconnectClient(clientId string, e chan<- Event) {
-	var event Event
-	event.eventType = EVENT_DISCONNECT
-	event.clientId = clientId
-	e <- event
+func disconnectClient(session *model.Session, e chan<- Packet) {
+	p := Packet{session: session, event: EVENT_DISCONNECT}
+	e <- p
 }

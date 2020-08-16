@@ -1,13 +1,8 @@
 package mqtt
 
-import "github.com/ilgianlu/tagyou/model"
-
-func pingReq(events chan<- Event, session *model.Session) {
-	var event Event
-	event.eventType = EVENT_PING
-	event.clientId = session.ClientId
-	event.session = session
-	events <- event
+func (p *Packet) pingReq() int {
+	p.event = EVENT_PING
+	return 0
 }
 
 func PingResp() Packet {

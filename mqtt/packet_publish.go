@@ -3,8 +3,6 @@ package mqtt
 import (
 	"log"
 	"math/rand"
-
-	"github.com/ilgianlu/tagyou/model"
 )
 
 func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packetIdentifier int, payload []byte) Packet {
@@ -32,35 +30,28 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 	return p
 }
 
-func publishReq(p *Packet, events chan<- Event, session *model.Session) {
-	var event Event
-	event.eventType = EVENT_PUBLISH
-	event.clientId = session.ClientId
-	event.session = session
+func (p *Packet) publishReq() int {
+	p.event = EVENT_PUBLISH
 	i := 0
 	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	// variable header
-	topic := string(p.remainingBytes[i : i+tl])
-	event.topic = topic
+	p.topic = string(p.remainingBytes[i : i+tl])
 	i = i + tl
 	if p.QoS() > 0 {
 		i = i + 2 // + 2 for packet identifier
 	}
-	if session.ProtocolVersion >= MQTT_V5 {
+	if p.session.ProtocolVersion >= MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
-			event.err = uint8(err)
-			events <- event
-			return
+			return err
 		}
 		i = i + pl
 	}
 	// payload
 	p.payloadOffset = i
-	event.packet = *p
-	events <- event
+	return 0
 }
 
 func newPacketIdentifier() int {

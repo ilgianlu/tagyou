@@ -6,24 +6,18 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func unsubscribeReq(p *Packet, events chan<- Event, session *model.Session) {
-	var event Event
-	event.eventType = EVENT_UNSUBSCRIBED
-	event.clientId = session.ClientId
-	event.session = session
-	event.packet = *p
+func (p *Packet) unsubscribeReq() int {
+	p.event = EVENT_UNSUBSCRIBED
 	i := 2 // 2 bytes for packet identifier
-	if session.ProtocolVersion >= MQTT_V5 {
+	if p.session.ProtocolVersion >= MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
-			event.err = uint8(err)
-			events <- event
-			return
+			return err
 		}
 		i = i + pl
 	}
-	event.subscriptions = make([]model.Subscription, 0)
+	p.subscriptions = make([]model.Subscription, 0)
 	j := 0
 	for {
 		sl := Read2BytesInt(p.remainingBytes, i)
@@ -31,7 +25,7 @@ func unsubscribeReq(p *Packet, events chan<- Event, session *model.Session) {
 		unsub := model.Subscription{
 			Topic: string(p.remainingBytes[i : i+sl]),
 		}
-		event.subscriptions = append(event.subscriptions, unsub)
+		p.subscriptions = append(p.subscriptions, unsub)
 		i = i + sl
 		if i >= len(p.remainingBytes)-1 {
 			break
@@ -41,5 +35,5 @@ func unsubscribeReq(p *Packet, events chan<- Event, session *model.Session) {
 			break
 		}
 	}
-	events <- event
+	return 0
 }

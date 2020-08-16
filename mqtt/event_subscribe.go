@@ -8,19 +8,19 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func onSubscribe(db *gorm.DB, e Event, outQueue chan<- OutData) {
+func onSubscribe(db *gorm.DB, p Packet, outQueue chan<- OutData) {
 	reasonCodes := []uint8{}
-	for _, subscription := range e.subscriptions {
-		rCode := clientSubscription(db, e.session, &subscription, outQueue)
+	for _, subscription := range p.subscriptions {
+		rCode := clientSubscription(db, p.session, &subscription, outQueue)
 		reasonCodes = append(reasonCodes, rCode)
 	}
-	clientSubscribed(e, reasonCodes, outQueue)
+	clientSubscribed(p, reasonCodes, outQueue)
 }
 
-func clientSubscribed(e Event, reasonCodes []uint8, outQueue chan<- OutData) {
+func clientSubscribed(p Packet, reasonCodes []uint8, outQueue chan<- OutData) {
 	var o OutData
-	o.clientId = e.clientId
-	o.packet = Suback(e.packet.PacketIdentifier(), reasonCodes, e.session.ProtocolVersion)
+	o.clientId = p.session.ClientId
+	o.packet = Suback(p.PacketIdentifier(), reasonCodes, p.session.ProtocolVersion)
 	outQueue <- o
 }
 

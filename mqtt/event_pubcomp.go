@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func clientPubcomp(db *gorm.DB, e Event) {
+func clientPubcomp(db *gorm.DB, p Packet) {
 	onRetryFound := func(db *gorm.DB, retry model.Retry) {
 		// if retry in wait for pub rec -> send pub rel
 		if retry.AckStatus == model.WAIT_FOR_PUB_COMP {
@@ -18,9 +18,9 @@ func clientPubcomp(db *gorm.DB, e Event) {
 	}
 
 	retry := model.Retry{
-		ClientId:         e.clientId,
-		PacketIdentifier: e.packet.PacketIdentifier(),
-		ReasonCode:       e.packet.reasonCode,
+		ClientId:         p.session.ClientId,
+		PacketIdentifier: p.PacketIdentifier(),
+		ReasonCode:       p.reasonCode,
 	}
 	if db.Find(&retry).RecordNotFound() {
 		log.Println("pubcomp for invalid retry", retry.ClientId, retry.PacketIdentifier)

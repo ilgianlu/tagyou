@@ -2,8 +2,6 @@ package mqtt
 
 import (
 	"log"
-
-	"github.com/ilgianlu/tagyou/model"
 )
 
 func Pubrec(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Packet {
@@ -21,24 +19,18 @@ func Pubrec(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Packe
 	return p
 }
 
-func pubrecReq(p *Packet, events chan<- Event, session *model.Session) {
-	var event Event
-	event.eventType = EVENT_PUBRECED
-	event.clientId = session.ClientId
-	event.session = session
+func (p *Packet) pubrecReq() int {
+	p.event = EVENT_PUBRECED
 	i := 2 // 2 bytes for packet identifier
 	if i < len(p.remainingBytes) {
 		p.reasonCode = p.remainingBytes[i]
 	}
-	if session.ProtocolVersion >= MQTT_V5 {
+	if p.session.ProtocolVersion >= MQTT_V5 {
 		_, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
-			event.err = uint8(err)
-			events <- event
-			return
+			return err
 		}
 	}
-	event.packet = *p
-	events <- event
+	return 0
 }
