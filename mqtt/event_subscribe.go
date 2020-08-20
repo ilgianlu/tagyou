@@ -41,7 +41,7 @@ func sendRetain(db *gorm.DB, protocolVersion uint8, subscription *model.Subscrip
 	}
 	for _, r := range retains {
 		p := Publish(protocolVersion, subscription.Qos, true, r.Topic, newPacketIdentifier(), r.ApplicationMessage)
-		sendForward(db, protocolVersion, r.Topic, p, outQueue)
+		sendForward(db, r.Topic, p, outQueue)
 	}
 }
 

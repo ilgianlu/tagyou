@@ -40,6 +40,7 @@ func (p *Packet) subscribeReq() int {
 		sub.RetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
 		sub.NoLocal = p.remainingBytes[i] & 0x04 >> 2
 		sub.Qos = p.remainingBytes[i] & 0x03
+		sub.ProtocolVersion = p.session.ProtocolVersion
 		sub.Enabled = true
 		sub.CreatedAt = time.Now()
 		p.subscriptions = append(p.subscriptions, sub)

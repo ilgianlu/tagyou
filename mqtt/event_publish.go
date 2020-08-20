@@ -21,7 +21,7 @@ func onPublish(db *gorm.DB, p Packet, outQueue chan<- OutData) {
 	if p.Retain() {
 		saveRetain(db, p)
 	}
-	sendForward(db, p.session.ProtocolVersion, p.topic, p, outQueue)
+	sendForward(db, p.topic, p, outQueue)
 	if p.QoS() == 1 {
 		sendAck(db, p, PUBACK_SUCCESS, outQueue)
 	} else {
