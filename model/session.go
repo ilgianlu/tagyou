@@ -16,7 +16,7 @@ type Session struct {
 	ExpiryInterval  uint32
 	ClientId        string `gorm:"unique_index"`
 	Connected       bool
-	ProtocolVersion uint8          `gorm:"-" json:"-"`
+	ProtocolVersion uint8
 	ConnectFlags    uint8          `gorm:"-" json:"-"`
 	KeepAlive       int            `gorm:"-" json:"-"`
 	WillTopic       string         `gorm:"-" json:"-"`

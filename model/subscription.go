@@ -10,6 +10,7 @@ type Subscription struct {
 	RetainAsPublished uint8
 	NoLocal           uint8
 	Qos               uint8
+	ProtocolVersion   uint8
 	Enabled           bool
 	CreatedAt         time.Time
 	SessionID         uint

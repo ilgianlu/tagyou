@@ -70,7 +70,6 @@ func handleConnection(conn net.Conn, events chan<- Packet) {
 
 	scanner := bufio.NewScanner(conn)
 	packetSplit := func(b []byte, atEOF bool) (advance int, token []byte, err error) {
-		log.Println(len(b), b, atEOF)
 		if len(b) == 0 && atEOF {
 			// socket down - closed
 			if session.ClientId != "" {
@@ -94,7 +93,6 @@ func handleConnection(conn net.Conn, events chan<- Packet) {
 
 	for scanner.Scan() {
 		err := scanner.Err()
-		log.Println("Scanner err", err)
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				// socket up but silent
@@ -116,18 +114,18 @@ func handleConnection(conn net.Conn, events chan<- Packet) {
 		b := scanner.Bytes()
 		p, err := Start(b)
 		if err != nil {
-			log.Printf("[MQTT] %s\n", err)
+			log.Printf("[MQTT] Start err %s\n", err)
 			return
 		}
 		p.session = &session
 		parseErr := p.Parse()
 		if parseErr != 0 {
-			log.Printf("[MQTT] %d\n", parseErr)
+			log.Printf("[MQTT] parseErr %d\n", parseErr)
 		}
 		events <- p
 	}
 
-	log.Println("Out of Scan loop!")
+	// log.Println("Out of Scan loop!")
 }
 
 func willEvent(session *model.Session, e chan<- Packet) {
