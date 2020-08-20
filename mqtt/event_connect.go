@@ -49,7 +49,7 @@ func checkConnectionTakeOver(p Packet, connections Connections, outQueue chan<- 
 
 func startSession(db *gorm.DB, session *model.Session) {
 	if prevSession, ok := model.SessionExists(db, session.ClientId); ok {
-		if session.CleanStart() || prevSession.Expired() {
+		if session.CleanStart() || prevSession.Expired() || session.ProtocolVersion != prevSession.ProtocolVersion {
 			model.CleanSession(db, session.ClientId)
 		}
 		prevSession.MergeSession(*session)
