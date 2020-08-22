@@ -10,6 +10,7 @@ import (
 	AuthController "github.com/ilgianlu/tagyou/api/controllers/auth"
 	MessageController "github.com/ilgianlu/tagyou/api/controllers/message"
 	SessionController "github.com/ilgianlu/tagyou/api/controllers/session"
+	WebsocketController "github.com/ilgianlu/tagyou/api/controllers/websocket"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/jinzhu/gorm"
 	"github.com/julienschmidt/httprouter"
@@ -43,6 +44,9 @@ func StartApi(httpPort string) {
 	sc.RegisterRoutes(r)
 	mc := MessageController.New(c)
 	mc.RegisterRoutes(r)
+
+	wc := WebsocketController.New()
+	wc.RegisterRoutes(r)
 
 	log.Printf("[API] http listening on %s", httpPort)
 	if err := http.ListenAndServe(httpPort, r); err != nil {

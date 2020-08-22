@@ -10,4 +10,6 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
+	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
+	nhooyr.io/websocket v1.8.6
 )
