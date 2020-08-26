@@ -1,15 +1,16 @@
-package mqtt
+package packet
 
 import (
 	"log"
 
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 )
 
 func (p *Packet) unsubscribeReq() int {
-	p.event = EVENT_UNSUBSCRIBED
+	p.Event = EVENT_UNSUBSCRIBED
 	i := 2 // 2 bytes for packet identifier
-	if p.session.ProtocolVersion >= MQTT_V5 {
+	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
@@ -17,7 +18,7 @@ func (p *Packet) unsubscribeReq() int {
 		}
 		i = i + pl
 	}
-	p.subscriptions = make([]model.Subscription, 0)
+	p.Subscriptions = make([]model.Subscription, 0)
 	j := 0
 	for {
 		sl := Read2BytesInt(p.remainingBytes, i)
@@ -25,7 +26,7 @@ func (p *Packet) unsubscribeReq() int {
 		unsub := model.Subscription{
 			Topic: string(p.remainingBytes[i : i+sl]),
 		}
-		p.subscriptions = append(p.subscriptions, unsub)
+		p.Subscriptions = append(p.Subscriptions, unsub)
 		i = i + sl
 		if i >= len(p.remainingBytes)-1 {
 			break

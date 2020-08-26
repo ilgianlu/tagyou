@@ -1,4 +1,4 @@
-package mqtt
+package packet
 
 import (
 	"log"
@@ -9,10 +9,10 @@ import (
 )
 
 func (p *Packet) subscribeReq() int {
-	p.event = EVENT_SUBSCRIBED
+	p.Event = EVENT_SUBSCRIBED
 	// variable header
 	i := 2 // 2 bytes for packet identifier
-	if p.session.ProtocolVersion >= MQTT_V5 {
+	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
@@ -22,13 +22,13 @@ func (p *Packet) subscribeReq() int {
 	}
 	// payload
 	j := 0
-	p.subscriptions = make([]model.Subscription, 0)
+	p.Subscriptions = make([]model.Subscription, 0)
 	for {
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
 		sub := model.Subscription{
-			ClientId: p.session.ClientId,
+			ClientId: p.Session.ClientId,
 			Topic:    s,
 		}
 		i = i + sl
@@ -40,10 +40,10 @@ func (p *Packet) subscribeReq() int {
 		sub.RetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
 		sub.NoLocal = p.remainingBytes[i] & 0x04 >> 2
 		sub.Qos = p.remainingBytes[i] & 0x03
-		sub.ProtocolVersion = p.session.ProtocolVersion
+		sub.ProtocolVersion = p.Session.ProtocolVersion
 		sub.Enabled = true
 		sub.CreatedAt = time.Now()
-		p.subscriptions = append(p.subscriptions, sub)
+		p.Subscriptions = append(p.Subscriptions, sub)
 		i++
 		if i >= len(p.remainingBytes)-1 {
 			break

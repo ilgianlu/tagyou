@@ -5,15 +5,16 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func onPublish(db *gorm.DB, p Packet, outQueue chan<- OutData) {
-	if (conf.ACL_ON || !p.session.FromLocalhost()) && !CheckAcl(p.topic, p.session.PublishAcl) {
+func onPublish(db *gorm.DB, p packet.Packet, outQueue chan<- OutData) {
+	if (conf.ACL_ON || !p.Session.FromLocalhost()) && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
-			sendAck(db, p, PUBACK_NOT_AUTHORIZED, outQueue)
+			sendAck(db, p, packet.PUBACK_NOT_AUTHORIZED, outQueue)
 		} else {
-			sendPubrec(db, p, PUBREC_NOT_AUTHORIZED, outQueue)
+			sendPubrec(db, p, packet.PUBREC_NOT_AUTHORIZED, outQueue)
 		}
 		return
 	}
@@ -21,21 +22,21 @@ func onPublish(db *gorm.DB, p Packet, outQueue chan<- OutData) {
 	if p.Retain() {
 		saveRetain(db, p)
 	}
-	sendForward(db, p.topic, p, outQueue)
+	sendForward(db, p.Topic, p, outQueue)
 	if p.QoS() == 1 {
-		sendAck(db, p, PUBACK_SUCCESS, outQueue)
+		sendAck(db, p, packet.PUBACK_SUCCESS, outQueue)
 	} else {
-		sendPubrec(db, p, PUBREC_SUCCESS, outQueue)
+		sendPubrec(db, p, packet.PUBREC_SUCCESS, outQueue)
 	}
 }
 
-func sendAck(db *gorm.DB, p Packet, reasonCode uint8, outQueue chan<- OutData) {
-	sendSimple(p.session.ClientId, Puback(p.PacketIdentifier(), reasonCode, p.session.ProtocolVersion), outQueue)
+func sendAck(db *gorm.DB, p packet.Packet, reasonCode uint8, outQueue chan<- OutData) {
+	sendSimple(p.Session.ClientId, packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion), outQueue)
 }
 
-func sendPubrec(db *gorm.DB, p Packet, reasonCode uint8, outQueue chan<- OutData) {
+func sendPubrec(db *gorm.DB, p packet.Packet, reasonCode uint8, outQueue chan<- OutData) {
 	r := model.Retry{
-		ClientId:           p.session.ClientId,
+		ClientId:           p.Session.ClientId,
 		PacketIdentifier:   p.PacketIdentifier(),
 		Qos:                p.QoS(),
 		Dup:                p.Dup(),
@@ -44,5 +45,5 @@ func sendPubrec(db *gorm.DB, p Packet, reasonCode uint8, outQueue chan<- OutData
 		CreatedAt:          time.Now(),
 	}
 	db.Save(&r)
-	sendSimple(p.session.ClientId, Pubrec(p.PacketIdentifier(), reasonCode, p.session.ProtocolVersion), outQueue)
+	sendSimple(p.Session.ClientId, packet.Pubrec(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion), outQueue)
 }

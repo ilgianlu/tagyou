@@ -3,6 +3,7 @@ package mqtt
 import (
 	"log"
 
+	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
@@ -12,9 +13,9 @@ func rangeOutQueue(connections Connections, db *gorm.DB, outQueue <-chan OutData
 	}
 }
 
-func simpleSend(connections Connections, db *gorm.DB, clientId string, packet Packet) {
+func simpleSend(connections Connections, db *gorm.DB, clientId string, p packet.Packet) {
 	if c, ok := connections[clientId]; ok {
-		n, err := c.Write(packet.ToByteSlice())
+		n, err := c.Write(p.ToByteSlice())
 		if err != nil {
 			log.Println("cannot write to", clientId, ":", err)
 		} else {
