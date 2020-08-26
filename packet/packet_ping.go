@@ -1,7 +1,7 @@
-package mqtt
+package packet
 
 func (p *Packet) pingReq() int {
-	p.event = EVENT_PING
+	p.Event = EVENT_PING
 	return 0
 }
 

@@ -5,22 +5,23 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func onSubscribe(db *gorm.DB, p Packet, outQueue chan<- OutData) {
+func onSubscribe(db *gorm.DB, p packet.Packet, outQueue chan<- OutData) {
 	reasonCodes := []uint8{}
-	for _, subscription := range p.subscriptions {
-		rCode := clientSubscription(db, p.session, &subscription, outQueue)
+	for _, subscription := range p.Subscriptions {
+		rCode := clientSubscription(db, p.Session, &subscription, outQueue)
 		reasonCodes = append(reasonCodes, rCode)
 	}
 	clientSubscribed(p, reasonCodes, outQueue)
 }
 
-func clientSubscribed(p Packet, reasonCodes []uint8, outQueue chan<- OutData) {
+func clientSubscribed(p packet.Packet, reasonCodes []uint8, outQueue chan<- OutData) {
 	var o OutData
-	o.clientId = p.session.ClientId
-	o.packet = Suback(p.PacketIdentifier(), reasonCodes, p.session.ProtocolVersion)
+	o.clientId = p.Session.ClientId
+	o.packet = packet.Suback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
 	outQueue <- o
 }
 
@@ -40,7 +41,7 @@ func sendRetain(db *gorm.DB, protocolVersion uint8, subscription *model.Subscrip
 		return
 	}
 	for _, r := range retains {
-		p := Publish(protocolVersion, subscription.Qos, true, r.Topic, newPacketIdentifier(), r.ApplicationMessage)
+		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
 		sendForward(db, r.Topic, p, outQueue)
 	}
 }

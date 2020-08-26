@@ -1,17 +1,19 @@
-package mqtt
+package packet
 
 import (
 	"log"
+
+	"github.com/ilgianlu/tagyou/conf"
 )
 
-func Pubrec(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Packet {
+func Pubrec(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Packet {
 	var p Packet
 	p.header = uint8(PACKET_TYPE_PUBREC) << 4
 	p.remainingBytes = Write2BytesInt(packetIdentifier)
-	if reasonCode != 0 {
-		p.remainingBytes = append(p.remainingBytes, reasonCode)
+	if ReasonCode != 0 {
+		p.remainingBytes = append(p.remainingBytes, ReasonCode)
 	}
-	if protocolVersion >= MQTT_V5 {
+	if protocolVersion >= conf.MQTT_V5 {
 		// properties
 		p.remainingBytes = append(p.remainingBytes, 0)
 	}
@@ -20,12 +22,12 @@ func Pubrec(packetIdentifier int, reasonCode uint8, protocolVersion uint8) Packe
 }
 
 func (p *Packet) pubrecReq() int {
-	p.event = EVENT_PUBRECED
+	p.Event = EVENT_PUBRECED
 	i := 2 // 2 bytes for packet identifier
 	if i < len(p.remainingBytes) {
-		p.reasonCode = p.remainingBytes[i]
+		p.ReasonCode = p.remainingBytes[i]
 	}
-	if p.session.ProtocolVersion >= MQTT_V5 {
+	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 		_, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)

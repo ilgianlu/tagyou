@@ -1,8 +1,10 @@
-package mqtt
+package packet
 
 import (
 	"log"
 	"math/rand"
+
+	"github.com/ilgianlu/tagyou/conf"
 )
 
 func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packetIdentifier int, payload []byte) Packet {
@@ -21,7 +23,7 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 	if qos != 0 {
 		p.remainingBytes = append(p.remainingBytes, Write2BytesInt(packetIdentifier)...)
 	}
-	if protocolVersion >= MQTT_V5 {
+	if protocolVersion >= conf.MQTT_V5 {
 		p.remainingBytes = append(p.remainingBytes, p.encodeProperties()...)
 	}
 	// write payload
@@ -31,17 +33,17 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 }
 
 func (p *Packet) publishReq() int {
-	p.event = EVENT_PUBLISH
+	p.Event = EVENT_PUBLISH
 	i := 0
 	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	// variable header
-	p.topic = string(p.remainingBytes[i : i+tl])
+	p.Topic = string(p.remainingBytes[i : i+tl])
 	i = i + tl
 	if p.QoS() > 0 {
 		i = i + 2 // + 2 for packet identifier
 	}
-	if p.session.ProtocolVersion >= MQTT_V5 {
+	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Println("err reading properties", err)
@@ -54,6 +56,6 @@ func (p *Packet) publishReq() int {
 	return 0
 }
 
-func newPacketIdentifier() int {
+func NewPacketIdentifier() int {
 	return rand.Intn(65534)
 }

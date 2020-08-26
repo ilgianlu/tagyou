@@ -1,4 +1,4 @@
-package mqtt
+package packet
 
 const PAYLOAD_FORMAT_INDICATOR = 0x01
 const MESSAGE_EXPIRY_INTERVAL = 0x02

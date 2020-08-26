@@ -1,5 +1,11 @@
 package conf
 
+const MQTT_V5 = 5
+const MQTT_V3_11 = 4
+
+const TOPIC_SEPARATOR = "/"
+const TOPIC_WILDCARD = "#"
+
 const MINIMUM_SUPPORTED_PROTOCOL = 4
 
 const MAX_WAIT_FOR_ACK = 4

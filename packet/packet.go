@@ -1,4 +1,4 @@
-package mqtt
+package packet
 
 import (
 	"fmt"
@@ -71,17 +71,17 @@ type Packet struct {
 	// varHeaderOffset int always 0
 	properties Properties
 	// CONNACK, PUBACK, PUBREC, PUBREL, PUBCOMP, DISCONNECT
-	reasonCode uint8
+	ReasonCode uint8
 
 	// payload
 	payloadOffset  int
 	willProperties Properties
 
 	// metadata
-	session       *model.Session
-	subscriptions []model.Subscription
-	topic         string
-	event         int
+	Session       *model.Session
+	Subscriptions []model.Subscription
+	Topic         string
+	Event         int
 }
 
 func (p *Packet) PacketType() byte {
