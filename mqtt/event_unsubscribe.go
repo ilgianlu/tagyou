@@ -4,22 +4,23 @@ import (
 	"log"
 
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func onUnsubscribe(db *gorm.DB, p Packet, outQueue chan<- OutData) {
+func onUnsubscribe(db *gorm.DB, p packet.Packet, outQueue chan<- OutData) {
 	reasonCodes := []uint8{}
-	for _, unsub := range p.subscriptions {
-		rCode := clientUnsubscription(db, p.session.ClientId, unsub.Topic)
+	for _, unsub := range p.Subscriptions {
+		rCode := clientUnsubscription(db, p.Session.ClientId, unsub.Topic)
 		reasonCodes = append(reasonCodes, rCode)
 	}
 	clientUnsubscribed(p, reasonCodes, outQueue)
 }
 
-func clientUnsubscribed(p Packet, reasonCodes []uint8, outQueue chan<- OutData) {
+func clientUnsubscribed(p packet.Packet, reasonCodes []uint8, outQueue chan<- OutData) {
 	var o OutData
-	o.clientId = p.session.ClientId
-	o.packet = Unsuback(p.PacketIdentifier(), reasonCodes, p.session.ProtocolVersion)
+	o.clientId = p.Session.ClientId
+	o.packet = packet.Unsuback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
 	outQueue <- o
 }
 

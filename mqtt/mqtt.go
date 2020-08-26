@@ -9,15 +9,10 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
-
-const MQTT_V5 = 5
-const MQTT_V3_11 = 4
-
-const TOPIC_SEPARATOR = "/"
-const TOPIC_WILDCARD = "#"
 
 func StartMQTT(port string) {
 	conf.FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") == "true"
@@ -32,7 +27,7 @@ func StartMQTT(port string) {
 	model.Migrate(db)
 
 	connections := make(Connections)
-	events := make(chan Packet, 1)
+	events := make(chan packet.Packet, 1)
 	outQueue := make(chan OutData, 1)
 
 	go rangeEvents(connections, db, events, outQueue)
@@ -41,7 +36,7 @@ func StartMQTT(port string) {
 	startTCP(events, port)
 }
 
-func startTCP(events chan<- Packet, port string) {
+func startTCP(events chan<- packet.Packet, port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
@@ -58,7 +53,7 @@ func startTCP(events chan<- Packet, port string) {
 	}
 }
 
-func handleConnection(conn net.Conn, events chan<- Packet) {
+func handleConnection(conn net.Conn, events chan<- packet.Packet) {
 	defer conn.Close()
 
 	session := model.Session{
@@ -79,7 +74,7 @@ func handleConnection(conn net.Conn, events chan<- Packet) {
 			}
 			return 0, b, bufio.ErrFinalToken
 		}
-		pb, err := ReadFromByteSlice(b)
+		pb, err := packet.ReadFromByteSlice(b)
 		if err != nil {
 			log.Printf("[MQTT] %s\n", err)
 			if !atEOF {
@@ -112,12 +107,12 @@ func handleConnection(conn net.Conn, events chan<- Packet) {
 		}
 
 		b := scanner.Bytes()
-		p, err := Start(b)
+		p, err := packet.Start(b)
 		if err != nil {
 			log.Printf("[MQTT] Start err %s\n", err)
 			return
 		}
-		p.session = &session
+		p.Session = &session
 		parseErr := p.Parse()
 		if parseErr != 0 {
 			log.Printf("[MQTT] parseErr %d\n", parseErr)
@@ -128,12 +123,12 @@ func handleConnection(conn net.Conn, events chan<- Packet) {
 	// log.Println("Out of Scan loop!")
 }
 
-func willEvent(session *model.Session, e chan<- Packet) {
-	p := Packet{session: session, event: EVENT_WILL_SEND}
+func willEvent(session *model.Session, e chan<- packet.Packet) {
+	p := packet.Packet{Session: session, Event: packet.EVENT_WILL_SEND}
 	e <- p
 }
 
-func disconnectClient(session *model.Session, e chan<- Packet) {
-	p := Packet{session: session, event: EVENT_DISCONNECT}
+func disconnectClient(session *model.Session, e chan<- packet.Packet) {
+	p := packet.Packet{Session: session, Event: packet.EVENT_DISCONNECT}
 	e <- p
 }
