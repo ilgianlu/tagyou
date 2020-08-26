@@ -19,7 +19,7 @@ func (wc WebsocketController) UpgradeConnection(w http.ResponseWriter, r *http.R
 		log.Printf("[WS] err %s", err)
 		return
 	}
-	defer c.Close(ws.StatusInternalError, "the sky is falling")
+	defer c.Close(ws.StatusInternalError, "[WS] the sky is falling")
 
 	l := rate.NewLimiter(rate.Every(time.Second*1), 10)
 	for {
@@ -55,7 +55,7 @@ func echo(ctx context.Context, c *ws.Conn, l *rate.Limiter) error {
 
 	_, err = io.Copy(w, r)
 	if err != nil {
-		return fmt.Errorf("failed to io.Copy: %w", err)
+		return fmt.Errorf("[WS] failed to io.Copy: %w", err)
 	}
 	log.Println("[WS] echoed")
 
