@@ -11,7 +11,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func rangeEvents(connections Connections, db *gorm.DB, events <-chan packet.Packet, outQueue chan<- OutData) {
+func rangeEvents(connections Connections, db *gorm.DB, events <-chan *packet.Packet, outQueue chan<- *OutData) {
 	for p := range events {
 		switch p.Event {
 		case packet.EVENT_CONNECT:
@@ -63,11 +63,11 @@ func trimWildcard(topic string) string {
 	return topic
 }
 
-func onPing(p packet.Packet, outQueue chan<- OutData) {
+func onPing(p *packet.Packet, outQueue chan<- *OutData) {
 	var o OutData
 	o.clientId = p.Session.ClientId
 	o.packet = packet.PingResp()
-	outQueue <- o
+	outQueue <- &o
 }
 
 func clientDisconnect(db *gorm.DB, connections Connections, clientId string) {
@@ -78,10 +78,10 @@ func clientDisconnect(db *gorm.DB, connections Connections, clientId string) {
 	}
 }
 
-func sendForward(db *gorm.DB, topic string, packet packet.Packet, outQueue chan<- OutData) {
+func sendForward(db *gorm.DB, topic string, p *packet.Packet, outQueue chan<- *OutData) {
 	topicSegments := strings.Split(topic, conf.TOPIC_SEPARATOR)
 	subs := findDests(db, topicSegments)
-	sendSubscribers(db, topic, subs, packet, outQueue)
+	sendSubscribers(db, topic, subs, p, outQueue)
 }
 
 func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
@@ -99,13 +99,13 @@ func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
 	return subs
 }
 
-func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, p packet.Packet, outQueue chan<- OutData) {
+func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, p *packet.Packet, outQueue chan<- *OutData) {
 	for _, s := range subscribers {
 		qos := getQos(p.QoS(), s.Qos)
 		if qos == conf.QOS0 {
 			// prepare publish packet qos 0 no packet identifier
 			p := packet.Publish(s.ProtocolVersion, conf.QOS0, p.Retain(), topic, 0, p.ApplicationMessage())
-			sendSimple(s.ClientId, p, outQueue)
+			sendSimple(s.ClientId, &p, outQueue)
 		} else if qos == conf.QOS1 {
 			// prepare publish packet qos 1 (if sub permit) new packet identifier
 			p := packet.Publish(s.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
@@ -119,7 +119,7 @@ func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription
 				CreatedAt:          time.Now(),
 			}
 			db.Save(&r)
-			sendSimple(r.ClientId, p, outQueue)
+			sendSimple(r.ClientId, &p, outQueue)
 		} else if qos == 2 {
 			// prepare publish packet qos 2 (if sub permit) new packet identifier
 			p := packet.Publish(s.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
@@ -133,7 +133,7 @@ func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription
 				CreatedAt:          time.Now(),
 			}
 			db.Save(&r)
-			sendSimple(r.ClientId, p, outQueue)
+			sendSimple(r.ClientId, &p, outQueue)
 		}
 
 	}
@@ -147,14 +147,14 @@ func getQos(pubQos uint8, subQos uint8) uint8 {
 	}
 }
 
-func sendSimple(clientId string, p packet.Packet, outQueue chan<- OutData) {
+func sendSimple(clientId string, p *packet.Packet, outQueue chan<- *OutData) {
 	var o OutData
 	o.clientId = clientId
-	o.packet = p
-	outQueue <- o
+	o.packet = *p
+	outQueue <- &o
 }
 
-func saveRetain(db *gorm.DB, p packet.Packet) {
+func saveRetain(db *gorm.DB, p *packet.Packet) {
 	var r model.Retain
 	r.Topic = p.Topic
 	r.ApplicationMessage = p.ApplicationMessage()
@@ -165,13 +165,13 @@ func saveRetain(db *gorm.DB, p packet.Packet) {
 	}
 }
 
-func sendWill(db *gorm.DB, p packet.Packet, outQueue chan<- OutData) {
+func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
 	var s model.Session
 	if db.First(&s, "client_id = ?", p.Session.ClientId).RecordNotFound() {
 		return
 	}
 	if s.WillTopic != "" {
 		p := packet.Publish(p.Session.ProtocolVersion, s.WillQoS(), s.WillRetain(), s.WillTopic, packet.NewPacketIdentifier(), s.WillMessage)
-		sendForward(db, s.WillTopic, p, outQueue)
+		sendForward(db, s.WillTopic, &p, outQueue)
 	}
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func onPublish(db *gorm.DB, p packet.Packet, outQueue chan<- OutData) {
+func onPublish(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
 	if (conf.ACL_ON || !p.Session.FromLocalhost()) && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
 			sendAck(db, p, packet.PUBACK_NOT_AUTHORIZED, outQueue)
@@ -30,11 +30,12 @@ func onPublish(db *gorm.DB, p packet.Packet, outQueue chan<- OutData) {
 	}
 }
 
-func sendAck(db *gorm.DB, p packet.Packet, reasonCode uint8, outQueue chan<- OutData) {
-	sendSimple(p.Session.ClientId, packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion), outQueue)
+func sendAck(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *OutData) {
+	puback := packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
+	sendSimple(p.Session.ClientId, &puback, outQueue)
 }
 
-func sendPubrec(db *gorm.DB, p packet.Packet, reasonCode uint8, outQueue chan<- OutData) {
+func sendPubrec(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *OutData) {
 	r := model.Retry{
 		ClientId:           p.Session.ClientId,
 		PacketIdentifier:   p.PacketIdentifier(),
@@ -45,5 +46,7 @@ func sendPubrec(db *gorm.DB, p packet.Packet, reasonCode uint8, outQueue chan<- 
 		CreatedAt:          time.Now(),
 	}
 	db.Save(&r)
-	sendSimple(p.Session.ClientId, packet.Pubrec(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion), outQueue)
+
+	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
+	sendSimple(p.Session.ClientId, &pubrec, outQueue)
 }
