@@ -9,7 +9,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func onConnect(db *gorm.DB, connections Connections, p packet.Packet, outQueue chan<- OutData) {
+func onConnect(db *gorm.DB, connections Connections, p *packet.Packet, outQueue chan<- *OutData) {
 	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
 		ok, pubAcl, subAcl := model.CheckAuth(db, p.Session.ClientId, p.Session.Username, p.Session.Password)
 		if !ok {
@@ -29,16 +29,17 @@ func onConnect(db *gorm.DB, connections Connections, p packet.Packet, outQueue c
 
 	startSession(db, p.Session)
 
-	sendSimple(p.Session.ClientId, packet.Connack(false, packet.CONNECT_OK, p.Session.ProtocolVersion), outQueue)
+	connack := packet.Connack(false, packet.CONNECT_OK, p.Session.ProtocolVersion)
+	sendSimple(p.Session.ClientId, &connack, outQueue)
 }
 
-func checkConnectionTakeOver(p packet.Packet, connections Connections, outQueue chan<- OutData) bool {
+func checkConnectionTakeOver(p *packet.Packet, connections Connections, outQueue chan<- *OutData) bool {
 	if _, ok := connections.Exists(p.Session.ClientId); !ok {
 		return false
 	}
 
 	pkt := packet.Connack(false, packet.SESSION_TAKEN_OVER, p.Session.ProtocolVersion)
-	sendSimple(p.Session.ClientId, pkt, outQueue)
+	sendSimple(p.Session.ClientId, &pkt, outQueue)
 
 	err := connections.Close(p.Session.ClientId)
 	if err != nil {
