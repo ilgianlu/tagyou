@@ -27,8 +27,8 @@ func StartMQTT(port string) {
 	model.Migrate(db)
 
 	connections := make(Connections)
-	events := make(chan packet.Packet, 1)
-	outQueue := make(chan OutData, 1)
+	events := make(chan *packet.Packet, 1)
+	outQueue := make(chan *OutData, 1)
 
 	go rangeEvents(connections, db, events, outQueue)
 	go rangeOutQueue(connections, db, outQueue)
@@ -36,7 +36,7 @@ func StartMQTT(port string) {
 	startTCP(events, port)
 }
 
-func startTCP(events chan<- packet.Packet, port string) {
+func startTCP(events chan<- *packet.Packet, port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
@@ -53,7 +53,7 @@ func startTCP(events chan<- packet.Packet, port string) {
 	}
 }
 
-func handleConnection(conn net.Conn, events chan<- packet.Packet) {
+func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 	defer conn.Close()
 
 	session := model.Session{
@@ -117,18 +117,18 @@ func handleConnection(conn net.Conn, events chan<- packet.Packet) {
 		if parseErr != 0 {
 			log.Printf("[MQTT] parseErr %d\n", parseErr)
 		}
-		events <- p
+		events <- &p
 	}
 
 	// log.Println("Out of Scan loop!")
 }
 
-func willEvent(session *model.Session, e chan<- packet.Packet) {
+func willEvent(session *model.Session, e chan<- *packet.Packet) {
 	p := packet.Packet{Session: session, Event: packet.EVENT_WILL_SEND}
-	e <- p
+	e <- &p
 }
 
-func disconnectClient(session *model.Session, e chan<- packet.Packet) {
+func disconnectClient(session *model.Session, e chan<- *packet.Packet) {
 	p := packet.Packet{Session: session, Event: packet.EVENT_DISCONNECT}
-	e <- p
+	e <- &p
 }

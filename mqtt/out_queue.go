@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func rangeOutQueue(connections Connections, db *gorm.DB, outQueue <-chan OutData) {
+func rangeOutQueue(connections Connections, db *gorm.DB, outQueue <-chan *OutData) {
 	for o := range outQueue {
 		simpleSend(connections, db, o.clientId, o.packet)
 	}

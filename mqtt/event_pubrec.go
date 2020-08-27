@@ -8,12 +8,12 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func clientPubrec(db *gorm.DB, p packet.Packet, outQueue chan<- OutData) {
+func clientPubrec(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
 	sendPubrel := func(retry model.Retry) {
 		var o OutData
 		o.clientId = retry.ClientId
 		o.packet = packet.Pubrel(retry.PacketIdentifier, retry.ReasonCode, p.Session.ProtocolVersion)
-		outQueue <- o
+		outQueue <- &o
 	}
 
 	onExpectedPubrec := func(retry model.Retry) {
