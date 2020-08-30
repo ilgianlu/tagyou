@@ -1,15 +1,16 @@
-package mqtt
+package event
 
 import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func onPublish(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
+func onPublish(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	if (conf.ACL_ON || !p.Session.FromLocalhost()) && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
 			sendAck(db, p, packet.PUBACK_NOT_AUTHORIZED, outQueue)
@@ -30,12 +31,12 @@ func onPublish(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
 	}
 }
 
-func sendAck(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *OutData) {
+func sendAck(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *out.OutData) {
 	puback := packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
 	sendSimple(p.Session.ClientId, &puback, outQueue)
 }
 
-func sendPubrec(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *OutData) {
+func sendPubrec(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *out.OutData) {
 	r := model.Retry{
 		ClientId:           p.Session.ClientId,
 		PacketIdentifier:   p.PacketIdentifier(),
