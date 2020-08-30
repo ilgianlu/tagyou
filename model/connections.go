@@ -1,4 +1,4 @@
-package mqtt
+package model
 
 import "net"
 

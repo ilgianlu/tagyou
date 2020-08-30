@@ -1,4 +1,4 @@
-package mqtt
+package event
 
 import (
 	"log"
@@ -7,11 +7,12 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func rangeEvents(connections Connections, db *gorm.DB, events <-chan *packet.Packet, outQueue chan<- *OutData) {
+func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *packet.Packet, outQueue chan<- *out.OutData) {
 	for p := range events {
 		switch p.Event {
 		case packet.EVENT_CONNECT:
@@ -63,14 +64,14 @@ func trimWildcard(topic string) string {
 	return topic
 }
 
-func onPing(p *packet.Packet, outQueue chan<- *OutData) {
-	var o OutData
-	o.clientId = p.Session.ClientId
-	o.packet = packet.PingResp()
+func onPing(p *packet.Packet, outQueue chan<- *out.OutData) {
+	var o out.OutData
+	o.ClientId = p.Session.ClientId
+	o.Packet = packet.PingResp()
 	outQueue <- &o
 }
 
-func clientDisconnect(db *gorm.DB, connections Connections, clientId string) {
+func clientDisconnect(db *gorm.DB, connections model.Connections, clientId string) {
 	if _, ok := connections.Exists(clientId); ok {
 		connections.Close(clientId)
 		connections.Remove(clientId)
@@ -78,7 +79,7 @@ func clientDisconnect(db *gorm.DB, connections Connections, clientId string) {
 	}
 }
 
-func sendForward(db *gorm.DB, topic string, p *packet.Packet, outQueue chan<- *OutData) {
+func sendForward(db *gorm.DB, topic string, p *packet.Packet, outQueue chan<- *out.OutData) {
 	topicSegments := strings.Split(topic, conf.TOPIC_SEPARATOR)
 	subs := findDests(db, topicSegments)
 	sendSubscribers(db, topic, subs, p, outQueue)
@@ -99,7 +100,7 @@ func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
 	return subs
 }
 
-func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, p *packet.Packet, outQueue chan<- *OutData) {
+func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, p *packet.Packet, outQueue chan<- *out.OutData) {
 	for _, s := range subscribers {
 		qos := getQos(p.QoS(), s.Qos)
 		if qos == conf.QOS0 {
@@ -147,10 +148,10 @@ func getQos(pubQos uint8, subQos uint8) uint8 {
 	}
 }
 
-func sendSimple(clientId string, p *packet.Packet, outQueue chan<- *OutData) {
-	var o OutData
-	o.clientId = clientId
-	o.packet = *p
+func sendSimple(clientId string, p *packet.Packet, outQueue chan<- *out.OutData) {
+	var o out.OutData
+	o.ClientId = clientId
+	o.Packet = *p
 	outQueue <- &o
 }
 
@@ -165,7 +166,7 @@ func saveRetain(db *gorm.DB, p *packet.Packet) {
 	}
 }
 
-func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
+func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	var s model.Session
 	if db.First(&s, "client_id = ?", p.Session.ClientId).RecordNotFound() {
 		return
