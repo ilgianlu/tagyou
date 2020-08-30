@@ -1,15 +1,16 @@
-package mqtt
+package event
 
 import (
 	"strings"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func onSubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
+func onSubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
 		rCode := clientSubscription(db, p.Session, &subscription, outQueue)
@@ -18,14 +19,14 @@ func onSubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
 	clientSubscribed(p, reasonCodes, outQueue)
 }
 
-func clientSubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- *OutData) {
-	var o OutData
-	o.clientId = p.Session.ClientId
-	o.packet = packet.Suback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
+func clientSubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- *out.OutData) {
+	var o out.OutData
+	o.ClientId = p.Session.ClientId
+	o.Packet = packet.Suback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
 	outQueue <- &o
 }
 
-func clientSubscription(db *gorm.DB, session *model.Session, subscription *model.Subscription, outQueue chan<- *OutData) uint8 {
+func clientSubscription(db *gorm.DB, session *model.Session, subscription *model.Subscription, outQueue chan<- *out.OutData) uint8 {
 	// check subscr qos, topic valid...
 	if (conf.ACL_ON || !session.FromLocalhost()) && !CheckAcl(subscription.Topic, session.SubscribeAcl) {
 		return conf.SUB_TOPIC_FILTER_INVALID
@@ -35,7 +36,7 @@ func clientSubscription(db *gorm.DB, session *model.Session, subscription *model
 	return 0
 }
 
-func sendRetain(db *gorm.DB, protocolVersion uint8, subscription *model.Subscription, outQueue chan<- *OutData) {
+func sendRetain(db *gorm.DB, protocolVersion uint8, subscription *model.Subscription, outQueue chan<- *out.OutData) {
 	retains := findRetains(db, subscription.Topic)
 	if len(retains) == 0 {
 		return

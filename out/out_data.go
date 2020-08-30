@@ -1,8 +1,8 @@
-package mqtt
+package out
 
 import "github.com/ilgianlu/tagyou/packet"
 
 type OutData struct {
-	clientId string
-	packet   packet.Packet
+	ClientId string
+	Packet   packet.Packet
 }

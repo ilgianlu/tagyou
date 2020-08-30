@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
@@ -26,12 +28,12 @@ func StartMQTT(port string) {
 
 	model.Migrate(db)
 
-	connections := make(Connections)
+	connections := make(model.Connections)
 	events := make(chan *packet.Packet, 1)
-	outQueue := make(chan *OutData, 1)
+	outQueue := make(chan *out.OutData, 1)
 
-	go rangeEvents(connections, db, events, outQueue)
-	go rangeOutQueue(connections, db, outQueue)
+	go event.RangeEvents(connections, db, events, outQueue)
+	go out.RangeOutQueue(connections, db, outQueue)
 
 	startTCP(events, port)
 }

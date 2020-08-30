@@ -1,18 +1,19 @@
-package mqtt
+package event
 
 import (
 	"log"
 
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func clientPubrec(db *gorm.DB, p *packet.Packet, outQueue chan<- *OutData) {
+func clientPubrec(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	sendPubrel := func(retry model.Retry) {
-		var o OutData
-		o.clientId = retry.ClientId
-		o.packet = packet.Pubrel(retry.PacketIdentifier, retry.ReasonCode, p.Session.ProtocolVersion)
+		var o out.OutData
+		o.ClientId = retry.ClientId
+		o.Packet = packet.Pubrel(retry.PacketIdentifier, retry.ReasonCode, p.Session.ProtocolVersion)
 		outQueue <- &o
 	}
 

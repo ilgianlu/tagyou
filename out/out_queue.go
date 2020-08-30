@@ -1,19 +1,20 @@
-package mqtt
+package out
 
 import (
 	"log"
 
+	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func rangeOutQueue(connections Connections, db *gorm.DB, outQueue <-chan *OutData) {
+func RangeOutQueue(connections model.Connections, db *gorm.DB, outQueue <-chan *OutData) {
 	for o := range outQueue {
-		simpleSend(connections, db, o.clientId, o.packet)
+		simpleSend(connections, db, o.ClientId, o.Packet)
 	}
 }
 
-func simpleSend(connections Connections, db *gorm.DB, clientId string, p packet.Packet) {
+func simpleSend(connections model.Connections, db *gorm.DB, clientId string, p packet.Packet) {
 	if c, ok := connections[clientId]; ok {
 		n, err := c.Write(p.ToByteSlice())
 		if err != nil {

@@ -1,15 +1,16 @@
-package mqtt
+package event
 
 import (
 	"log"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/jinzhu/gorm"
 )
 
-func onConnect(db *gorm.DB, connections Connections, p *packet.Packet, outQueue chan<- *OutData) {
+func onConnect(db *gorm.DB, connections model.Connections, p *packet.Packet, outQueue chan<- *out.OutData) {
 	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
 		ok, pubAcl, subAcl := model.CheckAuth(db, p.Session.ClientId, p.Session.Username, p.Session.Password)
 		if !ok {
@@ -33,7 +34,7 @@ func onConnect(db *gorm.DB, connections Connections, p *packet.Packet, outQueue 
 	sendSimple(p.Session.ClientId, &connack, outQueue)
 }
 
-func checkConnectionTakeOver(p *packet.Packet, connections Connections, outQueue chan<- *OutData) bool {
+func checkConnectionTakeOver(p *packet.Packet, connections model.Connections, outQueue chan<- *out.OutData) bool {
 	if _, ok := connections.Exists(p.Session.ClientId); !ok {
 		return false
 	}
