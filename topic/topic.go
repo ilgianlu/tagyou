@@ -62,14 +62,14 @@ func Explode(topic string) []string {
 		return res
 	}
 	for i := 0; i < len(setRoad); i++ {
-		prev := pre(setRoad, i)
-		pos := post(setRoad, i)
-		if prev == "" {
+		prev, isPrev := pre(setRoad, i)
+		pos, isPos := post(setRoad, i)
+		if !isPrev {
 			res = append(res, setRoad[i]+TOPIC_SEPARATOR+TOPIC_WILDCARD)
 			res = append(res, TOPIC_JOLLY+TOPIC_SEPARATOR+TOPIC_WILDCARD)
 			res = append(res, TOPIC_JOLLY+TOPIC_SEPARATOR+pos)
 		} else {
-			if pos == "" {
+			if !isPos {
 				res = append(res, prev+TOPIC_SEPARATOR+TOPIC_JOLLY)
 			} else {
 				res = append(res, prev+TOPIC_SEPARATOR+setRoad[i]+TOPIC_SEPARATOR+TOPIC_WILDCARD)
@@ -81,16 +81,16 @@ func Explode(topic string) []string {
 	return res
 }
 
-func pre(path []string, i int) string {
+func pre(path []string, i int) (string, bool) {
 	if i == 0 {
-		return ""
+		return "", false
 	}
-	return strings.Join(path[0:i], TOPIC_SEPARATOR)
+	return strings.Join(path[0:i], TOPIC_SEPARATOR), true
 }
 
-func post(path []string, i int) string {
+func post(path []string, i int) (string, bool) {
 	if i == len(path)-1 {
-		return ""
+		return "", false
 	}
-	return strings.Join(path[i+1:], TOPIC_SEPARATOR)
+	return strings.Join(path[i+1:], TOPIC_SEPARATOR), true
 }

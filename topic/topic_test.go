@@ -44,6 +44,8 @@ func TestExplode(t *testing.T) {
 		{"a", []string{"#", "a", "+"}},
 		{"a/b", []string{"#", "a/b", "a/#", "+/#", "+/b", "a/+"}},
 		{"a/b/c", []string{"#", "a/b/c", "a/#", "+/#", "+/b/c", "a/b/#", "a/+/c", "a/+/#", "a/b/+"}},
+		{"/a", []string{"#", "/a", "/#", "+/#", "+/a", "/+"}},
+		{"/b/c", []string{"#", "/b/c", "/#", "+/#", "+/b/c", "/b/#", "/+/c", "/+/#", "/b/+"}},
 	}
 
 	for _, value := range tests {
