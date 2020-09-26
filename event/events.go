@@ -2,13 +2,13 @@ package event
 
 import (
 	"log"
-	"strings"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
+	tpc "github.com/ilgianlu/tagyou/topic"
 	"github.com/jinzhu/gorm"
 )
 
@@ -80,24 +80,13 @@ func clientDisconnect(db *gorm.DB, connections model.Connections, clientId strin
 }
 
 func sendForward(db *gorm.DB, topic string, p *packet.Packet, outQueue chan<- *out.OutData) {
-	topicSegments := strings.Split(topic, conf.TOPIC_SEPARATOR)
-	subs := findDests(db, topicSegments)
-	sendSubscribers(db, topic, subs, p, outQueue)
-}
-
-func findDests(db *gorm.DB, topicSegments []string) []model.Subscription {
+	destSubs := tpc.Explode(topic)
 	subs := []model.Subscription{}
-	for i := 1; i <= len(topicSegments); i++ {
-		subT := append(make([]string, 0), topicSegments[:i]...)
-		if len(subT) < len(topicSegments) {
-			subT = append(subT, conf.TOPIC_WILDCARD)
-		}
-		t := strings.Join(subT, conf.TOPIC_SEPARATOR)
-		ss := []model.Subscription{}
-		db.Where("topic = ?", t).Find(&ss)
-		subs = append(subs, ss...)
+	if err := db.Where("topic IN (?)", destSubs).Find(&subs).Error; err != nil {
+		log.Println("could not query for subscriptions:", err)
+		return
 	}
-	return subs
+	sendSubscribers(db, topic, subs, p, outQueue)
 }
 
 func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, p *packet.Packet, outQueue chan<- *out.OutData) {
