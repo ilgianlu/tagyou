@@ -1,6 +1,9 @@
 package topic
 
-import "testing"
+import (
+	"log"
+	"testing"
+)
 
 func TestMatch(t *testing.T) {
 	type test struct {
@@ -29,6 +32,41 @@ func TestMatch(t *testing.T) {
 			t.Errorf("expected %s to match %s, %t", value.data[0], value.data[1], value.result)
 		}
 	}
+}
+
+func TestExplode(t *testing.T) {
+	type test struct {
+		data   string
+		result []string
+	}
+
+	tests := []test{
+		{"a", []string{"#", "a", "+"}},
+		{"a/b", []string{"#", "a/b", "a/#", "+/#", "+/b", "a/+"}},
+		{"a/b/c", []string{"#", "a/b/c", "a/#", "+/#", "+/b/c", "a/b/#", "a/+/c", "a/+/#", "a/b/+"}},
+		{"/a", []string{"#", "/a", "/#", "+/#", "+/a", "/+"}},
+		{"/b/c", []string{"#", "/b/c", "/#", "+/#", "+/b/c", "/b/#", "/+/c", "/+/#", "/b/+"}},
+	}
+
+	for _, value := range tests {
+		res := Explode(value.data)
+		log.Println(value.data, "==>", res, "==", value.result)
+		if !arrEq(res, value.result) {
+			t.Error("expected", value.data, "to explode into", value.result, "received", res)
+		}
+	}
+}
+
+func arrEq(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func TestMatcherSubset(t *testing.T) {
