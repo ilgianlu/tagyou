@@ -5,7 +5,7 @@ import (
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 func clientPuback(db *gorm.DB, p *packet.Packet) {
@@ -22,7 +22,7 @@ func clientPuback(db *gorm.DB, p *packet.Packet) {
 		ClientId:         p.Session.ClientId,
 		PacketIdentifier: p.PacketIdentifier(),
 	}
-	if db.Find(&retry).RecordNotFound() {
+	if err := db.Find(&retry).Error; err != nil {
 		log.Println("puback for invalid retry", retry.ClientId, retry.PacketIdentifier)
 	} else {
 		onRetryFound(db, retry)

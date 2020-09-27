@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"gorm.io/gorm"
 )
 
 type Session struct {
@@ -92,7 +91,7 @@ func CleanSession(db *gorm.DB, clientId string) {
 
 func SessionExists(db *gorm.DB, clientId string) (Session, bool) {
 	session := Session{}
-	if db.Where("client_id = ?", clientId).First(&session).RecordNotFound() {
+	if err := db.Where("client_id = ?", clientId).First(&session).Error; err != nil {
 		return session, false
 	} else {
 		return session, true

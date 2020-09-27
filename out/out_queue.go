@@ -5,7 +5,7 @@ import (
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 func RangeOutQueue(connections model.Connections, db *gorm.DB, outQueue <-chan *OutData) {

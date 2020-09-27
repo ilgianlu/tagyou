@@ -1,14 +1,15 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/jinzhu/gorm"
 	"github.com/julienschmidt/httprouter"
+	"gorm.io/gorm"
 )
 
 const resourceName string = "/auths"
@@ -41,7 +42,7 @@ func (uc AuthController) getOne(w http.ResponseWriter, r *http.Request, p httpro
 	}
 
 	if err := uc.db.Where("id = ?", authId).First(&auth).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			w.WriteHeader(http.StatusNoContent)
 			return auth, fmt.Errorf("error getting auth row: %s\n", err)
 		} else {

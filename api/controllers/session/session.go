@@ -1,8 +1,8 @@
 package session
 
 import (
-	"github.com/jinzhu/gorm"
 	"github.com/julienschmidt/httprouter"
+	"gorm.io/gorm"
 )
 
 const resourceName string = "/sessions"

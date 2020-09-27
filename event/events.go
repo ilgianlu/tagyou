@@ -9,7 +9,7 @@ import (
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	tpc "github.com/ilgianlu/tagyou/topic"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *packet.Packet, outQueue chan<- *out.OutData) {
@@ -157,7 +157,7 @@ func saveRetain(db *gorm.DB, p *packet.Packet) {
 
 func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	var s model.Session
-	if db.First(&s, "client_id = ?", p.Session.ClientId).RecordNotFound() {
+	if err := db.First(&s, "client_id = ?", p.Session.ClientId).Error; err != nil {
 		return
 	}
 	if s.WillTopic != "" {
