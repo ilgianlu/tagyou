@@ -67,8 +67,8 @@ func (s Session) FromLocalhost() bool {
 }
 
 func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
-	tx.Where("session_id = ?", s.ID).Delete(Subscription{})
-	tx.Where("session_id = ?", s.ID).Delete(Retry{})
+	tx.Where("session_id = ?", s.ID).Delete(&Subscription{})
+	tx.Where("session_id = ?", s.ID).Delete(&Retry{})
 	return nil
 }
 
@@ -86,7 +86,7 @@ func (s *Session) MergeSession(newSession Session) {
 }
 
 func CleanSession(db *gorm.DB, clientId string) {
-	db.Where("client_id = ?", clientId).Delete(Session{})
+	db.Where("client_id = ?", clientId).Delete(&Session{})
 }
 
 func SessionExists(db *gorm.DB, clientId string) (Session, bool) {

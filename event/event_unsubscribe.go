@@ -30,6 +30,6 @@ func clientUnsubscription(db *gorm.DB, clientId string, topic string) uint8 {
 	if err := db.Where("topic = ? and client_id = ?", topic, clientId).First(&sub); err != nil {
 		log.Println("no subscription to unsubscribe", topic, clientId)
 	}
-	db.Delete(sub)
+	db.Delete(&sub)
 	return 0
 }
