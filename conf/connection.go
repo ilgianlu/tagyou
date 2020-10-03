@@ -7,9 +7,9 @@ var SESSION_MAX_DURATION_SECONDS uint32 = 3600
 var CLEAN_EXPIRED_SESSIONS bool = true
 
 // (minutes) interval at which check for expired sessions cleanup (can be heavy on db, don't be too aggressive)
-var CLEAN_EXPIRED_SESSIONS_INTERVAL int = 1
+var CLEAN_EXPIRED_SESSIONS_INTERVAL int = 60
 
 // (secs) keepalive for tcp connections before mqtt connect
-const DEFAULT_KEEPALIVE = 30
+var DEFAULT_KEEPALIVE int = 30
 
 const LOCALHOST = "127.0.0.1"
