@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 /**
@@ -61,7 +61,7 @@ func (a *Auth) SetPassword(password string) error {
 
 func CheckAuth(db *gorm.DB, clientId string, username string, password string) (bool, string, string) {
 	var auth Auth
-	if db.First(&auth, "client_id = ? and username = ?", clientId, username).RecordNotFound() {
+	if err := db.Where("client_id = ? and username = ?", clientId, username).First(&auth).Error; err != nil {
 		return false, "", ""
 	}
 

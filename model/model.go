@@ -1,14 +1,24 @@
 package model
 
 import (
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	_ "gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func Migrate(db *gorm.DB) {
-	db.AutoMigrate(&Auth{})
-	db.AutoMigrate(&Retry{})
-	db.AutoMigrate(&Retain{})
-	db.AutoMigrate(&Session{})
-	db.AutoMigrate(&Subscription{})
+	if err := db.AutoMigrate(&Auth{}); err != nil {
+		return
+	}
+	if err := db.AutoMigrate(&Retry{}); err != nil {
+		return
+	}
+	if err := db.AutoMigrate(&Retain{}); err != nil {
+		return
+	}
+	if err := db.AutoMigrate(&Session{}); err != nil {
+		return
+	}
+	if err := db.AutoMigrate(&Subscription{}); err != nil {
+		return
+	}
 }

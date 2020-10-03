@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"gorm.io/gorm"
 )
 
 type Session struct {
@@ -68,8 +67,8 @@ func (s Session) FromLocalhost() bool {
 }
 
 func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
-	tx.Where("session_id = ?", s.ID).Delete(Subscription{})
-	tx.Where("session_id = ?", s.ID).Delete(Retry{})
+	tx.Where("session_id = ?", s.ID).Delete(&Subscription{})
+	tx.Where("session_id = ?", s.ID).Delete(&Retry{})
 	return nil
 }
 
@@ -87,12 +86,12 @@ func (s *Session) MergeSession(newSession Session) {
 }
 
 func CleanSession(db *gorm.DB, clientId string) {
-	db.Where("client_id = ?", clientId).Delete(Session{})
+	db.Where("client_id = ?", clientId).Delete(&Session{})
 }
 
 func SessionExists(db *gorm.DB, clientId string) (Session, bool) {
 	session := Session{}
-	if db.Where("client_id = ?", clientId).First(&session).RecordNotFound() {
+	if err := db.Where("client_id = ?", clientId).First(&session).Error; err != nil {
 		return session, false
 	} else {
 		return session, true

@@ -12,19 +12,19 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func StartMQTT(port string) {
 	conf.FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") == "true"
 	conf.ACL_ON = os.Getenv("ACL_ON") == "true"
-	db, err := gorm.Open("sqlite3", os.Getenv("DB_PATH")+os.Getenv("DB_NAME"))
+	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("[MQTT] failed to connect database %s", err)
 	}
 	log.Println("[MQTT] db connected !")
-	defer db.Close()
+	defer closeDb(db)
 
 	model.Migrate(db)
 
@@ -36,6 +36,15 @@ func StartMQTT(port string) {
 	go out.RangeOutQueue(connections, db, outQueue)
 
 	startTCP(events, port)
+}
+
+func closeDb(db *gorm.DB) {
+	sql, err := db.DB()
+	if err != nil {
+		log.Println("could not close DB", err)
+		return
+	}
+	sql.Close()
 }
 
 func startTCP(events chan<- *packet.Packet, port string) {

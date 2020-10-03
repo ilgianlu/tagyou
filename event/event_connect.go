@@ -7,7 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 func onConnect(db *gorm.DB, connections model.Connections, p *packet.Packet, outQueue chan<- *out.OutData) {

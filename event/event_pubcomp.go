@@ -5,7 +5,7 @@ import (
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 func clientPubcomp(db *gorm.DB, p *packet.Packet) {
@@ -23,7 +23,7 @@ func clientPubcomp(db *gorm.DB, p *packet.Packet) {
 		PacketIdentifier: p.PacketIdentifier(),
 		ReasonCode:       p.ReasonCode,
 	}
-	if db.Find(&retry).RecordNotFound() {
+	if err := db.Find(&retry).Error; err != nil {
 		log.Println("pubcomp for invalid retry", retry.ClientId, retry.PacketIdentifier)
 	} else {
 		onRetryFound(db, retry)

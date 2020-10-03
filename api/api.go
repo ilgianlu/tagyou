@@ -11,18 +11,19 @@ import (
 	MessageController "github.com/ilgianlu/tagyou/api/controllers/message"
 	SessionController "github.com/ilgianlu/tagyou/api/controllers/session"
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/jinzhu/gorm"
 	"github.com/julienschmidt/httprouter"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func StartApi(httpPort string) {
-	db, err := gorm.Open("sqlite3", os.Getenv("DB_PATH")+os.Getenv("DB_NAME"))
+	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("[API] failed to connect database %s", err)
 	}
 	log.Println("[API] db connected !")
 	// db.LogMode(true)
-	defer db.Close()
+	defer closeDb(db)
 
 	clientOptions := mqtt.NewClientOptions().
 		SetClientID("api").
@@ -48,6 +49,15 @@ func StartApi(httpPort string) {
 	if err := http.ListenAndServe(httpPort, r); err != nil {
 		log.Panic(err)
 	}
+}
+
+func closeDb(db *gorm.DB) {
+	sql, err := db.DB()
+	if err != nil {
+		log.Println("could not close DB", err)
+		return
+	}
+	sql.Close()
 }
 
 func mqttConnect(c mqtt.Client) {

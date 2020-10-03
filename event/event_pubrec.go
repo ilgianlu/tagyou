@@ -6,7 +6,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 func clientPubrec(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
@@ -38,7 +38,7 @@ func clientPubrec(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 		PacketIdentifier: p.PacketIdentifier(),
 		ReasonCode:       p.ReasonCode,
 	}
-	if db.Find(&retry).RecordNotFound() {
+	if err := db.First(&retry).Error; err != nil {
 		log.Println("pubrec for invalid retry", retry.ClientId, retry.PacketIdentifier)
 	} else {
 		onRetryFound(retry)

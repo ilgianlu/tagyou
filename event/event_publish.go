@@ -7,7 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 func onPublish(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
