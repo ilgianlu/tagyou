@@ -25,7 +25,7 @@ Can be tested quite easily pulling from docker hub
 
 > docker pull ilgianlu/tagyou
 
-Tag "latest" is continuously refresh by github actions built on main branch.
+Tag "latest" is continuously refresh by github actions built on development branch.
 
 ## contribution
 
