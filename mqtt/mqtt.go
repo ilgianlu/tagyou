@@ -37,7 +37,7 @@ func StartMQTT(port string) {
 	go out.RangeOutQueue(connections, db, outQueue)
 
 	if conf.CLEAN_EXPIRED_SESSIONS {
-		StartSessionCLeaner(db)
+		StartSessionCleaner(db)
 	}
 	startTCP(events, port)
 }
