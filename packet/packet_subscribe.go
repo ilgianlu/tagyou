@@ -28,8 +28,9 @@ func (p *Packet) subscribeReq() int {
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
 		sub := model.Subscription{
-			ClientId: p.Session.ClientId,
-			Topic:    s,
+			SessionID: p.Session.ID,
+			ClientId:  p.Session.ClientId,
+			Topic:     s,
 		}
 		i = i + sl
 		if p.remainingBytes[i]&0x12 != 0 {
