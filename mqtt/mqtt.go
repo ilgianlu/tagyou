@@ -17,8 +17,7 @@ import (
 )
 
 func StartMQTT(port string) {
-	conf.FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") == "true"
-	conf.ACL_ON = os.Getenv("ACL_ON") == "true"
+	conf.Loader()
 	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("[MQTT] failed to connect database %s", err)
@@ -35,6 +34,9 @@ func StartMQTT(port string) {
 	go event.RangeEvents(connections, db, events, outQueue)
 	go out.RangeOutQueue(connections, db, outQueue)
 
+	if conf.CLEAN_EXPIRED_SESSIONS {
+		StartSessionCleaner(db)
+	}
 	startTCP(events, port)
 }
 

@@ -7,8 +7,9 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
-	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/net v0.0.0-20200927032502-5d4f70055728 // indirect
+	github.com/robfig/cron v1.2.0
+	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
+	golang.org/x/net v0.0.0-20201002202402-0a1ea396d57c // indirect
 	gorm.io/driver/sqlite v1.1.3
 	gorm.io/gorm v1.20.2
 )
