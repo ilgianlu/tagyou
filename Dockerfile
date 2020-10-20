@@ -21,7 +21,8 @@ FROM alpine
 EXPOSE 1883 80
 WORKDIR /app
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata sqlite
+RUN mkdir -p /db
 COPY --from=build-img /go/src/app/tagyou /app/
 COPY --from=build-img /go/src/app/.env.default.local /app/
 ENTRYPOINT ["/app/tagyou"]
