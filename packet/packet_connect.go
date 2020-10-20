@@ -62,7 +62,7 @@ func (p *Packet) connectReq() int {
 		wml := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		p.Session.WillMessage = p.remainingBytes[i : i+wml]
-		log.Printf("will topic \"%s\"\nwith message \"%s\"\n", p.Session.WillTopic, p.Session.WillMessage)
+		// log.Printf("will topic \"%s\"\nwith message \"%s\"\n", p.Session.WillTopic, p.Session.WillMessage)
 		i = i + wml
 	}
 	if p.Session.HaveUser() {
