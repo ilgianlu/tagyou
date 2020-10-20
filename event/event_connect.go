@@ -2,6 +2,7 @@ package event
 
 import (
 	"log"
+	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
@@ -51,6 +52,7 @@ func checkConnectionTakeOver(p *packet.Packet, connections model.Connections, ou
 }
 
 func startSession(db *gorm.DB, session *model.Session) {
+	session.LastSeen = time.Now()
 	if prevSession, ok := model.SessionExists(db, session.ClientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.ProtocolVersion != prevSession.ProtocolVersion {
 			model.CleanSession(db, session.ClientId)
