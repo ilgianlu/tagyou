@@ -12,6 +12,9 @@ type Acl struct {
 }
 
 func CheckAcl(t string, aclsAsString string) bool {
+	if aclsAsString == "" {
+		return false
+	}
 	acls, err := readAcls(aclsAsString)
 	if err != nil {
 		log.Println("error checking subscribe acls :", err)
