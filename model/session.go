@@ -1,7 +1,6 @@
 package model
 
 import (
-	"log"
 	"net"
 	"strings"
 	"time"
@@ -87,8 +86,11 @@ func (s *Session) MergeSession(newSession Session) {
 }
 
 func CleanSession(db *gorm.DB, clientId string) error {
-	log.Println("cleanup", clientId)
-	return db.Where("client_id = ?", clientId).Delete(&Session{}).Error
+	sess := Session{}
+	if err := db.Where("client_id = ?", clientId).First(&sess).Error; err != nil {
+		return err
+	}
+	return db.Delete(&sess).Error
 }
 
 func SessionExists(db *gorm.DB, clientId string) (Session, bool) {

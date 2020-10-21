@@ -16,6 +16,9 @@ func TestCreate(t *testing.T) {
 
 	Migrate(db)
 
+	db.Exec("DELETE FROM sessions")
+	db.Exec("DELETE FROM subscriptions")
+
 	un := Subscription{ClientId: "uno", Topic: "uno"}
 	if err := db.Create(&un).Error; err != nil {
 		t.Errorf("subscription create should not throw err: %s", err)
