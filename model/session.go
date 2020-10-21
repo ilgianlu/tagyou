@@ -1,6 +1,7 @@
 package model
 
 import (
+	"log"
 	"net"
 	"strings"
 	"time"
@@ -13,7 +14,7 @@ type Session struct {
 	ID              uint `gorm:"primary_key"`
 	LastSeen        time.Time
 	ExpiryInterval  uint32
-	ClientId        string `gorm:"unique_index"`
+	ClientId        string `gorm:"uniqueIndex:client_unique_session_idx"`
 	Connected       bool
 	ProtocolVersion uint8
 	ConnectFlags    uint8          `gorm:"-" json:"-"`
@@ -66,7 +67,7 @@ func (s Session) FromLocalhost() bool {
 	return strings.Index(s.Conn.RemoteAddr().String(), conf.LOCALHOST) == 0
 }
 
-func (s *Session) AfterDelete(tx *gorm.DB) (err error) {
+func (s *Session) BeforeDelete(tx *gorm.DB) (err error) {
 	tx.Where("session_id = ?", s.ID).Delete(&Subscription{})
 	tx.Where("session_id = ?", s.ID).Delete(&Retry{})
 	return nil
@@ -85,8 +86,9 @@ func (s *Session) MergeSession(newSession Session) {
 	s.Conn = newSession.Conn
 }
 
-func CleanSession(db *gorm.DB, clientId string) {
-	db.Where("client_id = ?", clientId).Delete(&Session{})
+func CleanSession(db *gorm.DB, clientId string) error {
+	log.Println("cleanup", clientId)
+	return db.Where("client_id = ?", clientId).Delete(&Session{}).Error
 }
 
 func SessionExists(db *gorm.DB, clientId string) (Session, bool) {

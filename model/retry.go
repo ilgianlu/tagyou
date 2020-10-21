@@ -13,9 +13,10 @@ const WAIT_FOR_PUB_REL = 20
 const WAIT_FOR_PUB_COMP = 21
 
 type Retry struct {
-	ClientId           string `gorm:"primary_key;auto_increment:false"`
+	ID                 uint   `gorm:"primaryKey"`
+	ClientId           string `gorm:"uniqueIndex:client_identifier_idx"`
 	ApplicationMessage []byte
-	PacketIdentifier   int `gorm:"primary_key;auto_increment:false"`
+	PacketIdentifier   int `gorm:"uniqueIndex:client_identifier_idx"`
 	Qos                uint8
 	Dup                bool
 	Retries            uint8

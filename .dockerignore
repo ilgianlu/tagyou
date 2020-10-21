@@ -1,1 +1,3 @@
-sqlite.db3
+vendor
+
+*.db3

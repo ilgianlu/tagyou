@@ -17,9 +17,9 @@ Acl
 */
 
 type Auth struct {
-	ID                   uint   `gorm:"primary_key"`
-	ClientId             string `gorm:"unique_index:auth_cred_idx"`
-	Username             string `gorm:"unique_index:auth_cred_idx"`
+	ID                   uint   `gorm:"primaryKey"`
+	ClientId             string `gorm:"index:auth_cred_idx,unique"`
+	Username             string `gorm:"index:auth_cred_idx,unique"`
 	Password             []byte `json:"-"`
 	SubscribeAcl         string
 	PublishAcl           string
