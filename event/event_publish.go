@@ -11,7 +11,7 @@ import (
 )
 
 func onPublish(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
-	if (conf.ACL_ON || !p.Session.FromLocalhost()) && !CheckAcl(p.Topic, p.Session.PublishAcl) {
+	if conf.ACL_ON && !p.Session.FromLocalhost() && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
 			sendAck(db, p, packet.PUBACK_NOT_AUTHORIZED, outQueue)
 		} else if p.QoS() == 2 {

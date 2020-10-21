@@ -28,7 +28,7 @@ func clientSubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- *ou
 
 func clientSubscription(db *gorm.DB, session *model.Session, subscription *model.Subscription, outQueue chan<- *out.OutData) uint8 {
 	// check subscr qos, topic valid...
-	if (conf.ACL_ON || !session.FromLocalhost()) && !CheckAcl(subscription.Topic, session.SubscribeAcl) {
+	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(subscription.Topic, session.SubscribeAcl) {
 		return conf.SUB_TOPIC_FILTER_INVALID
 	}
 	db.Create(subscription)
