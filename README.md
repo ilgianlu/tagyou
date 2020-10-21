@@ -32,4 +32,4 @@ Tag "latest" is continuously refresh by github actions built on development bran
 I'm developing on linux, visual studio code, go lang 1.14.9, using go modules.
 
 Build and modify should not more difficult than cloning the repo, branching, opening a pull request. Please open an issue before contributing and feel free to include @ilgianlu
-for the review.
+for the review
