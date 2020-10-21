@@ -31,6 +31,6 @@ jobs:
         tags: |
           ilgianlu/tagyou:latest
           ilgianlu/tagyou:development
-          ilgianlu/tagyou:${{ GITHUB_SHA::8 }}
+          ilgianlu/tagyou:${{ github.sha }}
 
 
