@@ -24,5 +24,8 @@
 .env.*
 !.env.default.local
 
+# third party libraries
+vendor
+
 # main binary
 tagyou
