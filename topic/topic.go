@@ -1,6 +1,7 @@
 package topic
 
 import (
+	"math"
 	"strings"
 )
 
@@ -57,6 +58,9 @@ func Explode(topic string) []string {
 		"#",
 		topic,
 	}
+
+	// res = append(res, explodeSingleLevel(road)...)
+	// res = append(res, explodeMultiLevel(road)...)
 	if len(setRoad) == 1 {
 		res = append(res, TOPIC_JOLLY)
 		return res
@@ -79,6 +83,39 @@ func Explode(topic string) []string {
 		}
 	}
 	return res
+}
+
+func explodeMultiLevel(road []string) []string {
+	res := []string{}
+	for i := 0; i < len(road); i++ {
+		r := append([]string{}, road[:i]...)
+		r = append(r, TOPIC_WILDCARD)
+		t := strings.Join(r, TOPIC_SEPARATOR)
+		res = append(res, t)
+	}
+	return res
+}
+
+func explodeSingleLevel(road []string) []string {
+	res := []string{}
+	l := math.Pow(2, float64(len(road)))
+	for i := 0; i < int(l); i++ {
+		res = append(res, singleLevel(road, i))
+	}
+	return res
+}
+
+func singleLevel(road []string, i int) string {
+	ss := []string{}
+	for p, e := range road {
+		o := i & (1 << p)
+		if o > 0 {
+			ss = append(ss, "+")
+		} else {
+			ss = append(ss, e)
+		}
+	}
+	return strings.Join(ss, "/")
 }
 
 func pre(path []string, i int) (string, bool) {

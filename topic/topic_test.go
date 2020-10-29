@@ -57,6 +57,50 @@ func TestExplode(t *testing.T) {
 	}
 }
 
+func TestExplodeMultiLevel(t *testing.T) {
+	type test struct {
+		data   []string
+		result []string
+	}
+
+	tests := []test{
+		{[]string{"a"}, []string{"#"}},
+		{[]string{"", "a"}, []string{"#", "/#"}},
+		{[]string{"a", "b"}, []string{"#", "a/#"}},
+		{[]string{"a", "b", "c"}, []string{"#", "a/#", "a/b/#"}},
+	}
+
+	for _, value := range tests {
+		res := explodeMultiLevel(value.data)
+		log.Println(value.data, "==>", res, "==", value.result)
+		if !arrEq(res, value.result) {
+			t.Error("expected", value.data, "to explode into", value.result, "received", res)
+		}
+	}
+}
+
+func TestExplodeSingleLevel(t *testing.T) {
+	type test struct {
+		data   []string
+		result []string
+	}
+
+	tests := []test{
+		{[]string{"a"}, []string{"a", "+"}},
+		{[]string{"", "a"}, []string{"/a", "+/a", "/+", "+/+"}},
+		{[]string{"a", "b"}, []string{"a/b", "+/b", "a/+", "+/+"}},
+		{[]string{"a", "b", "c"}, []string{"a/b/c", "+/b/c", "a/+/c", "+/+/c", "a/b/+", "+/b/+", "a/+/+", "+/+/+"}},
+	}
+
+	for _, value := range tests {
+		res := explodeSingleLevel(value.data)
+		log.Println(value.data, "==>", res, "==", value.result)
+		if !arrEq(res, value.result) {
+			t.Error("expected", value.data, "to explode into", value.result, "received", res)
+		}
+	}
+}
+
 func arrEq(a []string, b []string) bool {
 	if len(a) != len(b) {
 		return false
