@@ -1,20 +1,29 @@
 package topic
 
 import (
+	"log"
 	"math"
 	"strings"
+
+	"github.com/ilgianlu/tagyou/conf"
 )
 
-const TOPIC_SEPARATOR = "/"
-const TOPIC_WILDCARD = "#"
-const TOPIC_JOLLY = "+"
+// TopicSeparator separator between topic parts
+const TopicSeparator = "/"
 
+// TopicWildcard matches multiple consecutive parts in the end of a topic
+const TopicWildcard = "#"
+
+// TopicJolly matches a single part in a topic "road"
+const TopicJolly = "+"
+
+// Match does topic matches the matcher (ie subscription?)
 func Match(topic string, matcher string) bool {
 	if matcher == "#" || topic == matcher {
 		return true
 	}
-	topicRoad := strings.Split(topic, TOPIC_SEPARATOR)
-	matcherRoad := strings.Split(matcher, TOPIC_SEPARATOR)
+	topicRoad := strings.Split(topic, TopicSeparator)
+	matcherRoad := strings.Split(matcher, TopicSeparator)
 	if len(matcherRoad) > len(topicRoad) {
 		return false
 	}
@@ -29,75 +38,69 @@ func Match(topic string, matcher string) bool {
 	return true
 }
 
-func MatcherSubset(subSet string, set string) bool {
-	if set == "#" {
+// MatcherSubset is subMatcher included in matcher (acl, can client subscribe this?)
+func MatcherSubset(subMatcher string, matcher string) bool {
+	if matcher == "#" {
 		return true
 	}
-	if set == "" {
+	if matcher == "" {
 		return false
 	}
-	subsetRoad := strings.Split(subSet, TOPIC_SEPARATOR)
-	setRoad := strings.Split(set, TOPIC_SEPARATOR)
-	if len(setRoad) > len(subsetRoad) {
+	subMatcherRoad := strings.Split(subMatcher, TopicSeparator)
+	setRoad := strings.Split(matcher, TopicSeparator)
+	if len(setRoad) > len(subMatcherRoad) {
 		return false
 	}
-	if len(setRoad) < len(subsetRoad) && setRoad[len(setRoad)-1] != "#" {
+	if len(setRoad) < len(subMatcherRoad) && setRoad[len(setRoad)-1] != "#" {
 		return false
 	}
 	for i := 0; i < len(setRoad); i++ {
-		if setRoad[i] != "+" && setRoad[i] != "#" && setRoad[i] != subsetRoad[i] {
+		if setRoad[i] != "+" && setRoad[i] != "#" && setRoad[i] != subMatcherRoad[i] {
 			return false
 		}
 	}
 	return true
 }
 
+// Explode list all possible subscriptions to look for when client publish a message in a topic
 func Explode(topic string) []string {
-	setRoad := strings.Split(topic, TOPIC_SEPARATOR)
-	res := []string{
-		"#",
-		topic,
+	if conf.Matcher == conf.MatcherBasic {
+		return []string{topic}
 	}
-
-	// res = append(res, explodeSingleLevel(road)...)
-	// res = append(res, explodeMultiLevel(road)...)
-	if len(setRoad) == 1 {
-		res = append(res, TOPIC_JOLLY)
-		return res
+	road := strings.Split(topic, TopicSeparator)
+	if conf.Matcher == conf.MatcherMultilevelOnly {
+		return explodeMultiLevel(road)
 	}
-	for i := 0; i < len(setRoad); i++ {
-		prev, isPrev := pre(setRoad, i)
-		pos, isPos := post(setRoad, i)
-		if !isPrev {
-			res = append(res, setRoad[i]+TOPIC_SEPARATOR+TOPIC_WILDCARD)
-			res = append(res, TOPIC_JOLLY+TOPIC_SEPARATOR+TOPIC_WILDCARD)
-			res = append(res, TOPIC_JOLLY+TOPIC_SEPARATOR+pos)
-		} else {
-			if !isPos {
-				res = append(res, prev+TOPIC_SEPARATOR+TOPIC_JOLLY)
-			} else {
-				res = append(res, prev+TOPIC_SEPARATOR+setRoad[i]+TOPIC_SEPARATOR+TOPIC_WILDCARD)
-				res = append(res, prev+TOPIC_SEPARATOR+TOPIC_JOLLY+TOPIC_SEPARATOR+pos)
-				res = append(res, prev+TOPIC_SEPARATOR+TOPIC_JOLLY+TOPIC_SEPARATOR+TOPIC_WILDCARD)
-			}
-		}
-	}
-	return res
+	return explodeFull(road)
 }
 
 func explodeMultiLevel(road []string) []string {
 	res := []string{}
 	for i := 0; i < len(road); i++ {
 		r := append([]string{}, road[:i]...)
-		r = append(r, TOPIC_WILDCARD)
-		t := strings.Join(r, TOPIC_SEPARATOR)
+		r = append(r, TopicWildcard)
+		t := strings.Join(r, TopicSeparator)
 		res = append(res, t)
 	}
 	return res
 }
 
-func explodeSingleLevel(road []string) []string {
-	res := []string{}
+func explodeFull(road []string) []string {
+	res := []string{"#"}
+	for i := 1; i < len(road); i++ {
+		log.Println(i)
+		log.Println(road[:i])
+		subRoads := explodeSingleLevel(road[:i])
+		for _, subRoad := range subRoads {
+			subRoad = append(subRoad, TopicWildcard)
+			res = append(res, strings.Join(subRoad, "/"))
+		}
+	}
+	return res
+}
+
+func explodeSingleLevel(road []string) [][]string {
+	res := [][]string{}
 	l := math.Pow(2, float64(len(road)))
 	for i := 0; i < int(l); i++ {
 		res = append(res, singleLevel(road, i))
@@ -105,29 +108,15 @@ func explodeSingleLevel(road []string) []string {
 	return res
 }
 
-func singleLevel(road []string, i int) string {
+func singleLevel(road []string, i int) []string {
 	ss := []string{}
 	for p, e := range road {
 		o := i & (1 << p)
 		if o > 0 {
-			ss = append(ss, "+")
+			ss = append(ss, TopicJolly)
 		} else {
 			ss = append(ss, e)
 		}
 	}
-	return strings.Join(ss, "/")
-}
-
-func pre(path []string, i int) (string, bool) {
-	if i == 0 {
-		return "", false
-	}
-	return strings.Join(path[0:i], TOPIC_SEPARATOR), true
-}
-
-func post(path []string, i int) (string, bool) {
-	if i == len(path)-1 {
-		return "", false
-	}
-	return strings.Join(path[i+1:], TOPIC_SEPARATOR), true
+	return ss
 }
