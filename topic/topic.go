@@ -1,7 +1,6 @@
 package topic
 
 import (
-	"log"
 	"math"
 	"strings"
 
@@ -87,12 +86,12 @@ func explodeMultiLevel(road []string) []string {
 
 func explodeFull(road []string) []string {
 	res := []string{"#"}
-	for i := 1; i < len(road); i++ {
-		log.Println(i)
-		log.Println(road[:i])
+	for i := 1; i <= len(road); i++ {
 		subRoads := explodeSingleLevel(road[:i])
 		for _, subRoad := range subRoads {
-			subRoad = append(subRoad, TopicWildcard)
+			if i != len(road) {
+				subRoad = append(subRoad, TopicWildcard)
+			}
 			res = append(res, strings.Join(subRoad, "/"))
 		}
 	}
