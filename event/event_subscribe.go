@@ -32,7 +32,9 @@ func clientSubscription(db *gorm.DB, session *model.Session, subscription *model
 		return conf.SUB_TOPIC_FILTER_INVALID
 	}
 	db.Create(subscription)
-	sendRetain(db, session.ProtocolVersion, subscription, outQueue)
+	if !subscription.Shared {
+		sendRetain(db, session.ProtocolVersion, subscription, outQueue)
+	}
 	return 0
 }
 
