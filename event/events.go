@@ -154,7 +154,7 @@ func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
 	grouped := model.SubscriptionGroup{}
 	for _, s := range subs {
 		if val, ok := grouped[s.ShareName]; ok {
-			val = append(val, s)
+			grouped[s.ShareName] = append(val, s)
 		} else {
 			grouped[s.ShareName] = []model.Subscription{s}
 		}
