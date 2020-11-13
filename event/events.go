@@ -81,52 +81,85 @@ func clientDisconnect(db *gorm.DB, connections model.Connections, clientId strin
 
 func sendForward(db *gorm.DB, topic string, p *packet.Packet, outQueue chan<- *out.OutData) {
 	destSubs := tpc.Explode(topic)
+	go sendSubscribers(db, topic, destSubs, p, outQueue)
+	go sendSharedSubscribers(db, topic, destSubs, p, outQueue)
+}
+
+func sendSubscribers(db *gorm.DB, topic string, destSubs []string, p *packet.Packet, outQueue chan<- *out.OutData) {
 	subs := []model.Subscription{}
-	if err := db.Where("topic IN (?)", destSubs).Find(&subs).Error; err != nil {
+	if err := db.Where("topic IN (?)", destSubs).Where("shared = false").Find(&subs).Error; err != nil {
 		log.Println("could not query for subscriptions:", err)
 		return
 	}
-	sendSubscribers(db, topic, subs, p, outQueue)
+	for _, s := range subs {
+		send(db, topic, s, p, outQueue)
+	}
 }
 
-func sendSubscribers(db *gorm.DB, topic string, subscribers []model.Subscription, p *packet.Packet, outQueue chan<- *out.OutData) {
-	for _, s := range subscribers {
-		qos := getQos(p.QoS(), s.Qos)
-		if qos == conf.QOS0 {
-			// prepare publish packet qos 0 no packet identifier
-			p := packet.Publish(s.ProtocolVersion, conf.QOS0, p.Retain(), topic, 0, p.ApplicationMessage())
-			sendSimple(s.ClientId, &p, outQueue)
-		} else if qos == conf.QOS1 {
-			// prepare publish packet qos 1 (if sub permit) new packet identifier
-			p := packet.Publish(s.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
-			r := model.Retry{
-				ClientId:           s.ClientId,
-				PacketIdentifier:   p.PacketIdentifier(),
-				Qos:                qos,
-				Dup:                p.Dup(),
-				ApplicationMessage: p.ApplicationMessage(),
-				AckStatus:          model.WAIT_FOR_PUB_ACK,
-				CreatedAt:          time.Now(),
-			}
-			db.Save(&r)
-			sendSimple(r.ClientId, &p, outQueue)
-		} else if qos == 2 {
-			// prepare publish packet qos 2 (if sub permit) new packet identifier
-			p := packet.Publish(s.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
-			r := model.Retry{
-				ClientId:           s.ClientId,
-				PacketIdentifier:   p.PacketIdentifier(),
-				Qos:                qos,
-				Dup:                p.Dup(),
-				ApplicationMessage: p.ApplicationMessage(),
-				AckStatus:          model.WAIT_FOR_PUB_REL,
-				CreatedAt:          time.Now(),
-			}
-			db.Save(&r)
-			sendSimple(r.ClientId, &p, outQueue)
+func send(db *gorm.DB, topic string, s model.Subscription, p *packet.Packet, outQueue chan<- *out.OutData) {
+	qos := getQos(p.QoS(), s.Qos)
+	if qos == conf.QOS0 {
+		// prepare publish packet qos 0 no packet identifier
+		p := packet.Publish(s.ProtocolVersion, conf.QOS0, p.Retain(), topic, 0, p.ApplicationMessage())
+		sendSimple(s.ClientId, &p, outQueue)
+	} else if qos == conf.QOS1 {
+		// prepare publish packet qos 1 (if sub permit) new packet identifier
+		p := packet.Publish(s.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
+		r := model.Retry{
+			ClientId:           s.ClientId,
+			PacketIdentifier:   p.PacketIdentifier(),
+			Qos:                qos,
+			Dup:                p.Dup(),
+			ApplicationMessage: p.ApplicationMessage(),
+			AckStatus:          model.WAIT_FOR_PUB_ACK,
+			CreatedAt:          time.Now(),
 		}
-
+		db.Save(&r)
+		sendSimple(r.ClientId, &p, outQueue)
+	} else if qos == 2 {
+		// prepare publish packet qos 2 (if sub permit) new packet identifier
+		p := packet.Publish(s.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
+		r := model.Retry{
+			ClientId:           s.ClientId,
+			PacketIdentifier:   p.PacketIdentifier(),
+			Qos:                qos,
+			Dup:                p.Dup(),
+			ApplicationMessage: p.ApplicationMessage(),
+			AckStatus:          model.WAIT_FOR_PUB_REL,
+			CreatedAt:          time.Now(),
+		}
+		db.Save(&r)
+		sendSimple(r.ClientId, &p, outQueue)
 	}
+}
+
+func sendSharedSubscribers(db *gorm.DB, topic string, destSubs []string, p *packet.Packet, outQueue chan<- *out.OutData) {
+	subs := []model.Subscription{}
+	if err := db.Where("topic IN (?)", destSubs).Where("shared = true").Order("share_name").Find(&subs).Error; err != nil {
+		log.Println("could not query for subscriptions:", err)
+		return
+	}
+	grouped := groupSubscribers(subs)
+	for _, group := range grouped {
+		dest := pickDest(group)
+		send(db, topic, dest, p, outQueue)
+	}
+}
+
+func pickDest(group []model.Subscription) model.Subscription {
+	return group[0]
+}
+
+func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
+	grouped := model.SubscriptionGroup{}
+	for _, s := range subs {
+		if val, ok := grouped[s.ShareName]; ok {
+			val = append(val, s)
+		} else {
+			grouped[s.ShareName] = []model.Subscription{s}
+		}
+	}
+	return grouped
 }
 
 func getQos(pubQos uint8, subQos uint8) uint8 {
