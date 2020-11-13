@@ -3,8 +3,11 @@ package conf
 const MQTT_V5 = 5
 const MQTT_V3_11 = 4
 
-const TOPIC_SEPARATOR = "/"
-const TOPIC_WILDCARD = "#"
+const LEVEL_SEPARATOR = "/"
+const WILDCARD_MULTI_LEVEL = "#"
+const WILDCARD_SINGLE_LEVEL = "+"
+
+const TOPIC_SHARED = "$share"
 
 const MINIMUM_SUPPORTED_PROTOCOL = 4
 

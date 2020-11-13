@@ -14,4 +14,6 @@ type Subscription struct {
 	Enabled           bool
 	CreatedAt         time.Time
 	SessionID         uint
+	Shared            bool   `gorm:"default:false"`
+	ShareName         string `gorm:"uniqueIndex:sub_pars_idx"`
 }

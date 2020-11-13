@@ -58,7 +58,7 @@ func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *pack
 func trimWildcard(topic string) string {
 	lci := len(topic) - 1
 	lc := topic[lci]
-	if string(lc) == conf.TOPIC_WILDCARD {
+	if string(lc) == conf.WILDCARD_MULTI_LEVEL {
 		topic = topic[:lci]
 	}
 	return topic
