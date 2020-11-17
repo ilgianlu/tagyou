@@ -142,12 +142,15 @@ func sendSharedSubscribers(db *gorm.DB, topic string, destSubs []string, p *pack
 	}
 	grouped := groupSubscribers(db, subs)
 	for _, group := range grouped {
-		dest := pickDest(group)
+		dest := pickDest(group, 1)
 		send(db, topic, dest, p, outQueue)
 	}
 }
 
-func pickDest(group []model.Subscription) model.Subscription {
+func pickDest(group []model.Subscription, mode int8) model.Subscription {
+	if mode == 0 {
+		return group[0]
+	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	i := r.Intn(len(group))
 	log.Println("picked", group[i].ClientId)

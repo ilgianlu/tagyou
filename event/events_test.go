@@ -18,7 +18,7 @@ func TestPickDest(t *testing.T) {
 		ClientId: "pluto",
 	}
 	subGroup := []model.Subscription{sub1, sub2}
-	dest := pickDest(subGroup)
+	dest := pickDest(subGroup, 0)
 
 	if dest.ClientId != "pippo" {
 		t.Errorf("expecting %s received %s", "pippo", dest.ClientId)
