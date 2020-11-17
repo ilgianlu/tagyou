@@ -6,6 +6,7 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/topic"
 )
 
 func (p *Packet) subscribeReq() int {
@@ -30,7 +31,12 @@ func (p *Packet) subscribeReq() int {
 		sub := model.Subscription{
 			SessionID: p.Session.ID,
 			ClientId:  p.Session.ClientId,
-			Topic:     s,
+		}
+		if topic.SharedSubscription(s) {
+			sub.Shared = true
+			sub.ShareName, sub.Topic = topic.SharedSubscriptionTopicParse(s)
+		} else {
+			sub.Topic = s
 		}
 		i = i + sl
 		if p.remainingBytes[i]&0x12 != 0 {

@@ -7,22 +7,13 @@ import (
 	"github.com/ilgianlu/tagyou/conf"
 )
 
-// TopicSeparator separator between topic parts
-const TopicSeparator = "/"
-
-// TopicWildcard matches multiple consecutive parts in the end of a topic
-const TopicWildcard = "#"
-
-// TopicJolly matches a single part in a topic "road"
-const TopicJolly = "+"
-
 // Match does topic matches the matcher (ie subscription?)
 func Match(topic string, matcher string) bool {
 	if matcher == "#" || topic == matcher {
 		return true
 	}
-	topicRoad := strings.Split(topic, TopicSeparator)
-	matcherRoad := strings.Split(matcher, TopicSeparator)
+	topicRoad := strings.Split(topic, conf.LEVEL_SEPARATOR)
+	matcherRoad := strings.Split(matcher, conf.LEVEL_SEPARATOR)
 	if len(matcherRoad) > len(topicRoad) {
 		return false
 	}
@@ -45,8 +36,8 @@ func MatcherSubset(subMatcher string, matcher string) bool {
 	if matcher == "" {
 		return false
 	}
-	subMatcherRoad := strings.Split(subMatcher, TopicSeparator)
-	setRoad := strings.Split(matcher, TopicSeparator)
+	subMatcherRoad := strings.Split(subMatcher, conf.LEVEL_SEPARATOR)
+	setRoad := strings.Split(matcher, conf.LEVEL_SEPARATOR)
 	if len(setRoad) > len(subMatcherRoad) {
 		return false
 	}
@@ -66,7 +57,7 @@ func Explode(topic string) []string {
 	if conf.Matcher == conf.MatcherBasic {
 		return []string{topic}
 	}
-	road := strings.Split(topic, TopicSeparator)
+	road := strings.Split(topic, conf.LEVEL_SEPARATOR)
 	if conf.Matcher == conf.MatcherMultilevelOnly {
 		return explodeMultiLevel(road)
 	}
@@ -77,8 +68,8 @@ func explodeMultiLevel(road []string) []string {
 	res := []string{}
 	for i := 0; i < len(road); i++ {
 		r := append([]string{}, road[:i]...)
-		r = append(r, TopicWildcard)
-		t := strings.Join(r, TopicSeparator)
+		r = append(r, conf.WILDCARD_MULTI_LEVEL)
+		t := strings.Join(r, conf.LEVEL_SEPARATOR)
 		res = append(res, t)
 	}
 	return res
@@ -90,7 +81,7 @@ func explodeFull(road []string) []string {
 		subRoads := explodeSingleLevel(road[:i])
 		for _, subRoad := range subRoads {
 			if i != len(road) {
-				subRoad = append(subRoad, TopicWildcard)
+				subRoad = append(subRoad, conf.WILDCARD_MULTI_LEVEL)
 			}
 			res = append(res, strings.Join(subRoad, "/"))
 		}
@@ -112,10 +103,23 @@ func singleLevel(road []string, i int) []string {
 	for p, e := range road {
 		o := i & (1 << p)
 		if o > 0 {
-			ss = append(ss, TopicJolly)
+			ss = append(ss, conf.WILDCARD_SINGLE_LEVEL)
 		} else {
 			ss = append(ss, e)
 		}
 	}
 	return ss
+}
+
+func SharedSubscription(topic string) bool {
+	return topic[0:6] == conf.TOPIC_SHARED && string(topic[7]) != conf.LEVEL_SEPARATOR
+}
+
+// SharedSubscriptionTopicParse return if shared
+func SharedSubscriptionTopicParse(topic string) (string, string) {
+	s := topic[len(conf.TOPIC_SHARED)+1:]
+	i := strings.Index(s, conf.LEVEL_SEPARATOR)
+	shareName := s[:i]
+	subscribedTopic := s[i+1:]
+	return shareName, subscribedTopic
 }
