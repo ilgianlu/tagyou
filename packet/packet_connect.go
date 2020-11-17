@@ -26,7 +26,7 @@ func (p *Packet) connectReq() int {
 	i++
 	ka := p.remainingBytes[i : i+2]
 	p.Session.KeepAlive = Read2BytesInt(ka, 0)
-	log.Debug().Msgf("keepAlive %s", Read2BytesInt(ka, 0))
+	log.Debug().Msgf("keepAlive %d", Read2BytesInt(ka, 0))
 	i = i + 2
 	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)

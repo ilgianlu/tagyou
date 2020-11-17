@@ -18,40 +18,40 @@ func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *pack
 	for p := range events {
 		switch p.Event {
 		case packet.EVENT_CONNECT:
-			log.Debug().Msgf("//!! EVENT type %s %s client connect", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, p.Session.ClientId)
 			onConnect(db, connections, p, outQueue)
 		case packet.EVENT_SUBSCRIBED:
-			log.Debug().Msgf("//!! EVENT type %s %s client subscribed", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, p.Session.ClientId)
 			onSubscribe(db, p, outQueue)
 		case packet.EVENT_UNSUBSCRIBED:
-			log.Debug().Msgf("//!! EVENT type %s %s client unsubscribed", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client unsubscribed %s", p.Event, p.Session.ClientId)
 			onUnsubscribe(db, p, outQueue)
 		case packet.EVENT_PUBLISH:
-			log.Debug().Msgf("//!! EVENT type %s %s client published to", p.Topic, p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client published to %s %s", p.Event, p.Topic, p.Session.ClientId)
 			onPublish(db, p, outQueue)
 		case packet.EVENT_PUBACKED:
-			log.Debug().Msgf("//!! EVENT type %d %s %s client acked message", p.PacketIdentifier(), p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
 			clientPuback(db, p)
 		case packet.EVENT_PUBRECED:
-			log.Debug().Msgf("//!! EVENT type %d %s %s pub received message", p.PacketIdentifier(), p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d pub received message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
 			clientPubrec(db, p, outQueue)
 		case packet.EVENT_PUBRELED:
-			log.Debug().Msgf("//!! EVENT type %d %s %s pub releases message", p.PacketIdentifier(), p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d pub releases message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
 			clientPubrel(db, p, outQueue)
 		case packet.EVENT_PUBCOMPED:
-			log.Debug().Msgf("//!! EVENT type %d %s %s pub complete message", p.PacketIdentifier(), p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d pub complete message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
 			clientPubcomp(db, p)
 		case packet.EVENT_PING:
-			log.Debug().Msgf("//!! EVENT type %s %s client ping", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client ping %s", p.Event, p.Session.ClientId)
 			onPing(p, outQueue)
 		case packet.EVENT_DISCONNECT:
-			log.Debug().Msgf("//!! EVENT type %s %s client disconnect", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client disconnect %s", p.Event, p.Session.ClientId)
 			clientDisconnect(db, connections, p.Session.ClientId)
 		case packet.EVENT_WILL_SEND:
-			log.Debug().Msgf("//!! EVENT type %s %s sending will message", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, p.Session.ClientId)
 			sendWill(db, p, outQueue)
 		case packet.EVENT_PACKET_ERR:
-			log.Debug().Msgf("//!! EVENT type %s %s packet error", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, p.Session.ClientId)
 			clientDisconnect(db, connections, p.Session.ClientId)
 		}
 	}

@@ -14,7 +14,7 @@ func clientPuback(db *gorm.DB, p *packet.Packet) {
 		if retry.AckStatus == model.WAIT_FOR_PUB_ACK {
 			db.Delete(&retry)
 		} else {
-			log.Info().Msgf("puback for invalid retry status %s %s %s", retry.ClientId, retry.PacketIdentifier, retry.AckStatus)
+			log.Info().Msgf("puback for invalid retry status %s %d %d", retry.ClientId, retry.PacketIdentifier, retry.AckStatus)
 		}
 	}
 
@@ -23,7 +23,7 @@ func clientPuback(db *gorm.DB, p *packet.Packet) {
 		PacketIdentifier: p.PacketIdentifier(),
 	}
 	if err := db.Find(&retry).Error; err != nil {
-		log.Info().Msgf("puback for invalid retry %s %s", retry.ClientId, retry.PacketIdentifier)
+		log.Info().Msgf("puback for invalid retry %s %d", retry.ClientId, retry.PacketIdentifier)
 	} else {
 		onRetryFound(db, retry)
 	}

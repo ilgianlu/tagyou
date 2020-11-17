@@ -54,7 +54,7 @@ func startSession(db *gorm.DB, session *model.Session) {
 	if prevSession, ok := model.SessionExists(db, session.ClientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.ProtocolVersion != prevSession.ProtocolVersion {
 			if err := model.CleanSession(db, session.ClientId); err != nil {
-				log.Err(err).Msgf("%s : error removing previous session; %s", session.ClientId)
+				log.Err(err).Msgf("%s : error removing previous session", session.ClientId)
 			}
 			db.Create(&session)
 		} else {
