@@ -12,6 +12,7 @@ import (
 
 func StartSessionCleaner(db *gorm.DB) {
 	log.Println("[MQTT] start expired sessions cleaner")
+	cleanSessions(db)
 	c := cron.New()
 	_ = c.AddFunc(
 		fmt.Sprintf("@every %dm", conf.CLEAN_EXPIRED_SESSIONS_INTERVAL),
