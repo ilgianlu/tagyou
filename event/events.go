@@ -2,6 +2,7 @@ package event
 
 import (
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -16,40 +17,40 @@ func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *pack
 	for p := range events {
 		switch p.Event {
 		case packet.EVENT_CONNECT:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client connect")
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client connect")
 			onConnect(db, connections, p, outQueue)
 		case packet.EVENT_SUBSCRIBED:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client subscribed")
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client subscribed")
 			onSubscribe(db, p, outQueue)
 		case packet.EVENT_UNSUBSCRIBED:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client unsubscribed")
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client unsubscribed")
 			onUnsubscribe(db, p, outQueue)
 		case packet.EVENT_PUBLISH:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client published to", p.Topic)
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client published to", p.Topic)
 			onPublish(db, p, outQueue)
 		case packet.EVENT_PUBACKED:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client acked message", p.PacketIdentifier())
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client acked message", p.PacketIdentifier())
 			clientPuback(db, p)
 		case packet.EVENT_PUBRECED:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "pub received message", p.PacketIdentifier())
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "pub received message", p.PacketIdentifier())
 			clientPubrec(db, p, outQueue)
 		case packet.EVENT_PUBRELED:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "pub releases message", p.PacketIdentifier())
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "pub releases message", p.PacketIdentifier())
 			clientPubrel(db, p, outQueue)
 		case packet.EVENT_PUBCOMPED:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "pub complete message", p.PacketIdentifier())
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "pub complete message", p.PacketIdentifier())
 			clientPubcomp(db, p)
 		case packet.EVENT_PING:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client ping")
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client ping")
 			onPing(p, outQueue)
 		case packet.EVENT_DISCONNECT:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client disconnect")
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "client disconnect")
 			clientDisconnect(db, connections, p.Session.ClientId)
 		case packet.EVENT_WILL_SEND:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "sending will message")
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "sending will message")
 			sendWill(db, p, outQueue)
 		case packet.EVENT_PACKET_ERR:
-			log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "packet error")
+			// log.Println("//!! EVENT type", p.Event, p.Session.ClientId, "packet error")
 			clientDisconnect(db, connections, p.Session.ClientId)
 		}
 	}
@@ -139,7 +140,7 @@ func sendSharedSubscribers(db *gorm.DB, topic string, destSubs []string, p *pack
 		log.Println("could not query for subscriptions:", err)
 		return
 	}
-	grouped := groupSubscribers(subs)
+	grouped := groupSubscribers(db, subs)
 	for _, group := range grouped {
 		dest := pickDest(group)
 		send(db, topic, dest, p, outQueue)
@@ -147,14 +148,19 @@ func sendSharedSubscribers(db *gorm.DB, topic string, destSubs []string, p *pack
 }
 
 func pickDest(group []model.Subscription) model.Subscription {
-	return group[0]
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	i := r.Intn(len(group))
+	log.Println("picked", group[i].ClientId)
+	return group[i]
 }
 
-func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
+func groupSubscribers(db *gorm.DB, subs []model.Subscription) model.SubscriptionGroup {
 	grouped := model.SubscriptionGroup{}
 	for _, s := range subs {
 		if val, ok := grouped[s.ShareName]; ok {
-			grouped[s.ShareName] = append(val, s)
+			if s.IsOnline(db) {
+				grouped[s.ShareName] = append(val, s)
+			}
 		} else {
 			grouped[s.ShareName] = []model.Subscription{s}
 		}

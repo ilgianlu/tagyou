@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Subscription struct {
 	ID                uint   `gorm:"primary_key"`
@@ -19,3 +23,12 @@ type Subscription struct {
 }
 
 type SubscriptionGroup map[string][]Subscription
+
+func (s *Subscription) IsOnline(db *gorm.DB) bool {
+	session := Session{}
+	if err := db.Where("id = ?", s.SessionID).First(&session).Error; err != nil {
+		return false
+	} else {
+		return session.Connected
+	}
+}
