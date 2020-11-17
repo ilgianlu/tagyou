@@ -2,7 +2,7 @@ package message
 
 import (
 	"encoding/json"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"

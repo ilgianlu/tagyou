@@ -1,7 +1,7 @@
 package event
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
@@ -14,17 +14,17 @@ func onConnect(db *gorm.DB, connections model.Connections, p *packet.Packet, out
 	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
 		ok, pubAcl, subAcl := model.CheckAuth(db, p.Session.ClientId, p.Session.Username, p.Session.Password)
 		if !ok {
-			log.Println("wrong connect credentials")
+			log.Debug().Msg("wrong connect credentials")
 			return
 		} else {
 			p.Session.PublishAcl = pubAcl
 			p.Session.SubscribeAcl = subAcl
-			log.Printf("auth ok, imported acls %s, %s\n", pubAcl, subAcl)
+			log.Debug().Msgf("auth ok, imported acls %s, %s", pubAcl, subAcl)
 		}
 	}
 	taken := checkConnectionTakeOver(p, connections, outQueue)
 	if taken {
-		log.Printf("%s reconnecting", p.Session.ClientId)
+		log.Debug().Msgf("%s reconnecting", p.Session.ClientId)
 	}
 	connections.Add(p.Session.ClientId, p.Session.Conn)
 
@@ -44,7 +44,7 @@ func checkConnectionTakeOver(p *packet.Packet, connections model.Connections, ou
 
 	err := connections.Close(p.Session.ClientId)
 	if err != nil {
-		log.Printf("%s : error taking over another connection; %s", p.Session.ClientId, err)
+		log.Debug().Msgf("%s : error taking over another connection; %s", p.Session.ClientId, err)
 	}
 	connections.Remove(p.Session.ClientId)
 	return true
@@ -54,7 +54,7 @@ func startSession(db *gorm.DB, session *model.Session) {
 	if prevSession, ok := model.SessionExists(db, session.ClientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.ProtocolVersion != prevSession.ProtocolVersion {
 			if err := model.CleanSession(db, session.ClientId); err != nil {
-				log.Printf("%s : error removing previous session; %s", session.ClientId, err)
+				log.Err(err).Msgf("%s : error removing previous session; %s", session.ClientId)
 			}
 			db.Create(&session)
 		} else {

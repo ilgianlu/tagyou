@@ -2,7 +2,8 @@ package mqtt
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
@@ -11,13 +12,13 @@ import (
 )
 
 func StartSessionCleaner(db *gorm.DB) {
-	log.Println("[MQTT] start expired sessions cleaner")
+	log.Info().Msg("[MQTT] start expired sessions cleaner")
 	cleanSessions(db)
 	c := cron.New()
 	_ = c.AddFunc(
 		fmt.Sprintf("@every %dm", conf.CLEAN_EXPIRED_SESSIONS_INTERVAL),
 		func() {
-			log.Println("[MQTT] clean expired sessions")
+			log.Info().Msg("[MQTT] clean expired sessions")
 			cleanSessions(db)
 		},
 	)

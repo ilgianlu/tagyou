@@ -1,8 +1,9 @@
 package model
 
 import (
-	"log"
 	"testing"
+
+	"github.com/rs/zerolog/log"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ import (
 func TestSessionDelete(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("[API] failed to connect database %s", err)
+		log.Fatal().Err(err).Msg("[API] failed to connect database")
 	}
 
 	Migrate(db)

@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"

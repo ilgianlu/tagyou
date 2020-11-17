@@ -1,8 +1,9 @@
 package model
 
 import (
-	"log"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"golang.org/x/crypto/bcrypt"
@@ -52,7 +53,7 @@ func (a *Auth) checkPassword(password string) error {
 func (a *Auth) SetPassword(password string) error {
 	pwd, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-		log.Println("Error encrypting password", err)
+		log.Err(err).Msg("Error encrypting password")
 		return err
 	}
 	a.Password = pwd

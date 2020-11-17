@@ -1,8 +1,10 @@
 package main
 
 import (
-	"log"
 	"os"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/api"
 	mq "github.com/ilgianlu/tagyou/mqtt"
@@ -12,8 +14,14 @@ import (
 func main() {
 	err := loadEnv()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("Could not load env")
 		return
+	}
+
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if os.Getenv("DEBUG") != "" {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
 	go api.StartApi(os.Getenv("API_PORT"))

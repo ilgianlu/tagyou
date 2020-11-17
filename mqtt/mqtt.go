@@ -2,10 +2,11 @@ package mqtt
 
 import (
 	"bufio"
-	"log"
 	"net"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/event"
@@ -20,9 +21,9 @@ func StartMQTT(port string) {
 	conf.Loader()
 	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("[MQTT] failed to connect database %s", err)
+		log.Fatal().Err(err).Msg("[MQTT] failed to connect database")
 	}
-	log.Println("[MQTT] db connected !")
+	log.Info().Msg("[MQTT] db connected !")
 	defer closeDb(db)
 
 	model.Migrate(db)
@@ -43,7 +44,7 @@ func StartMQTT(port string) {
 func closeDb(db *gorm.DB) {
 	sql, err := db.DB()
 	if err != nil {
-		log.Println("could not close DB", err)
+		log.Error().Err(err).Msg("could not close DB")
 		return
 	}
 	sql.Close()
@@ -53,14 +54,14 @@ func startTCP(events chan<- *packet.Packet, port string) {
 	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Println("[MQTT] tcp listen error", err)
+		log.Error().Err(err).Msg("[MQTT] tcp listen error")
 		return
 	}
-	log.Println("[MQTT] mqtt listening on", port)
+	log.Info().Msgf("[MQTT] mqtt listening on %s", port)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Println("[MQTT] tcp accept error", err)
+			log.Error().Err(err).Msg("[MQTT] tcp accept error")
 		}
 		go handleConnection(conn, events)
 	}
@@ -89,7 +90,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 		}
 		pb, err := packet.ReadFromByteSlice(b)
 		if err != nil {
-			log.Printf("[MQTT] %s\n", err)
+			log.Error().Err(err).Msg("[MQTT] error reading bytes")
 			if !atEOF {
 				return 0, nil, nil
 			}
@@ -104,7 +105,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				// socket up but silent
-				log.Println("[MQTT] keepalive not respected!")
+				log.Info().Msg("[MQTT] keepalive not respected!")
 				if session.ClientId != "" {
 					willEvent(&session, events)
 					disconnectClient(&session, events)
@@ -115,20 +116,20 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 
 		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
 		if derr != nil {
-			log.Println("[MQTT] cannot set read deadline", derr)
+			log.Error().Err(derr).Msg("[MQTT] cannot set read deadline")
 			defer conn.Close()
 		}
 
 		b := scanner.Bytes()
 		p, err := packet.Start(b)
 		if err != nil {
-			log.Printf("[MQTT] Start err %s\n", err)
+			log.Error().Err(err).Msg("[MQTT] Start err")
 			return
 		}
 		p.Session = &session
 		parseErr := p.Parse()
 		if parseErr != 0 {
-			log.Printf("[MQTT] parseErr %d\n", parseErr)
+			log.Error().Msgf("[MQTT] parse err %d", parseErr)
 		}
 		events <- &p
 	}
