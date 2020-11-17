@@ -19,10 +19,7 @@ import (
 )
 
 func StartApi(httpPort string) {
-	logLevel := logger.Silent
-	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
-		Logger: logger.Default.LogMode(logLevel),
-	})
+	db, err := openDb()
 	if err != nil {
 		log.Fatal().Err(err).Msgf("[API] failed to connect database %s", os.Getenv("DB_PATH")+os.Getenv("DB_NAME"))
 	}
