@@ -15,15 +15,18 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func StartApi(httpPort string) {
-	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{})
+	logLevel := logger.Silent
+	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
+		Logger: logger.Default.LogMode(logLevel),
+	})
 	if err != nil {
 		log.Fatal().Err(err).Msgf("[API] failed to connect database %s", os.Getenv("DB_PATH")+os.Getenv("DB_NAME"))
 	}
 	log.Info().Msg("[API] db connected !")
-	// db.LogMode(true)
 	defer closeDb(db)
 
 	clientOptions := mqtt.NewClientOptions().
@@ -50,6 +53,23 @@ func StartApi(httpPort string) {
 	if err := http.ListenAndServe(httpPort, r); err != nil {
 		log.Fatal().Err(err).Msg("[API] http listener broken")
 	}
+}
+
+func openDb() (*gorm.DB, error) {
+	logLevel := logger.Silent
+	if os.Getenv("DEBUG") != "" {
+		logLevel = logger.Info
+	}
+	return gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
+		Logger: logger.New(
+			&log.Logger,
+			logger.Config{
+				SlowThreshold: 200 * time.Millisecond,
+				LogLevel:      logLevel,
+				Colorful:      true,
+			},
+		),
+	})
 }
 
 func closeDb(db *gorm.DB) {

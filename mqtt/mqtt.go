@@ -15,11 +15,12 @@ import (
 	"github.com/ilgianlu/tagyou/packet"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func StartMQTT(port string) {
 	conf.Loader()
-	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{})
+	db, err := openDb()
 	if err != nil {
 		log.Fatal().Err(err).Msg("[MQTT] failed to connect database")
 	}
@@ -39,6 +40,23 @@ func StartMQTT(port string) {
 		StartSessionCleaner(db)
 	}
 	startTCP(events, port)
+}
+
+func openDb() (*gorm.DB, error) {
+	logLevel := logger.Silent
+	if os.Getenv("DEBUG") != "" {
+		logLevel = logger.Info
+	}
+	return gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
+		Logger: logger.New(
+			&log.Logger,
+			logger.Config{
+				SlowThreshold: 200 * time.Millisecond,
+				LogLevel:      logLevel,
+				Colorful:      true,
+			},
+		),
+	})
 }
 
 func closeDb(db *gorm.DB) {
