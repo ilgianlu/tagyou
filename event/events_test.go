@@ -1,9 +1,10 @@
 package event
 
 import (
-	"log"
 	"sort"
 	"testing"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
 	"gorm.io/driver/sqlite"
@@ -28,7 +29,7 @@ func TestPickDest(t *testing.T) {
 func TestGroupSubscribers(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("[API] failed to connect database %s", err)
+		log.Fatal().Err(err).Msg("[API] failed to connect database")
 	}
 
 	model.Migrate(db)

@@ -1,7 +1,7 @@
 package packet
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 )
@@ -29,7 +29,7 @@ func (p *Packet) pubcompReq() int {
 	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 		_, err := p.parseProperties(i)
 		if err != 0 {
-			log.Println("err reading properties", err)
+			log.Error().Msgf("err reading properties %d", err)
 			return err
 		}
 	}

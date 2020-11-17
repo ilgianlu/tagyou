@@ -1,10 +1,11 @@
 package api
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	AuthController "github.com/ilgianlu/tagyou/api/controllers/auth"
@@ -14,15 +15,15 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func StartApi(httpPort string) {
-	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{})
+	db, err := openDb()
 	if err != nil {
-		log.Fatalf("[API] failed to connect database %s", err)
+		log.Fatal().Err(err).Msgf("[API] failed to connect database %s", os.Getenv("DB_PATH")+os.Getenv("DB_NAME"))
 	}
-	log.Println("[API] db connected !")
-	// db.LogMode(true)
+	log.Info().Msg("[API] db connected !")
 	defer closeDb(db)
 
 	clientOptions := mqtt.NewClientOptions().
@@ -45,16 +46,33 @@ func StartApi(httpPort string) {
 	mc := MessageController.New(c)
 	mc.RegisterRoutes(r)
 
-	log.Printf("[API] http listening on %s", httpPort)
+	log.Info().Msgf("[API] http listening on %s", httpPort)
 	if err := http.ListenAndServe(httpPort, r); err != nil {
-		log.Panic(err)
+		log.Fatal().Err(err).Msg("[API] http listener broken")
 	}
+}
+
+func openDb() (*gorm.DB, error) {
+	logLevel := logger.Silent
+	if os.Getenv("DEBUG") != "" {
+		logLevel = logger.Info
+	}
+	return gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
+		Logger: logger.New(
+			&log.Logger,
+			logger.Config{
+				SlowThreshold: 200 * time.Millisecond,
+				LogLevel:      logLevel,
+				Colorful:      true,
+			},
+		),
+	})
 }
 
 func closeDb(db *gorm.DB) {
 	sql, err := db.DB()
 	if err != nil {
-		log.Println("could not close DB", err)
+		log.Fatal().Err(err).Msg("[API] could not close DB")
 		return
 	}
 	sql.Close()
@@ -68,12 +86,12 @@ func mqttConnect(c mqtt.Client) {
 		token := c.Connect()
 		token.WaitTimeout(5 * time.Second)
 		if token.Wait() && token.Error() != nil {
-			log.Printf("[API] mqtt connect error %s\n", token.Error())
+			log.Error().Err(token.Error()).Msg("[API] mqtt connect error")
 		} else {
 			success = true
 		}
 		if i == 3 {
-			log.Printf("[API] panicking after too many connect errors %s\n", token.Error())
+			log.Fatal().Err(token.Error()).Msg("[API] panicking after too many connect errors")
 			panic(token.Error())
 		}
 		i = i + 1
@@ -81,11 +99,11 @@ func mqttConnect(c mqtt.Client) {
 }
 
 func connLostHandler(c mqtt.Client, err error) {
-	log.Printf("[API] MQTT Connection lost, reason: %v\n", err)
+	log.Debug().Err(err).Msg("[API] MQTT Connection lost")
 	//Perform additional action...
 }
 
 func onConnectHandler(c mqtt.Client) {
-	log.Println("[API] MQTT Client Connected")
+	log.Debug().Msg("[API] MQTT Client Connected")
 	//Perform additional action...
 }

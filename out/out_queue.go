@@ -1,7 +1,7 @@
 package out
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
@@ -18,12 +18,12 @@ func simpleSend(connections model.Connections, db *gorm.DB, clientId string, p p
 	if c, ok := connections[clientId]; ok {
 		_, err := c.Write(p.ToByteSlice())
 		if err != nil {
-			log.Println("cannot write to", clientId, ":", err)
+			log.Debug().Err(err).Msgf("cannot write to %s", clientId)
 		}
 		// else {
 		// 	log.Println("published", n, "bytes to", clientId)
 		// }
 	} else {
-		log.Println(clientId, "is not connected")
+		log.Debug().Msgf("%s is not connected", clientId)
 	}
 }

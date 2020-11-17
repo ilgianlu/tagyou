@@ -2,7 +2,8 @@ package packet
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
 )
@@ -273,7 +274,7 @@ func ReadFromByteSlice(buff []byte) ([]byte, error) {
 	}
 	i = i + k
 	if len(buff[i:]) < rl {
-		log.Println("remaining bytes: not enough bytes in buffer")
+		log.Debug().Msg("remaining bytes: not enough bytes in buffer")
 		return nil, fmt.Errorf("remaining bytes: not enough bytes in buffer\n")
 	}
 	i = i + rl

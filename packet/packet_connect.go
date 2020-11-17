@@ -1,7 +1,7 @@
 package packet
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 )
@@ -12,26 +12,26 @@ func (p *Packet) connectReq() int {
 	i := 0
 	pl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
-	// log.Printf("%d bytes, protocolName %s\n", pl, string(p.remainingBytes[i:i+pl]))
+	log.Debug().Msgf("%d bytes, protocolName %s\n", pl, string(p.remainingBytes[i:i+pl]))
 	i = i + pl
 	v := p.remainingBytes[i]
-	// log.Println("protocolVersion", v)
+	log.Debug().Msgf("protocolVersion %d", v)
 	p.Session.ProtocolVersion = v
 	i++
 	if int(v) < conf.MINIMUM_SUPPORTED_PROTOCOL {
-		log.Println("unsupported protocol version err", v)
+		log.Error().Msgf("unsupported protocol version err %d", v)
 		return UNSUPPORTED_PROTOCOL_VERSION
 	}
 	p.Session.ConnectFlags = p.remainingBytes[i]
 	i++
 	ka := p.remainingBytes[i : i+2]
 	p.Session.KeepAlive = Read2BytesInt(ka, 0)
-	// log.Println("keepAlive", Read2BytesInt(ka, 0))
+	log.Debug().Msgf("keepAlive %d", Read2BytesInt(ka, 0))
 	i = i + 2
 	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
-			log.Println("err reading properties", err)
+			log.Error().Msgf("err reading properties %d", err)
 			return err
 		}
 		i = i + pl
@@ -48,7 +48,7 @@ func (p *Packet) connectReq() int {
 		if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 			pl, err := p.parseWillProperties(i)
 			if err != 0 {
-				log.Println("err reading properties", err)
+				log.Error().Msgf("err reading properties %d", err)
 				return err
 			}
 			i = i + pl
@@ -62,7 +62,7 @@ func (p *Packet) connectReq() int {
 		wml := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		p.Session.WillMessage = p.remainingBytes[i : i+wml]
-		// log.Printf("will topic \"%s\"\nwith message \"%s\"\n", p.Session.WillTopic, p.Session.WillMessage)
+		log.Debug().Msgf("will topic \"%s\"\nwith message \"%s\"\n", p.Session.WillTopic, p.Session.WillMessage)
 		i = i + wml
 	}
 	if p.Session.HaveUser() {
@@ -75,7 +75,7 @@ func (p *Packet) connectReq() int {
 		pwdl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		p.Session.Password = string(p.remainingBytes[i : i+pwdl])
-		log.Printf("username \"%s\"\nlogging with password \"%s\"\n", p.Session.Username, p.Session.Password)
+		log.Debug().Msgf("username \"%s\"\nlogging with password \"%s\"\n", p.Session.Username, p.Session.Password)
 	}
 	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
 		p.Session.ExpiryInterval = p.SessionExpiryInterval()

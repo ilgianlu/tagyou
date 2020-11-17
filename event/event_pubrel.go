@@ -1,7 +1,7 @@
 package event
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
@@ -27,7 +27,7 @@ func clientPubrel(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 		if retry.AckStatus == model.WAIT_FOR_PUB_REL {
 			onExpectedPubrel(retry)
 		} else {
-			log.Println("pubrel for invalid retry status", retry.ClientId, retry.PacketIdentifier, retry.AckStatus)
+			log.Info().Msgf("pubrel for invalid retry status %s %d %d", retry.ClientId, retry.PacketIdentifier, retry.AckStatus)
 		}
 	}
 
@@ -37,7 +37,7 @@ func clientPubrel(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 		ReasonCode:       p.ReasonCode,
 	}
 	if err := db.Find(&retry).Error; err != nil {
-		log.Println("pubrel for invalid retry", retry.ClientId, retry.PacketIdentifier)
+		log.Info().Msgf("pubrel for invalid retry %s %d", retry.ClientId, retry.PacketIdentifier)
 	} else {
 		onRetryFound(retry)
 	}

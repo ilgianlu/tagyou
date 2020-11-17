@@ -3,7 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net/http"
 	"strconv"
 

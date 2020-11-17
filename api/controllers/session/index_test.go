@@ -1,10 +1,11 @@
 package session
 
 import (
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/driver/sqlite"
@@ -14,7 +15,7 @@ import (
 func TestGetSessions(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("sqlite3.test.db"), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("[API] [TEST] failed to connect database %s", err)
+		log.Fatal().Msgf("[API] [TEST] failed to connect database %s", err)
 	}
 	// db.LogMode(true)
 	defer closeDb(db)
@@ -31,7 +32,7 @@ func TestGetSessions(t *testing.T) {
 func closeDb(db *gorm.DB) {
 	sql, err := db.DB()
 	if err != nil {
-		log.Println("could not close DB", err)
+		log.Err(err).Msg("could not close DB")
 		return
 	}
 	sql.Close()
