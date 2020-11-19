@@ -112,6 +112,10 @@ func singleLevel(road []string, i int) []string {
 }
 
 func SharedSubscription(topic string) bool {
+	if len(topic) <= 10 {
+		// min shared topic length
+		return false
+	}
 	return topic[0:6] == conf.TOPIC_SHARED && string(topic[7]) != conf.LEVEL_SEPARATOR
 }
 
