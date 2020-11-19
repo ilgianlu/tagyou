@@ -28,8 +28,9 @@ func clientUnsubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- *
 
 func clientUnsubscription(db *gorm.DB, clientId string, topic string) uint8 {
 	var sub model.Subscription
-	if err := db.Where("topic = ? and client_id = ?", topic, clientId).First(&sub); err != nil {
+	if err := db.Where("topic = ? and client_id = ?", topic, clientId).First(&sub).Error; err != nil {
 		log.Info().Msgf("no subscription to unsubscribe %s %s", topic, clientId)
+		log.Error().Err(err).Msg("error unsubscribing")
 		return conf.UNSUB_NO_SUB_EXISTED
 	}
 	db.Delete(&sub)
