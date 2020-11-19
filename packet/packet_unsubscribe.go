@@ -5,6 +5,7 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/topic"
 )
 
 func (p *Packet) unsubscribeReq() int {
@@ -23,8 +24,15 @@ func (p *Packet) unsubscribeReq() int {
 	for {
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
-		unsub := model.Subscription{
-			Topic: string(p.remainingBytes[i : i+sl]),
+		tpc := string(p.remainingBytes[i : i+sl])
+		unsub := model.Subscription{}
+		if topic.SharedSubscription(tpc) {
+			shareName, unsubTopic := topic.SharedSubscriptionTopicParse(tpc)
+			unsub.Shared = true
+			unsub.ShareName = shareName
+			unsub.Topic = unsubTopic
+		} else {
+			unsub.Topic = tpc
 		}
 		p.Subscriptions = append(p.Subscriptions, unsub)
 		i = i + sl

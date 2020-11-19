@@ -13,7 +13,7 @@ import (
 func onUnsubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	reasonCodes := []uint8{}
 	for _, unsub := range p.Subscriptions {
-		rCode := clientUnsubscription(db, p.Session.ClientId, unsub.Topic)
+		rCode := clientUnsubscription(db, p.Session.ClientId, unsub)
 		reasonCodes = append(reasonCodes, rCode)
 	}
 	clientUnsubscribed(p, reasonCodes, outQueue)
@@ -26,13 +26,13 @@ func clientUnsubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- *
 	outQueue <- &o
 }
 
-func clientUnsubscription(db *gorm.DB, clientId string, topic string) uint8 {
-	var sub model.Subscription
-	if err := db.Where("topic = ? and client_id = ?", topic, clientId).First(&sub).Error; err != nil {
-		log.Info().Msgf("no subscription to unsubscribe %s %s", topic, clientId)
+func clientUnsubscription(db *gorm.DB, clientId string, unsub model.Subscription) uint8 {
+	if sub, err := model.FindToUnsubscribe(db, unsub.ShareName, unsub.Topic, clientId); err != nil {
+		log.Info().Msgf("no subscription to unsubscribe %s %s", unsub.Topic, clientId)
 		log.Error().Err(err).Msg("error unsubscribing")
 		return conf.UNSUB_NO_SUB_EXISTED
+	} else {
+		db.Delete(&sub)
+		return conf.SUCCESS
 	}
-	db.Delete(&sub)
-	return conf.SUCCESS
 }

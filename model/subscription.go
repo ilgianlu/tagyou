@@ -32,3 +32,11 @@ func (s *Subscription) IsOnline(db *gorm.DB) bool {
 		return session.Connected
 	}
 }
+
+func FindToUnsubscribe(db *gorm.DB, shareName string, topic string, clientId string) (Subscription, error) {
+	var sub Subscription
+	if err := db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).First(&sub).Error; err != nil {
+		return sub, err
+	}
+	return sub, nil
+}

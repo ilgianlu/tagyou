@@ -35,8 +35,22 @@ func TestClientUnsubscription(t *testing.T) {
 	db.Create(&sessions)
 	db.Create(&subscriptions)
 
-	res := clientUnsubscription(db, "pippo", "topic1")
+	res := clientUnsubscription(db, "pippo", model.Subscription{Topic: "topic1"})
 	if res != 0 {
 		t.Error("unsuccessful subscription, expected success")
+	}
+
+	res = clientUnsubscription(db, "pippo", model.Subscription{Topic: "topic2"})
+	if res != 17 {
+		t.Errorf("expecting 17 (no subscription to unsub), received %d", res)
+	}
+
+	res = clientUnsubscription(db, "pluto", model.Subscription{Topic: "sharedTopic1", ShareName: "share2"})
+	if res != 0 {
+		t.Errorf("expecting 0 (success), received %d", res)
+	}
+	s := model.Subscription{}
+	if err := db.Where("share_name = ? and topic = ?", "share2", "sharedTopic1").First(&s).Error; err == nil {
+		t.Errorf("shared subscription was not removed!")
 	}
 }
