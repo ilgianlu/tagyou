@@ -11,6 +11,7 @@ import (
 	AuthController "github.com/ilgianlu/tagyou/api/controllers/auth"
 	MessageController "github.com/ilgianlu/tagyou/api/controllers/message"
 	SessionController "github.com/ilgianlu/tagyou/api/controllers/session"
+	SubscriptionController "github.com/ilgianlu/tagyou/api/controllers/subscription"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/driver/sqlite"
@@ -45,6 +46,8 @@ func StartApi(httpPort string) {
 	sc.RegisterRoutes(r)
 	mc := MessageController.New(c)
 	mc.RegisterRoutes(r)
+	subc := SubscriptionController.New(db)
+	subc.RegisterRoutes(r)
 
 	log.Info().Msgf("[API] http listening on %s", httpPort)
 	if err := http.ListenAndServe(httpPort, r); err != nil {
