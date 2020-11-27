@@ -44,7 +44,7 @@ func sendPubrec(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<-
 		Dup:                p.Dup(),
 		ApplicationMessage: p.ApplicationMessage(),
 		AckStatus:          model.WAIT_FOR_PUB_REL,
-		CreatedAt:          time.Now(),
+		CreatedAt:          time.Now().Unix(),
 	}
 	db.Save(&r)
 

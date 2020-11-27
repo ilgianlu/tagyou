@@ -91,7 +91,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 	session := model.Session{
 		Connected:      true,
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
-		ExpiryInterval: conf.SESSION_MAX_DURATION_SECONDS,
+		ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 		Conn:           conn,
 	}
 

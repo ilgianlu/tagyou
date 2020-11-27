@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ilgianlu/tagyou/model"
 	"github.com/rs/zerolog/log"
 
 	"github.com/julienschmidt/httprouter"
@@ -13,10 +14,11 @@ import (
 )
 
 func TestGetSessions(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open("sqlite3.test.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("sqlite3.test.db3"), &gorm.Config{})
 	if err != nil {
 		log.Fatal().Msgf("[API] [TEST] failed to connect database %s", err)
 	}
+	model.Migrate(db)
 	// db.LogMode(true)
 	defer closeDb(db)
 	r := httptest.NewRequest(http.MethodGet, "/sessions", nil)

@@ -1,9 +1,5 @@
 package model
 
-import (
-	"time"
-)
-
 // qos 1
 const WAIT_FOR_PUB_ACK = 10
 
@@ -21,7 +17,7 @@ type Retry struct {
 	Dup                bool
 	Retries            uint8
 	AckStatus          uint8
-	CreatedAt          time.Time
+	CreatedAt          int64
 	SessionID          uint
 	ReasonCode         uint8 `gorm:"-"`
 }

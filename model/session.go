@@ -11,15 +11,15 @@ import (
 
 type Session struct {
 	ID              uint `gorm:"primary_key"`
-	LastSeen        time.Time
-	ExpiryInterval  uint32
+	LastSeen        int64
+	ExpiryInterval  int64
 	ClientId        string `gorm:"uniqueIndex:client_unique_session_idx"`
 	Connected       bool
 	ProtocolVersion uint8
 	ConnectFlags    uint8          `gorm:"-" json:"-"`
 	KeepAlive       int            `gorm:"-" json:"-"`
 	WillTopic       string         `gorm:"-" json:"-"`
-	WillDelay       time.Time      `gorm:"-" json:"-"`
+	WillDelay       int64          `gorm:"-" json:"-"`
 	WillMessage     []byte         `gorm:"-" json:"-"`
 	Subscriptions   []Subscription `json:"-"`
 	Retries         []Retry        `json:"-"`
@@ -59,7 +59,7 @@ func (s Session) HaveUser() bool {
 }
 
 func (s Session) Expired() bool {
-	return s.LastSeen.Add(time.Duration(s.ExpiryInterval) * time.Second).Before(time.Now())
+	return s.LastSeen+s.ExpiryInterval < time.Now().Unix()
 }
 
 func (s Session) FromLocalhost() bool {
@@ -105,6 +105,6 @@ func SessionExists(db *gorm.DB, clientId string) (Session, bool) {
 func DisconnectSession(db *gorm.DB, clientId string) {
 	db.Model(&Session{}).Where("client_id = ?", clientId).Updates(map[string]interface{}{
 		"Connected": false,
-		"LastSeen":  time.Now(),
+		"LastSeen":  time.Now().Unix(),
 	})
 }
