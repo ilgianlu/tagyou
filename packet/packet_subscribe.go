@@ -50,7 +50,7 @@ func (p *Packet) subscribeReq() int {
 		sub.Qos = p.remainingBytes[i] & 0x03
 		sub.ProtocolVersion = p.Session.ProtocolVersion
 		sub.Enabled = true
-		sub.CreatedAt = time.Now()
+		sub.CreatedAt = time.Now().Unix()
 		p.Subscriptions = append(p.Subscriptions, sub)
 		i++
 		if i >= len(p.remainingBytes)-1 {

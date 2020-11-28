@@ -1,8 +1,6 @@
 package model
 
 import (
-	"time"
-
 	"gorm.io/gorm"
 )
 
@@ -16,7 +14,7 @@ type Subscription struct {
 	Qos               uint8
 	ProtocolVersion   uint8
 	Enabled           bool
-	CreatedAt         time.Time
+	CreatedAt         int64
 	SessionID         uint
 	Shared            bool   `gorm:"default:false"`
 	ShareName         string `gorm:"uniqueIndex:sub_pars_idx"`

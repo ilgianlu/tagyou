@@ -1,8 +1,6 @@
 package model
 
 import (
-	"time"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -24,7 +22,7 @@ type Auth struct {
 	Password             []byte `json:"-"`
 	SubscribeAcl         string
 	PublishAcl           string
-	CreatedAt            time.Time
+	CreatedAt            int64
 	InputPassword        string `gorm:"-" json:",omitempty"`
 	InputPasswordConfirm string `gorm:"-" json:",omitempty"`
 }

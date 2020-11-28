@@ -114,7 +114,7 @@ func send(db *gorm.DB, topic string, s model.Subscription, p *packet.Packet, out
 			Dup:                p.Dup(),
 			ApplicationMessage: p.ApplicationMessage(),
 			AckStatus:          model.WAIT_FOR_PUB_ACK,
-			CreatedAt:          time.Now(),
+			CreatedAt:          time.Now().Unix(),
 		}
 		db.Save(&r)
 		sendSimple(r.ClientId, &p, outQueue)
@@ -128,7 +128,7 @@ func send(db *gorm.DB, topic string, s model.Subscription, p *packet.Packet, out
 			Dup:                p.Dup(),
 			ApplicationMessage: p.ApplicationMessage(),
 			AckStatus:          model.WAIT_FOR_PUB_REL,
-			CreatedAt:          time.Now(),
+			CreatedAt:          time.Now().Unix(),
 		}
 		db.Save(&r)
 		sendSimple(r.ClientId, &p, outQueue)
@@ -191,7 +191,7 @@ func saveRetain(db *gorm.DB, p *packet.Packet) {
 	var r model.Retain
 	r.Topic = p.Topic
 	r.ApplicationMessage = p.ApplicationMessage()
-	r.CreatedAt = time.Now()
+	r.CreatedAt = time.Now().Unix()
 	db.Delete(&r)
 	if len(r.ApplicationMessage) > 0 {
 		db.Create(&r)
