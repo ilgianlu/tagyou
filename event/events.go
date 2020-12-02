@@ -199,12 +199,8 @@ func saveRetain(db *gorm.DB, p *packet.Packet) {
 }
 
 func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
-	var s model.Session
-	if err := db.First(&s, "client_id = ?", p.Session.ClientId).Error; err != nil {
-		return
-	}
-	if s.WillTopic != "" {
-		p := packet.Publish(p.Session.ProtocolVersion, s.WillQoS(), s.WillRetain(), s.WillTopic, packet.NewPacketIdentifier(), s.WillMessage)
-		sendForward(db, s.WillTopic, &p, outQueue)
+	if p.Session.WillTopic != "" {
+		willPacket := packet.Publish(p.Session.ProtocolVersion, p.Session.WillQoS(), p.Session.WillRetain(), p.Session.WillTopic, packet.NewPacketIdentifier(), p.Session.WillMessage)
+		sendForward(db, p.Session.WillTopic, &willPacket, outQueue)
 	}
 }
