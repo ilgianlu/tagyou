@@ -28,6 +28,7 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 		p.remainingBytes = append(p.remainingBytes, p.encodeProperties()...)
 	}
 	// write payload
+	p.payloadOffset = len(p.remainingBytes)
 	p.remainingBytes = append(p.remainingBytes, payload...)
 	p.remainingLength = len(p.remainingBytes)
 	return p
