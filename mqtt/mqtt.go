@@ -10,6 +10,7 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/event"
+	"github.com/ilgianlu/tagyou/kafka"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
@@ -29,11 +30,17 @@ func StartMQTT(port string) {
 
 	model.Migrate(db)
 
+	kconn, err := kafka.StartKafka(os.Getenv("KAFKA_URL"), os.Getenv("KAFKA_TOPIC"), 0)
+	if err != nil {
+		log.Fatal().Err(err).Msg("[MQTT] failed to connect to kafka")
+	}
+	log.Info().Msg("[MQTT] kafka connected")
+
 	connections := make(model.Connections)
 	events := make(chan *packet.Packet, 1)
 	outQueue := make(chan *out.OutData, 1)
 
-	go event.RangeEvents(connections, db, events, outQueue)
+	go event.RangeEvents(connections, db, kconn, events, outQueue)
 	go out.RangeOutQueue(connections, db, outQueue)
 
 	if conf.CLEAN_EXPIRED_SESSIONS {

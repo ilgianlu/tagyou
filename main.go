@@ -30,7 +30,7 @@ func main() {
 
 func loadEnv() error {
 	env := os.Getenv("TAGYOU_ENV")
-	if "" == env {
+	if env == "" {
 		env = "default"
 	}
 	return dotenv.Load(".env." + env + ".local")

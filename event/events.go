@@ -11,10 +11,11 @@ import (
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	tpc "github.com/ilgianlu/tagyou/topic"
+	kgo "github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
 )
 
-func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *packet.Packet, outQueue chan<- *out.OutData) {
+func RangeEvents(connections model.Connections, db *gorm.DB, kconn *kgo.Conn, events <-chan *packet.Packet, outQueue chan<- *out.OutData) {
 	for p := range events {
 		switch p.Event {
 		case packet.EVENT_CONNECT:
@@ -28,7 +29,7 @@ func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *pack
 			onUnsubscribe(db, p, outQueue)
 		case packet.EVENT_PUBLISH:
 			log.Debug().Msgf("//!! EVENT type %d client published to %s %s", p.Event, p.Topic, p.Session.ClientId)
-			onPublish(db, p, outQueue)
+			onPublish(db, kconn, p, outQueue)
 		case packet.EVENT_PUBACKED:
 			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
 			clientPuback(db, p)

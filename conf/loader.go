@@ -9,6 +9,7 @@ func Loader() {
 	FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") == "true"
 	ACL_ON = os.Getenv("ACL_ON") == "true"
 	CLEAN_EXPIRED_SESSIONS = os.Getenv("CLEAN_EXPIRED_SESSIONS") == "true"
+	KAFKA_ON = os.Getenv("KAFKA_ON") == "true"
 
 	var s string
 	s = os.Getenv("CLEAN_EXPIRED_SESSIONS_INTERVAL")

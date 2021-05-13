@@ -9,8 +9,10 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/robfig/cron v1.2.0
 	github.com/rs/zerolog v1.20.0
+	github.com/segmentio/kafka-go v0.4.16
 	golang.org/x/crypto v0.0.0-20201116153603-4be66e5b6582
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
+	google.golang.org/protobuf v1.26.0
 	gorm.io/driver/sqlite v1.1.3
 	gorm.io/gorm v1.20.6
 )
