@@ -1,4 +1,4 @@
-package kafka
+package ec5
 
 import (
 	"context"
@@ -8,11 +8,13 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/kafka/kura"
+	"github.com/ilgianlu/tagyou/ec5/kura"
 	"github.com/ilgianlu/tagyou/packet"
 	kgo "github.com/segmentio/kafka-go"
 	"google.golang.org/protobuf/proto"
 )
+
+var EC5_TOPIC_FILTER string = "$EDC"
 
 type metric struct {
 	Name      string      `json:"name"`
@@ -36,8 +38,19 @@ func StartKafka(host string, topic string, partition int) (*kgo.Conn, error) {
 	return kgo.DialLeader(context.Background(), "tcp", host, topic, partition)
 }
 
-func Publish(conn *kgo.Conn, p *packet.Packet) {
+func StopKafka(conn *kgo.Conn) {
+	if !conf.KAFKA_ON {
+		return
+	}
+	if err := conn.Close(); err != nil {
+		log.Fatal().Err(err).Msg("[KAFKA] failed to close writer")
+	}
+}
 
+func Publish(conn *kgo.Conn, p *packet.Packet) {
+	if p.Topic[:4] != EC5_TOPIC_FILTER {
+		return
+	}
 	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	prepared, _ := preparePacket(p)
 	_, err := conn.WriteMessages(
@@ -45,10 +58,6 @@ func Publish(conn *kgo.Conn, p *packet.Packet) {
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("[KAFKA] failed to write messages")
-	}
-
-	if err := conn.Close(); err != nil {
-		log.Fatal().Err(err).Msg("[KAFKA] failed to close writer")
 	}
 }
 

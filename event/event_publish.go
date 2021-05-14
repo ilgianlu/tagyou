@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/kafka"
+	"github.com/ilgianlu/tagyou/ec5"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
@@ -26,8 +26,8 @@ func onPublish(db *gorm.DB, kconn *kgo.Conn, p *packet.Packet, outQueue chan<- *
 		saveRetain(db, p)
 	}
 	sendForward(db, p.Topic, p, outQueue)
-	if conf.KAFKA_ON && p.Topic[:1] == "$" {
-		kafka.Publish(kconn, p)
+	if conf.KAFKA_ON {
+		ec5.Publish(kconn, p)
 	}
 	if p.QoS() == 1 {
 		sendAck(db, p, packet.PUBACK_SUCCESS, outQueue)

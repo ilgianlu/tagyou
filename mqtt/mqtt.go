@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/segmentio/kafka-go"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/ec5"
 	"github.com/ilgianlu/tagyou/event"
-	"github.com/ilgianlu/tagyou/kafka"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
@@ -30,10 +31,11 @@ func StartMQTT(port string) {
 
 	model.Migrate(db)
 
-	kconn, err := kafka.StartKafka(os.Getenv("KAFKA_URL"), os.Getenv("KAFKA_TOPIC"), 0)
+	kconn, err := ec5.StartKafka(os.Getenv("KAFKA_URL"), os.Getenv("KAFKA_TOPIC"), 0)
 	if err != nil {
 		log.Fatal().Err(err).Msg("[MQTT] failed to connect to kafka")
 	}
+	defer closeKafka(kconn)
 	log.Info().Msg("[MQTT] kafka connected")
 
 	connections := make(model.Connections)
@@ -73,6 +75,10 @@ func closeDb(db *gorm.DB) {
 		return
 	}
 	sql.Close()
+}
+
+func closeKafka(conn *kafka.Conn) {
+	ec5.StopKafka(conn)
 }
 
 func startTCP(events chan<- *packet.Packet, port string) {
