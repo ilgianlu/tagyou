@@ -17,13 +17,12 @@ import (
 var EC5_TOPIC_FILTER string = "$EDC"
 
 type metric struct {
-	Name      string      `json:"name"`
 	ValueType string      `json:"valueType"`
 	Value     interface{} `json:"value"`
 }
 
 type metricPayload struct {
-	Metrics []metric `json:"metrics"`
+	Metrics map[string]metric `json:"metrics"`
 }
 
 type kuraJson struct {
@@ -71,9 +70,9 @@ func preparePacket(p *packet.Packet) ([]byte, error) {
 	kp := kuraJson{
 		Channel: p.Topic,
 	}
+	kp.Payload.Metrics = make(map[string]metric)
 	for _, m := range decoded.Metric {
 		newMetric := metric{
-			Name:      m.GetName(),
 			ValueType: kura.KuraPayload_KuraMetric_ValueType_name[int32(m.GetType())],
 		}
 		switch newMetric.ValueType {
@@ -106,7 +105,7 @@ func preparePacket(p *packet.Packet) ([]byte, error) {
 				newMetric.Value = m.GetBytesValue()
 			}
 		}
-		kp.Payload.Metrics = append(kp.Payload.Metrics, newMetric)
+		kp.Payload.Metrics[m.GetName()] = newMetric
 	}
 
 	toSend, err := json.Marshal(kp)
