@@ -166,7 +166,7 @@ func (p *Packet) CompletePacket(buff []byte) int {
 func Start(buff []byte) (Packet, error) {
 	var p Packet
 	if len(buff) < 2 {
-		return p, fmt.Errorf("Start: buffer too short\n")
+		return p, fmt.Errorf("Start: buffer too short")
 	}
 	i := 0
 	p.header = buff[i]
@@ -175,7 +175,7 @@ func Start(buff []byte) (Packet, error) {
 		rl, k, err := ReadVarInt(buff[i:])
 		p.remainingLengthBytes = k
 		if err != nil {
-			return p, fmt.Errorf("header: malformed remainingLength format: %s\n", err)
+			return p, fmt.Errorf("header: malformed remainingLength format: %s", err)
 		}
 		p.remainingLength = rl
 		i = i + k
@@ -264,18 +264,18 @@ func (p *Packet) Parse() int {
 
 func ReadFromByteSlice(buff []byte) ([]byte, error) {
 	if len(buff) < 2 {
-		return nil, fmt.Errorf("header: not enough bytes in buffer\n")
+		return nil, fmt.Errorf("header: not enough bytes in buffer")
 	}
 	i := 1
 	rl, k, err := ReadVarInt(buff[i:])
 	if err != nil {
-		log.Printf("header: malformed remainingLength format: %s\n", err)
+		log.Printf("header: malformed remainingLength format: %s", err)
 		return nil, err
 	}
 	i = i + k
 	if len(buff[i:]) < rl {
 		log.Debug().Msg("remaining bytes: not enough bytes in buffer")
-		return nil, fmt.Errorf("remaining bytes: not enough bytes in buffer\n")
+		return nil, fmt.Errorf("remaining bytes: not enough bytes in buffer")
 	}
 	i = i + rl
 	return buff[:i], nil
@@ -284,7 +284,8 @@ func ReadFromByteSlice(buff []byte) ([]byte, error) {
 func (p *Packet) ToByteSlice() []byte {
 	res := make([]byte, 1)
 	res[0] = p.header
-	res = append(res, WriteVarInt(p.remainingLength)...)
+	encodedLength := WriteVarInt(p.remainingLength)
+	res = append(res, encodedLength...)
 	res = append(res, p.remainingBytes...)
 	return res
 }

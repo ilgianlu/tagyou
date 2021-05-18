@@ -28,20 +28,21 @@ func ReadVarInt(props []byte) (int, int, error) {
 	return value, i, nil
 }
 
-func WriteVarInt(val int) []byte {
-	if val > 268435455 {
+func WriteVarInt(x int) []byte {
+	if x > 268435455 {
 		return []byte{}
 	}
 	divider := 128
 	res := []byte{}
 	for {
-		r := val % divider
-		val = val / divider
-		if val == 0 {
-			res = append([]byte{byte(r)}, res...)
+		encodedByte := x % divider
+		x = x / divider
+		if x > 0 {
+			encodedByte = encodedByte | divider
+		}
+		res = append(res, byte(encodedByte))
+		if x == 0 {
 			break
-		} else {
-			res = append([]byte{byte(128 + r)}, res...)
 		}
 	}
 	return res
