@@ -75,7 +75,7 @@ func TestStartSubscribeComplete(t *testing.T) {
 }
 
 func TestStartVeryLongPacket(t *testing.T) {
-	bComplete := []byte{48, 16, 170, 0, 40, 69, 68, 67, 47, 100, 101, 118, 45, 97, 117, 116, 111, 47, 97, 45, 99, 108, 105, 101, 110, 116, 45, 105, 100, 47, 109, 121, 45, 97, 112, 112, 45, 110, 97, 109, 101, 47, 80, 85, 84, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	bComplete := []byte{48, 170, 16, 0, 40, 69, 68, 67, 47, 100, 101, 118, 45, 97, 117, 116, 111, 47, 97, 45, 99, 108, 105, 101, 110, 116, 45, 105, 100, 47, 109, 121, 45, 97, 112, 112, 45, 110, 97, 109, 101, 47, 80, 85, 84, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	p, err := Start(bComplete)
 	if err != nil {
 		t.Errorf("did not expect any err: %s", err)
@@ -83,8 +83,8 @@ func TestStartVeryLongPacket(t *testing.T) {
 	if p.PacketType() != PACKET_TYPE_PUBLISH {
 		t.Errorf("expected packet type publish %d got %d", PACKET_TYPE_PUBLISH, p.PacketType())
 	}
-	if p.remainingLength != 1000 {
+	if p.remainingLength != 2090 {
 		log.Println(p)
-		t.Errorf("expected packet remaining length %d got %d", 1000, p.remainingLength)
+		t.Errorf("expected packet remaining length %d got %d", 2090, p.remainingLength)
 	}
 }
