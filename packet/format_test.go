@@ -51,10 +51,27 @@ func TestWriteVarInt(t *testing.T) {
 	if len(b0) > 1 || b0[0] != 0 {
 		t.Errorf("expect [0], received [%d]", b0[0])
 	}
+	a, b, c := ReadVarInt(b0)
+	if c == nil && b != 1 && a != 0 {
+		t.Errorf("expect no error, 2 bytes read, extracted 2090 received [%s,%d,%d]", c, b, a)
+	}
 
 	b1 := WriteVarInt(2097152)
-	if len(b1) != 4 || b1[3] != 128 || b1[2] != 128 || b1[1] != 128 || b1[0] != 1 {
-		t.Errorf("expect [128, 128, 128, 1], received [%d,%d,%d,%d]", b1[3], b1[2], b1[1], b1[0])
+	if len(b1) != 4 || b1[0] != 128 || b1[1] != 128 || b1[2] != 128 || b1[3] != 1 {
+		t.Errorf("expect [128, 128, 128, 1], received [%d,%d,%d,%d]", b1[0], b1[1], b1[2], b1[3])
+	}
+	a, b, c = ReadVarInt(b1)
+	if c == nil && b != 4 && a != 2097152 {
+		t.Errorf("expect no error, 2 bytes read, extracted 2090 received [%s,%d,%d]", c, b, a)
+	}
+
+	b2 := WriteVarInt(2090)
+	if len(b2) != 2 || b2[0] != 170 || b2[1] != 16 {
+		t.Errorf("expect [128, 10], received [%d,%d]", b2[0], b2[1])
+	}
+	a, b, c = ReadVarInt(b2)
+	if c == nil && b != 2 && a != 2090 {
+		t.Errorf("expect no error, 2 bytes read, extracted 2090 received [%s,%d,%d]", c, b, a)
 	}
 }
 
