@@ -31,18 +31,18 @@ func StartMQTT(port string) {
 
 	model.Migrate(db)
 
-	kconn, err := ec5.StartKafka(os.Getenv("KAFKA_URL"), os.Getenv("KAFKA_TOPIC"), 0)
+	kwriter, err := ec5.StartKafka(os.Getenv("KAFKA_URL"), os.Getenv("KAFKA_TOPIC"), 0)
 	if err != nil {
 		log.Fatal().Err(err).Msg("[MQTT] failed to connect to kafka")
 	}
-	defer closeKafka(kconn)
+	defer closeKafka(kwriter)
 	log.Info().Msg("[MQTT] kafka connected")
 
 	connections := make(model.Connections)
 	events := make(chan *packet.Packet, 1)
 	outQueue := make(chan *out.OutData, 1)
 
-	go event.RangeEvents(connections, db, kconn, events, outQueue)
+	go event.RangeEvents(connections, db, kwriter, events, outQueue)
 	go out.RangeOutQueue(connections, db, outQueue)
 
 	if conf.CLEAN_EXPIRED_SESSIONS {
@@ -77,8 +77,8 @@ func closeDb(db *gorm.DB) {
 	sql.Close()
 }
 
-func closeKafka(conn *kafka.Conn) {
-	ec5.StopKafka(conn)
+func closeKafka(writer *kafka.Writer) {
+	ec5.StopKafka(writer)
 }
 
 func startTCP(events chan<- *packet.Packet, port string) {

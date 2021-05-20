@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func RangeEvents(connections model.Connections, db *gorm.DB, kconn *kgo.Conn, events <-chan *packet.Packet, outQueue chan<- *out.OutData) {
+func RangeEvents(connections model.Connections, db *gorm.DB, kwriter *kgo.Writer, events <-chan *packet.Packet, outQueue chan<- *out.OutData) {
 	for p := range events {
 		switch p.Event {
 		case packet.EVENT_CONNECT:
@@ -29,7 +29,7 @@ func RangeEvents(connections model.Connections, db *gorm.DB, kconn *kgo.Conn, ev
 			onUnsubscribe(db, p, outQueue)
 		case packet.EVENT_PUBLISH:
 			log.Debug().Msgf("//!! EVENT type %d client published to %s %s", p.Event, p.Topic, p.Session.ClientId)
-			onPublish(db, kconn, p, outQueue)
+			onPublish(db, kwriter, p, outQueue)
 		case packet.EVENT_PUBACKED:
 			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
 			clientPuback(db, p)

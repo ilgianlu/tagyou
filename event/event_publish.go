@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func onPublish(db *gorm.DB, kconn *kgo.Conn, p *packet.Packet, outQueue chan<- *out.OutData) {
+func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<- *out.OutData) {
 	if conf.ACL_ON && !p.Session.FromLocalhost() && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
 			sendAck(db, p, packet.PUBACK_NOT_AUTHORIZED, outQueue)
@@ -27,7 +27,7 @@ func onPublish(db *gorm.DB, kconn *kgo.Conn, p *packet.Packet, outQueue chan<- *
 	}
 	sendForward(db, p.Topic, p, outQueue)
 	if conf.KAFKA_ON {
-		ec5.Publish(kconn, p)
+		ec5.Publish(kwriter, p)
 	}
 	if p.QoS() == 1 {
 		sendAck(db, p, packet.PUBACK_SUCCESS, outQueue)

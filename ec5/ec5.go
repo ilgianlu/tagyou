@@ -3,7 +3,6 @@ package ec5
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -30,31 +29,33 @@ type kuraJson struct {
 	Payload metricPayload `json:"payload"`
 }
 
-func StartKafka(host string, topic string, partition int) (*kgo.Conn, error) {
+func StartKafka(host string, topic string, partition int) (*kgo.Writer, error) {
 	if !conf.KAFKA_ON {
 		return nil, nil
 	}
-	return kgo.DialLeader(context.Background(), "tcp", host, topic, partition)
+	w := &kgo.Writer{
+		Addr:     kgo.TCP(host),
+		Topic:    topic,
+		Balancer: &kgo.LeastBytes{},
+	}
+	return w, nil
 }
 
-func StopKafka(conn *kgo.Conn) {
+func StopKafka(writer *kgo.Writer) {
 	if !conf.KAFKA_ON {
 		return
 	}
-	if err := conn.Close(); err != nil {
+	if err := writer.Close(); err != nil {
 		log.Fatal().Err(err).Msg("[KAFKA] failed to close writer")
 	}
 }
 
-func Publish(conn *kgo.Conn, p *packet.Packet) {
+func Publish(writer *kgo.Writer, p *packet.Packet) {
 	if p.Topic[:4] != EC5_TOPIC_FILTER {
 		return
 	}
-	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	prepared, _ := preparePacket(p)
-	_, err := conn.WriteMessages(
-		kgo.Message{Value: prepared},
-	)
+	err := writer.WriteMessages(context.Background(), kgo.Message{Value: prepared})
 	if err != nil {
 		log.Fatal().Err(err).Msg("[KAFKA] failed to write messages")
 	}
