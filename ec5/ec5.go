@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var EC5_TOPIC_FILTER string = "$EDC"
+var EC5_TOPIC_FILTER string = "dev-auto"
 
 type metric struct {
 	ValueType string      `json:"valueType"`
@@ -51,7 +51,7 @@ func StopKafka(writer *kgo.Writer) {
 }
 
 func Publish(writer *kgo.Writer, p *packet.Packet) {
-	if p.Topic[:4] != EC5_TOPIC_FILTER {
+	if p.Topic[:len(EC5_TOPIC_FILTER)] != EC5_TOPIC_FILTER {
 		return
 	}
 	prepared, _ := preparePacket(p)
