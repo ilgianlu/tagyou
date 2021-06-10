@@ -27,7 +27,7 @@ func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan
 	}
 	sendForward(db, p.Topic, p, outQueue)
 	if conf.KAFKA_ON {
-		ec5.Publish(kwriter, p)
+		ec5.Publish(kwriter, p.Topic, p)
 	}
 	if p.QoS() == 1 {
 		sendAck(db, p, packet.PUBACK_SUCCESS, outQueue)

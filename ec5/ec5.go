@@ -50,18 +50,21 @@ func StopKafka(writer *kgo.Writer) {
 	}
 }
 
-func Publish(writer *kgo.Writer, p *packet.Packet) {
-	if p.Topic[:len(EC5_TOPIC_FILTER)] != EC5_TOPIC_FILTER {
+func Publish(writer *kgo.Writer, topic string, p *packet.Packet) {
+	if len(topic) <= len(EC5_TOPIC_FILTER) {
 		return
 	}
-	prepared, _ := preparePacket(p)
+	if topic[:len(EC5_TOPIC_FILTER)] != EC5_TOPIC_FILTER {
+		return
+	}
+	prepared, _ := preparePacket(topic, p)
 	err := writer.WriteMessages(context.Background(), kgo.Message{Value: prepared})
 	if err != nil {
 		log.Fatal().Err(err).Msg("[KAFKA] failed to write messages")
 	}
 }
 
-func preparePacket(p *packet.Packet) ([]byte, error) {
+func preparePacket(topic string, p *packet.Packet) ([]byte, error) {
 	decoded := kura.KuraPayload{}
 	err := proto.Unmarshal(p.Payload(), &decoded)
 	if err != nil {
@@ -69,7 +72,7 @@ func preparePacket(p *packet.Packet) ([]byte, error) {
 	}
 
 	kp := kuraJson{
-		Channel: p.Topic,
+		Channel: topic,
 	}
 	kp.Payload.Metrics = make(map[string]metric)
 	for _, m := range decoded.Metric {

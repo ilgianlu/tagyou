@@ -50,7 +50,7 @@ func RangeEvents(connections model.Connections, db *gorm.DB, kwriter *kgo.Writer
 			clientDisconnect(db, connections, p.Session.ClientId)
 		case packet.EVENT_WILL_SEND:
 			log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, p.Session.ClientId)
-			sendWill(db, p, outQueue)
+			sendWill(db, kwriter, p, outQueue)
 		case packet.EVENT_PACKET_ERR:
 			log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, p.Session.ClientId)
 			clientDisconnect(db, connections, p.Session.ClientId)
@@ -196,12 +196,5 @@ func saveRetain(db *gorm.DB, p *packet.Packet) {
 	db.Delete(&r)
 	if len(r.ApplicationMessage) > 0 {
 		db.Create(&r)
-	}
-}
-
-func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
-	if p.Session.WillTopic != "" {
-		willPacket := packet.Publish(p.Session.ProtocolVersion, p.Session.WillQoS(), p.Session.WillRetain(), p.Session.WillTopic, packet.NewPacketIdentifier(), p.Session.WillMessage)
-		sendForward(db, p.Session.WillTopic, &willPacket, outQueue)
 	}
 }
