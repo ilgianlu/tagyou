@@ -1,5 +1,5 @@
 # build stage
-FROM golang:1.14-alpine as build-img
+FROM golang:1.16-alpine as build-img
 
 WORKDIR /go/src/app
 RUN apk update && apk add --update gcc musl-dev && rm -rf /var/cache/apk/*
@@ -7,7 +7,6 @@ RUN apk update && apk add --update gcc musl-dev && rm -rf /var/cache/apk/*
 COPY ./ .
 
 RUN go mod tidy
-RUN go mod download
 ENV CGO_ENABLED=1
 ENV GOOS=linux
 ENV GOARCH=amd64
