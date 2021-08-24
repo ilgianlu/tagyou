@@ -123,19 +123,13 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				// socket up but silent
-				log.Info().Msg("[MQTT] keepalive not respected!")
+				log.Debug().Msgf("[MQTT] keepalive of %d seconds not respected!", session.KeepAlive*2)
 				if session.ClientId != "" {
 					willEvent(&session, events)
 					disconnectClient(&session, events)
 					return
 				}
 			}
-		}
-
-		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
-		if derr != nil {
-			log.Error().Err(derr).Msg("[MQTT] cannot set read deadline")
-			defer conn.Close()
 		}
 
 		b := scanner.Bytes()
@@ -149,6 +143,14 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 		if parseErr != 0 {
 			log.Error().Msgf("[MQTT] parse err %d", parseErr)
 		}
+
+		log.Debug().Msgf("[MQTT] session %s setting keepalive of %d seconds", session.ClientId, session.KeepAlive*2)
+		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
+		if derr != nil {
+			log.Error().Err(derr).Msg("[MQTT] cannot set read deadline")
+			defer conn.Close()
+		}
+
 		events <- &p
 	}
 
