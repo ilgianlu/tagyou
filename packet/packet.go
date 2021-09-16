@@ -85,6 +85,10 @@ type Packet struct {
 	Event         int
 }
 
+func (p *Packet) RemainingBytes() []byte {
+	return p.remainingBytes
+}
+
 func (p *Packet) PacketType() byte {
 	return (p.header & 0x00F0) >> 4
 }
@@ -125,7 +129,8 @@ func (p *Packet) PublishTopic() []byte {
 func (p *Packet) PacketIdentifier() int {
 	var offset int
 	if p.PacketType() == PACKET_TYPE_PUBLISH {
-		offset = Read2BytesInt(p.remainingBytes, 0)
+		topicLength := Read2BytesInt(p.remainingBytes, 0)
+		offset = 2 + topicLength
 	}
 	return Read2BytesInt(p.remainingBytes, offset)
 }

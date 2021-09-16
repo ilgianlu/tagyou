@@ -27,7 +27,7 @@ func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *pack
 			log.Debug().Msgf("//!! EVENT type %d client unsubscribed %s", p.Event, p.Session.ClientId)
 			onUnsubscribe(db, p, outQueue)
 		case packet.EVENT_PUBLISH:
-			log.Debug().Msgf("//!! EVENT type %d client published to %s %s", p.Event, p.Topic, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client published to %s %s QoS %d", p.Event, p.Topic, p.Session.ClientId, p.QoS())
 			onPublish(db, p, outQueue)
 		case packet.EVENT_PUBACKED:
 			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
