@@ -7,6 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -21,12 +22,15 @@ func onPublish(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	}
 
 	if p.Retain() {
+		log.Debug().Msgf("[PUBLISH] to retain")
 		saveRetain(db, p)
 	}
 	sendForward(db, p.Topic, p, outQueue)
 	if p.QoS() == 1 {
+		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())
 		sendAck(db, p, packet.PUBACK_SUCCESS, outQueue)
 	} else if p.QoS() == 2 {
+		log.Debug().Msgf("[PUBLISH] QoS 2 return PUBREC")
 		sendPubrec(db, p, packet.PUBREC_SUCCESS, outQueue)
 	}
 }
