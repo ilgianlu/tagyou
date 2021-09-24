@@ -39,6 +39,9 @@ func StartMQTT(port string) {
 	if conf.CLEAN_EXPIRED_SESSIONS {
 		StartSessionCleaner(db)
 	}
+	if conf.CLEAN_EXPIRED_RETRIES {
+		StartRetryCleaner(db)
+	}
 	startTCP(events, port)
 }
 

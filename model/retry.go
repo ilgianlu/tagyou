@@ -1,5 +1,11 @@
 package model
 
+import (
+	"time"
+
+	"github.com/ilgianlu/tagyou/conf"
+)
+
 // qos 1
 const WAIT_FOR_PUB_ACK = 10
 
@@ -20,4 +26,8 @@ type Retry struct {
 	CreatedAt          int64
 	SessionID          uint
 	ReasonCode         uint8 `gorm:"-"`
+}
+
+func (r Retry) Expired() bool {
+	return r.CreatedAt+int64(conf.RETRY_EXPIRATION) < time.Now().Unix()
 }
