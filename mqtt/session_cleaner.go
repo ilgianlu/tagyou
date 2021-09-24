@@ -34,4 +34,5 @@ func cleanSessions(db *gorm.DB) {
 			}
 		}
 	}
+	log.Info().Msg("[MQTT] expired sessions cleanup done")
 }
