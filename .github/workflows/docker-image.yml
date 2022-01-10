@@ -2,9 +2,9 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ development ec-broker ]
+    branches: [ development, ec-broker ]
   pull_request:
-    branches: [ development ec-broker ]
+    branches: [ development, ec-broker ]
 
 jobs:
 
