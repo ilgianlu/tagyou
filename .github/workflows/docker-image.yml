@@ -2,9 +2,9 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ development ]
+    branches: [ development, ec-broker ]
   pull_request:
-    branches: [ development ]
+    branches: [ development, ec-broker ]
 
 jobs:
 
@@ -33,7 +33,7 @@ jobs:
         push: true
         tags: |
           ilgianlu/tagyou:latest
-          ilgianlu/tagyou:development
-          ilgianlu/tagyou:${{ github.sha }}
+          ilgianlu/tagyou:${{ github.ref_name }}
+          ilgianlu/tagyou:${{ github.ref_name }}-${{ github.sha }}
 
 

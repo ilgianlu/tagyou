@@ -8,6 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/rs/zerolog/log"
 	kgo "github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
 )
@@ -23,6 +24,7 @@ func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan
 	}
 
 	if p.Retain() {
+		log.Debug().Msgf("[PUBLISH] to retain")
 		saveRetain(db, p)
 	}
 	sendForward(db, p.Topic, p, outQueue)
@@ -30,8 +32,10 @@ func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan
 		ec5.Publish(kwriter, p.Topic, p)
 	}
 	if p.QoS() == 1 {
+		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())
 		sendAck(db, p, packet.PUBACK_SUCCESS, outQueue)
 	} else if p.QoS() == 2 {
+		log.Debug().Msgf("[PUBLISH] QoS 2 return PUBREC")
 		sendPubrec(db, p, packet.PUBREC_SUCCESS, outQueue)
 	}
 }
