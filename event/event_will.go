@@ -1,8 +1,7 @@
 package event
 
 import (
-	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/ec5"
+	"github.com/ilgianlu/tagyou/nowherecloud"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	kgo "github.com/segmentio/kafka-go"
@@ -19,8 +18,8 @@ func sendWill(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<
 			packet.NewPacketIdentifier(),
 			p.Session.WillMessage,
 		)
-		if conf.KAFKA_ON {
-			ec5.Publish(kwriter, p.Session.WillTopic, &willPacket)
+		if nowherecloud.KAFKA_ON {
+			nowherecloud.Publish(kwriter, p.Session.WillTopic, &willPacket)
 		}
 		sendForward(db, p.Session.WillTopic, &willPacket, outQueue)
 	}

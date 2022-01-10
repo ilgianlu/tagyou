@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/ec5"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/nowherecloud"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/rs/zerolog/log"
@@ -28,8 +28,8 @@ func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan
 		saveRetain(db, p)
 	}
 	sendForward(db, p.Topic, p, outQueue)
-	if conf.KAFKA_ON {
-		ec5.Publish(kwriter, p.Topic, p)
+	if nowherecloud.KAFKA_ON {
+		nowherecloud.Publish(kwriter, p.Topic, p)
 	}
 	if p.QoS() == 1 {
 		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())

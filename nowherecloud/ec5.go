@@ -1,4 +1,4 @@
-package ec5
+package nowherecloud
 
 import (
 	"context"
@@ -7,14 +7,11 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/ec5/kura"
+	"github.com/ilgianlu/tagyou/nowherecloud/kura"
 	"github.com/ilgianlu/tagyou/packet"
 	kgo "github.com/segmentio/kafka-go"
 	"google.golang.org/protobuf/proto"
 )
-
-var EC5_TOPIC_FILTER string = "dev-auto"
 
 type metric struct {
 	ValueType string      `json:"valueType"`
@@ -30,40 +27,45 @@ type kuraJson struct {
 	Payload metricPayload `json:"payload"`
 }
 
-func StartKafka(url string, topic string, partition int) (*kgo.Writer, error) {
-	if !conf.KAFKA_ON {
+func Init() (*kgo.Writer, error) {
+	Loader()
+	kwriter, err := StartKafka(KAFKA_URL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to connect to kafka")
+	}
+	log.Info().Msg("[NOWHERE-CLOUD] kafka connected")
+	return kwriter, nil
+}
+
+func StartKafka(url string) (*kgo.Writer, error) {
+	if !KAFKA_ON {
 		return nil, nil
 	}
 	hosts := strings.Split(url, ",")
 	w := &kgo.Writer{
 		Addr:     kgo.TCP(hosts...),
-		Topic:    topic,
 		Balancer: &kgo.LeastBytes{},
 	}
 	return w, nil
 }
 
 func StopKafka(writer *kgo.Writer) {
-	if !conf.KAFKA_ON {
+	if !KAFKA_ON {
 		return
 	}
 	if err := writer.Close(); err != nil {
-		log.Fatal().Err(err).Msg("[KAFKA] failed to close writer")
+		log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to close writer")
 	}
 }
 
 func Publish(writer *kgo.Writer, topic string, p *packet.Packet) {
-	log.Debug().Msg("[EC5] received message on " + topic)
-	if len(topic) <= len(EC5_TOPIC_FILTER) {
-		return
-	}
-	if topic[:len(EC5_TOPIC_FILTER)] != EC5_TOPIC_FILTER {
+	if !respectFilter(topic) {
 		return
 	}
 	prepared, _ := preparePacket(topic, p)
 	err := writer.WriteMessages(context.Background(), kgo.Message{Value: prepared})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[KAFKA] failed to write messages")
+		log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to write messages")
 	}
 }
 
