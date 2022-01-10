@@ -33,7 +33,7 @@ jobs:
         push: true
         tags: |
           ilgianlu/tagyou:latest
-          ilgianlu/tagyou:$GITHUB_REF_NAME
-          ilgianlu/tagyou:$GITHUB_REF_NAME-$GITHUB_SHA
+          ilgianlu/tagyou:${{ env.GITHUB_REF_NAME }}
+          ilgianlu/tagyou:${{ env.GITHUB_REF_NAME }}-${{ env.GITHUB_SHA }}
 
 
