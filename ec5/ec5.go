@@ -3,6 +3,7 @@ package ec5
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -29,12 +30,13 @@ type kuraJson struct {
 	Payload metricPayload `json:"payload"`
 }
 
-func StartKafka(host string, topic string, partition int) (*kgo.Writer, error) {
+func StartKafka(url string, topic string, partition int) (*kgo.Writer, error) {
 	if !conf.KAFKA_ON {
 		return nil, nil
 	}
+	hosts := strings.Split(url, ",")
 	w := &kgo.Writer{
-		Addr:     kgo.TCP(host),
+		Addr:     kgo.TCP(hosts...),
 		Topic:    topic,
 		Balancer: &kgo.LeastBytes{},
 	}
@@ -51,6 +53,7 @@ func StopKafka(writer *kgo.Writer) {
 }
 
 func Publish(writer *kgo.Writer, topic string, p *packet.Packet) {
+	log.Debug().Msg("[EC5] received message on " + topic)
 	if len(topic) <= len(EC5_TOPIC_FILTER) {
 		return
 	}
