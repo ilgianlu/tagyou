@@ -1,13 +1,13 @@
 package nowherecloud
 
-func respectFilter(topic string) bool {
+func respectFilter(topic string) (respectedFilter string, found bool) {
 	for _, t := range KAFKA_TOPICS {
 		if len(topic) <= len(t) {
 			continue
 		}
 		if topic[:len(t)] == t {
-			return true
+			return t, true
 		}
 	}
-	return false
+	return "", false
 }

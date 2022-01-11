@@ -59,11 +59,12 @@ func StopKafka(writer *kgo.Writer) {
 }
 
 func Publish(writer *kgo.Writer, topic string, p *packet.Packet) {
-	if !respectFilter(topic) {
+	respected, found := respectFilter(topic)
+	if !found {
 		return
 	}
 	prepared, _ := preparePacket(topic, p)
-	err := writer.WriteMessages(context.Background(), kgo.Message{Value: prepared})
+	err := writer.WriteMessages(context.Background(), kgo.Message{Topic: respected, Value: prepared})
 	if err != nil {
 		log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to write messages")
 	}
