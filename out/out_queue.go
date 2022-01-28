@@ -16,7 +16,13 @@ func RangeOutQueue(connections model.Connections, db *gorm.DB, outQueue <-chan *
 
 func simpleSend(connections model.Connections, db *gorm.DB, clientId string, p packet.Packet) {
 	if c, ok := connections[clientId]; ok {
-		_, err := c.Write(p.ToByteSlice())
+		if c == nil {
+			log.Error().Msgf("cannot write to %s net.Conn, c is nil (removing)", clientId)
+			connections.Remove(clientId)
+			return
+		}
+		packetBytes := p.ToByteSlice()
+		_, err := c.Write(packetBytes)
 		if err != nil {
 			log.Debug().Err(err).Msgf("cannot write to %s", clientId)
 		}

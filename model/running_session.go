@@ -59,6 +59,12 @@ func (s *RunningSession) FromLocalhost() bool {
 	return strings.Index(s.Conn.RemoteAddr().String(), conf.LOCALHOST) == 0
 }
 
+func (s *RunningSession) GetClientId() string {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.ClientId
+}
+
 func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {
 	s.Mu.Lock()
 	s.PublishAcl = pubAcl
