@@ -28,50 +28,34 @@ type RunningSession struct {
 }
 
 func (s *RunningSession) ReservedBit() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x01) == 0
 }
 
 func (s *RunningSession) CleanStart() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x02) > 0
 }
 
 func (s *RunningSession) WillFlag() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x04) > 0
 }
 
 func (s *RunningSession) WillQoS() uint8 {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x18 >> 3)
 }
 
 func (s *RunningSession) WillRetain() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x20) > 0
 }
 
 func (s *RunningSession) HavePass() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x40) > 0
 }
 
 func (s *RunningSession) HaveUser() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x80) > 0
 }
 
 func (s *RunningSession) FromLocalhost() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return strings.Index(s.Conn.RemoteAddr().String(), conf.LOCALHOST) == 0
 }
 
@@ -79,5 +63,11 @@ func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {
 	s.Mu.Lock()
 	s.PublishAcl = pubAcl
 	s.SubscribeAcl = subAcl
+	s.Mu.Unlock()
+}
+
+func (s *RunningSession) ApplySessionId(sessionID uint) {
+	s.Mu.Lock()
+	s.SessionID = sessionID
 	s.Mu.Unlock()
 }

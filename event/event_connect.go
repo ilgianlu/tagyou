@@ -59,11 +59,11 @@ func startSession(db *gorm.DB, session *model.RunningSession) {
 			if id, err := model.PersistSession(db, session, true); err != nil {
 				log.Err(err).Msgf("%s : error persisting clean session", session.ClientId)
 			} else {
-				session.SessionID = id
+				session.ApplySessionId(id)
 			}
 		} else {
 			log.Debug().Msgf("%s Updating previous session from running", session.ClientId)
-			session.SessionID = prevSession.ID
+			session.ApplySessionId(prevSession.ID)
 			prevSession.UpdateFromRunning(session)
 			db.Save(&prevSession)
 		}
@@ -72,7 +72,7 @@ func startSession(db *gorm.DB, session *model.RunningSession) {
 		if id, err := model.PersistSession(db, session, true); err != nil {
 			log.Err(err).Msgf("%s : error persisting clean session", session.ClientId)
 		} else {
-			session.SessionID = id
+			session.ApplySessionId(id)
 		}
 	}
 }
