@@ -53,6 +53,7 @@ func checkConnectionTakeOver(p *packet.Packet, connections model.Connections, ou
 func startSession(db *gorm.DB, session *model.RunningSession) {
 	if prevSession, ok := model.SessionExists(db, session.ClientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.ProtocolVersion != prevSession.ProtocolVersion {
+			log.Debug().Msgf("%s Cleaning previous session: Invalid or to clean", session.ClientId)
 			if err := model.CleanSession(db, session.ClientId); err != nil {
 				log.Err(err).Msgf("%s : error removing previous session", session.ClientId)
 			}
@@ -62,11 +63,13 @@ func startSession(db *gorm.DB, session *model.RunningSession) {
 				session.SessionID = id
 			}
 		} else {
+			log.Debug().Msgf("%s Updating previous session from running", session.ClientId)
 			session.SessionID = prevSession.ID
 			prevSession.UpdateFromRunning(*session)
 			db.Save(&prevSession)
 		}
 	} else {
+		log.Debug().Msgf("%s Starting new session from running", session.ClientId)
 		if id, err := model.PersistSession(db, session, true); err != nil {
 			log.Err(err).Msgf("%s : error persisting clean session", session.ClientId)
 		} else {

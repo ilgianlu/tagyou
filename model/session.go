@@ -42,6 +42,7 @@ func PersistSession(db *gorm.DB, running *RunningSession, connected bool) (sessi
 func (s *Session) UpdateFromRunning(newSession RunningSession) {
 	s.ProtocolVersion = newSession.ProtocolVersion
 	s.ExpiryInterval = newSession.ExpiryInterval
+	s.Connected = true
 }
 
 func CleanSession(db *gorm.DB, clientId string) error {
