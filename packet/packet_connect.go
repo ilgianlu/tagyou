@@ -7,6 +7,8 @@ import (
 )
 
 func (p *Packet) connectReq() int {
+	p.Session.Mu.Lock()
+	defer p.Session.Mu.Unlock()
 	p.Event = EVENT_CONNECT
 	// START VARIABLE HEADER
 	i := 0

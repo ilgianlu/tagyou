@@ -9,6 +9,8 @@ import (
 )
 
 func (p *Packet) unsubscribeReq() int {
+	p.Session.Mu.RLock()
+	defer p.Session.Mu.RUnlock()
 	p.Event = EVENT_UNSUBSCRIBED
 	i := 2 // 2 bytes for packet identifier
 	if p.Session.ProtocolVersion >= conf.MQTT_V5 {

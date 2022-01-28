@@ -11,6 +11,8 @@ import (
 )
 
 func (p *Packet) subscribeReq() int {
+	p.Session.Mu.RLock()
+	defer p.Session.Mu.RUnlock()
 	p.Event = EVENT_SUBSCRIBED
 	// variable header
 	i := 2 // 2 bytes for packet identifier
