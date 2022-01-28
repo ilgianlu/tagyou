@@ -18,7 +18,7 @@ func simpleSend(connections model.Connections, db *gorm.DB, clientId string, p p
 	if c, ok := connections[clientId]; ok {
 		if c == nil {
 			log.Error().Msgf("cannot write to %s net.Conn, c is nil (removing)", clientId)
-			delete(connections, clientId)
+			connections.Remove(clientId)
 			return
 		}
 		packetBytes := p.ToByteSlice()
