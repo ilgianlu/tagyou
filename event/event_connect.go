@@ -17,8 +17,7 @@ func onConnect(db *gorm.DB, connections model.Connections, p *packet.Packet, out
 			log.Debug().Msg("wrong connect credentials")
 			return
 		} else {
-			p.Session.PublishAcl = pubAcl
-			p.Session.SubscribeAcl = subAcl
+			p.Session.ApplyAcl(pubAcl, subAcl)
 			log.Debug().Msgf("auth ok, imported acls %s, %s", pubAcl, subAcl)
 		}
 	}
@@ -50,19 +49,30 @@ func checkConnectionTakeOver(p *packet.Packet, connections model.Connections, ou
 	return true
 }
 
-func startSession(db *gorm.DB, session *model.Session) {
+func startSession(db *gorm.DB, session *model.RunningSession) {
 	if prevSession, ok := model.SessionExists(db, session.ClientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.ProtocolVersion != prevSession.ProtocolVersion {
+			log.Debug().Msgf("%s Cleaning previous session: Invalid or to clean", session.ClientId)
 			if err := model.CleanSession(db, session.ClientId); err != nil {
 				log.Err(err).Msgf("%s : error removing previous session", session.ClientId)
 			}
-			db.Create(&session)
+			if id, err := model.PersistSession(db, session, true); err != nil {
+				log.Err(err).Msgf("%s : error persisting clean session", session.ClientId)
+			} else {
+				session.ApplySessionId(id)
+			}
 		} else {
-			prevSession.MergeSession(*session)
-			session = &prevSession
-			db.Save(&session)
+			log.Debug().Msgf("%s Updating previous session from running", session.ClientId)
+			session.ApplySessionId(prevSession.ID)
+			prevSession.UpdateFromRunning(session)
+			db.Save(&prevSession)
 		}
 	} else {
-		db.Create(&session)
+		log.Debug().Msgf("%s Starting new session from running", session.ClientId)
+		if id, err := model.PersistSession(db, session, true); err != nil {
+			log.Err(err).Msgf("%s : error persisting clean session", session.ClientId)
+		} else {
+			session.ApplySessionId(id)
+		}
 	}
 }

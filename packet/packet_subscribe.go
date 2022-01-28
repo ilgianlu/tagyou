@@ -11,6 +11,8 @@ import (
 )
 
 func (p *Packet) subscribeReq() int {
+	p.Session.Mu.RLock()
+	defer p.Session.Mu.RUnlock()
 	p.Event = EVENT_SUBSCRIBED
 	// variable header
 	i := 2 // 2 bytes for packet identifier
@@ -30,7 +32,7 @@ func (p *Packet) subscribeReq() int {
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
 		sub := model.Subscription{
-			SessionID: p.Session.ID,
+			SessionID: p.Session.SessionID,
 			ClientId:  p.Session.ClientId,
 		}
 		if topic.SharedSubscription(s) {

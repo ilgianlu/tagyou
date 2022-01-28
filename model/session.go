@@ -1,11 +1,8 @@
 package model
 
 import (
-	"net"
-	"strings"
 	"time"
 
-	"github.com/ilgianlu/tagyou/conf"
 	"gorm.io/gorm"
 )
 
@@ -16,54 +13,8 @@ type Session struct {
 	ClientId        string `gorm:"uniqueIndex:client_unique_session_idx"`
 	Connected       bool
 	ProtocolVersion uint8
-	ConnectFlags    uint8          `gorm:"-" json:"-"`
-	KeepAlive       int            `gorm:"-" json:"-"`
-	WillTopic       string         `gorm:"-" json:"-"`
-	WillDelay       int64          `gorm:"-" json:"-"`
-	WillMessage     []byte         `gorm:"-" json:"-"`
 	Subscriptions   []Subscription `json:"-"`
 	Retries         []Retry        `json:"-"`
-	Username        string         `gorm:"-" json:"-"`
-	Password        string         `gorm:"-" json:"-"`
-	SubscribeAcl    string         `gorm:"-" json:"-"`
-	PublishAcl      string         `gorm:"-" json:"-"`
-	Conn            net.Conn       `gorm:"-" json:"-"`
-}
-
-func (s Session) ReservedBit() bool {
-	return (s.ConnectFlags & 0x01) == 0
-}
-
-func (s Session) CleanStart() bool {
-	return (s.ConnectFlags & 0x02) > 0
-}
-
-func (s Session) WillFlag() bool {
-	return (s.ConnectFlags & 0x04) > 0
-}
-
-func (s Session) WillQoS() uint8 {
-	return (s.ConnectFlags & 0x18 >> 3)
-}
-
-func (s Session) WillRetain() bool {
-	return (s.ConnectFlags & 0x20) > 0
-}
-
-func (s Session) HavePass() bool {
-	return (s.ConnectFlags & 0x40) > 0
-}
-
-func (s Session) HaveUser() bool {
-	return (s.ConnectFlags & 0x80) > 0
-}
-
-func (s Session) Expired() bool {
-	return s.LastSeen+s.ExpiryInterval < time.Now().Unix()
-}
-
-func (s Session) FromLocalhost() bool {
-	return strings.Index(s.Conn.RemoteAddr().String(), conf.LOCALHOST) == 0
 }
 
 func (s *Session) BeforeDelete(tx *gorm.DB) (err error) {
@@ -72,17 +23,28 @@ func (s *Session) BeforeDelete(tx *gorm.DB) (err error) {
 	return nil
 }
 
-func (s *Session) MergeSession(newSession Session) {
-	s.ProtocolVersion = newSession.ProtocolVersion
-	s.ConnectFlags = newSession.ConnectFlags
-	s.KeepAlive = newSession.KeepAlive
-	s.WillTopic = newSession.WillTopic
-	s.WillDelay = newSession.WillDelay
-	s.WillMessage = newSession.WillMessage
-	s.Username = newSession.Username
-	s.Password = newSession.Password
-	s.ExpiryInterval = newSession.ExpiryInterval
-	s.Conn = newSession.Conn
+func (s Session) Expired() bool {
+	return s.LastSeen+s.ExpiryInterval < time.Now().Unix()
+}
+
+func PersistSession(db *gorm.DB, running *RunningSession, connected bool) (sessionId uint, err error) {
+	sess := Session{
+		LastSeen:        running.LastSeen,
+		ExpiryInterval:  running.ExpiryInterval,
+		ClientId:        running.ClientId,
+		Connected:       connected,
+		ProtocolVersion: running.ProtocolVersion,
+	}
+	saveErr := db.Save(&sess).Error
+	return sess.ID, saveErr
+}
+
+func (s *Session) UpdateFromRunning(running *RunningSession) {
+	running.Mu.RLock()
+	s.ProtocolVersion = running.ProtocolVersion
+	s.ExpiryInterval = running.ExpiryInterval
+	s.Connected = true
+	running.Mu.RUnlock()
 }
 
 func CleanSession(db *gorm.DB, clientId string) error {

@@ -79,7 +79,7 @@ type Packet struct {
 	willProperties Properties
 
 	// metadata
-	Session       *model.Session
+	Session       *model.RunningSession
 	Subscriptions []model.Subscription
 	Topic         string
 	Event         int

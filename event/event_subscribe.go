@@ -26,7 +26,7 @@ func clientSubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- *ou
 	outQueue <- &o
 }
 
-func clientSubscription(db *gorm.DB, session *model.Session, subscription *model.Subscription, outQueue chan<- *out.OutData) uint8 {
+func clientSubscription(db *gorm.DB, session *model.RunningSession, subscription *model.Subscription, outQueue chan<- *out.OutData) uint8 {
 	// check subscr qos, topic valid...
 	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(subscription.Topic, session.SubscribeAcl) {
 		return conf.SUB_TOPIC_FILTER_INVALID

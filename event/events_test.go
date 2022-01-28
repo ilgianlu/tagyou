@@ -36,17 +36,17 @@ func TestGroupSubscribers(t *testing.T) {
 
 	db.Exec("DELETE FROM sessions")
 	db.Exec("DELETE FROM subscriptions")
-	sess1 := model.Session{ID: 1, Connected: true, SubscribeAcl: "[]", PublishAcl: "[]"}
+	sess1 := model.Session{ID: 1, Connected: true}
 	sub1 := model.Subscription{SessionID: sess1.ID, ClientId: "pippo", ShareName: "share1"}
-	sess2 := model.Session{ID: 2, Connected: true, SubscribeAcl: "[]", PublishAcl: "[]"}
+	sess2 := model.Session{ID: 2, Connected: true}
 	sub2 := model.Subscription{SessionID: sess2.ID, ClientId: "pluto", ShareName: "share2"}
-	sess3 := model.Session{ID: 3, Connected: true, SubscribeAcl: "[]", PublishAcl: "[]"}
+	sess3 := model.Session{ID: 3, Connected: true}
 	sub3 := model.Subscription{SessionID: sess3.ID, ClientId: "minnie", ShareName: "share1"}
-	sess4 := model.Session{ID: 4, Connected: true, SubscribeAcl: "[]", PublishAcl: "[]"}
+	sess4 := model.Session{ID: 4, Connected: true}
 	sub4 := model.Subscription{SessionID: sess4.ID, ClientId: "topolino", ShareName: "share2"}
-	sess5 := model.Session{ID: 5, Connected: false, SubscribeAcl: "[]", PublishAcl: "[]"}
+	sess5 := model.Session{ID: 5, Connected: false}
 	sub5 := model.Subscription{SessionID: sess5.ID, ClientId: "paperino", ShareName: "share1"}
-	sess6 := model.Session{ID: 5, Connected: false, SubscribeAcl: "[]", PublishAcl: "[]"}
+	sess6 := model.Session{ID: 5, Connected: false}
 	sub6 := model.Subscription{SessionID: sess6.ID, ClientId: "paperina", ShareName: "share2"}
 	ungrouped := []model.Subscription{sub1, sub2, sub3, sub4, sub5, sub6}
 	sessions := []model.Session{sess1, sess2, sess3, sess4, sess5, sess6}
