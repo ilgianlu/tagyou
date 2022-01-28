@@ -11,8 +11,9 @@ import (
 )
 
 func onConnect(db *gorm.DB, connections model.Connections, p *packet.Packet, outQueue chan<- *out.OutData) {
+	clientId := p.Session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
-		ok, pubAcl, subAcl := model.CheckAuth(db, p.Session.ClientId, p.Session.Username, p.Session.Password)
+		ok, pubAcl, subAcl := model.CheckAuth(db, clientId, p.Session.Username, p.Session.Password)
 		if !ok {
 			log.Debug().Msg("wrong connect credentials")
 			return
@@ -23,14 +24,14 @@ func onConnect(db *gorm.DB, connections model.Connections, p *packet.Packet, out
 	}
 	taken := checkConnectionTakeOver(p, connections, outQueue)
 	if taken {
-		log.Debug().Msgf("%s reconnecting", p.Session.ClientId)
+		log.Debug().Msgf("%s reconnecting", clientId)
 	}
-	connections.Add(p.Session.ClientId, p.Session.Conn)
+	connections.Add(clientId, p.Session.Conn)
 
 	startSession(db, p.Session)
 
 	connack := packet.Connack(false, packet.CONNECT_OK, p.Session.ProtocolVersion)
-	sendSimple(p.Session.ClientId, &connack, outQueue)
+	sendSimple(clientId, &connack, outQueue)
 }
 
 func checkConnectionTakeOver(p *packet.Packet, connections model.Connections, outQueue chan<- *out.OutData) bool {

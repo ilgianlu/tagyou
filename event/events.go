@@ -17,43 +17,44 @@ import (
 
 func RangeEvents(connections model.Connections, db *gorm.DB, kwriter *kgo.Writer, events <-chan *packet.Packet, outQueue chan<- *out.OutData) {
 	for p := range events {
+		clientId := p.Session.GetClientId()
 		switch p.Event {
 		case packet.EVENT_CONNECT:
-			log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, clientId)
 			onConnect(db, connections, p, outQueue)
 		case packet.EVENT_SUBSCRIBED:
-			log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, clientId)
 			onSubscribe(db, p, outQueue)
 		case packet.EVENT_UNSUBSCRIBED:
-			log.Debug().Msgf("//!! EVENT type %d client unsubscribed %s", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client unsubscribed %s", p.Event, clientId)
 			onUnsubscribe(db, p, outQueue)
 		case packet.EVENT_PUBLISH:
-			log.Debug().Msgf("//!! EVENT type %d client published to %s %s QoS %d", p.Event, p.Topic, p.Session.ClientId, p.QoS())
+			log.Debug().Msgf("//!! EVENT type %d client published to %s %s QoS %d", p.Event, p.Topic, clientId, p.QoS())
 			onPublish(db, kwriter, p, outQueue)
 		case packet.EVENT_PUBACKED:
-			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), clientId)
 			clientPuback(db, p)
 		case packet.EVENT_PUBRECED:
-			log.Debug().Msgf("//!! EVENT type %d pub received message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d pub received message %d %s", p.Event, p.PacketIdentifier(), clientId)
 			clientPubrec(db, p, outQueue)
 		case packet.EVENT_PUBRELED:
-			log.Debug().Msgf("//!! EVENT type %d pub releases message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d pub releases message %d %s", p.Event, p.PacketIdentifier(), clientId)
 			clientPubrel(db, p, outQueue)
 		case packet.EVENT_PUBCOMPED:
-			log.Debug().Msgf("//!! EVENT type %d pub complete message %d %s", p.Event, p.PacketIdentifier(), p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d pub complete message %d %s", p.Event, p.PacketIdentifier(), clientId)
 			clientPubcomp(db, p)
 		case packet.EVENT_PING:
-			log.Debug().Msgf("//!! EVENT type %d client ping %s", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client ping %s", p.Event, clientId)
 			onPing(p, outQueue)
 		case packet.EVENT_DISCONNECT:
-			log.Debug().Msgf("//!! EVENT type %d client disconnect %s", p.Event, p.Session.ClientId)
-			clientDisconnect(db, connections, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d client disconnect %s", p.Event, clientId)
+			clientDisconnect(db, connections, clientId)
 		case packet.EVENT_WILL_SEND:
-			log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, clientId)
 			sendWill(db, kwriter, p, outQueue)
 		case packet.EVENT_PACKET_ERR:
-			log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, p.Session.ClientId)
-			clientDisconnect(db, connections, p.Session.ClientId)
+			log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, clientId)
+			clientDisconnect(db, connections, clientId)
 		}
 	}
 }
