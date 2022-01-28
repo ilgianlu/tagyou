@@ -3,6 +3,7 @@ package model
 import (
 	"net"
 	"strings"
+	"sync"
 
 	"github.com/ilgianlu/tagyou/conf"
 )
@@ -23,40 +24,60 @@ type RunningSession struct {
 	SubscribeAcl    string
 	PublishAcl      string
 	Conn            net.Conn
+	Mu              sync.RWMutex
 }
 
-func (s RunningSession) ReservedBit() bool {
+func (s *RunningSession) ReservedBit() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x01) == 0
 }
 
-func (s RunningSession) CleanStart() bool {
+func (s *RunningSession) CleanStart() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x02) > 0
 }
 
-func (s RunningSession) WillFlag() bool {
+func (s *RunningSession) WillFlag() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x04) > 0
 }
 
-func (s RunningSession) WillQoS() uint8 {
+func (s *RunningSession) WillQoS() uint8 {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x18 >> 3)
 }
 
-func (s RunningSession) WillRetain() bool {
+func (s *RunningSession) WillRetain() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x20) > 0
 }
 
-func (s RunningSession) HavePass() bool {
+func (s *RunningSession) HavePass() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x40) > 0
 }
 
-func (s RunningSession) HaveUser() bool {
+func (s *RunningSession) HaveUser() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x80) > 0
 }
 
-// func (s RunningSession) Expired() bool {
-// 	return s.LastSeen+s.ExpiryInterval < time.Now().Unix()
-// }
-
-func (s RunningSession) FromLocalhost() bool {
+func (s *RunningSession) FromLocalhost() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return strings.Index(s.Conn.RemoteAddr().String(), conf.LOCALHOST) == 0
+}
+
+func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {
+	s.Mu.Lock()
+	s.PublishAcl = pubAcl
+	s.SubscribeAcl = subAcl
+	s.Mu.Unlock()
 }

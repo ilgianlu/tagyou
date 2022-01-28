@@ -17,8 +17,7 @@ func onConnect(db *gorm.DB, connections model.Connections, p *packet.Packet, out
 			log.Debug().Msg("wrong connect credentials")
 			return
 		} else {
-			p.Session.PublishAcl = pubAcl
-			p.Session.SubscribeAcl = subAcl
+			p.Session.ApplyAcl(pubAcl, subAcl)
 			log.Debug().Msgf("auth ok, imported acls %s, %s", pubAcl, subAcl)
 		}
 	}
@@ -65,7 +64,7 @@ func startSession(db *gorm.DB, session *model.RunningSession) {
 		} else {
 			log.Debug().Msgf("%s Updating previous session from running", session.ClientId)
 			session.SessionID = prevSession.ID
-			prevSession.UpdateFromRunning(*session)
+			prevSession.UpdateFromRunning(session)
 			db.Save(&prevSession)
 		}
 	} else {

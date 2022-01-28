@@ -39,10 +39,12 @@ func PersistSession(db *gorm.DB, running *RunningSession, connected bool) (sessi
 	return sess.ID, saveErr
 }
 
-func (s *Session) UpdateFromRunning(newSession RunningSession) {
-	s.ProtocolVersion = newSession.ProtocolVersion
-	s.ExpiryInterval = newSession.ExpiryInterval
+func (s *Session) UpdateFromRunning(running *RunningSession) {
+	running.Mu.RLock()
+	s.ProtocolVersion = running.ProtocolVersion
+	s.ExpiryInterval = running.ExpiryInterval
 	s.Connected = true
+	running.Mu.RUnlock()
 }
 
 func CleanSession(db *gorm.DB, clientId string) error {
