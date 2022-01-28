@@ -30,7 +30,7 @@ func (p *Packet) subscribeReq() int {
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
 		sub := model.Subscription{
-			SessionID: p.Session.ID,
+			SessionID: p.Session.SessionID,
 			ClientId:  p.Session.ClientId,
 		}
 		if topic.SharedSubscription(s) {

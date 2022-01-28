@@ -9,7 +9,7 @@ import (
 
 func TestConnectSuccess(t *testing.T) {
 	e := make(chan Packet)
-	s := model.Session{}
+	s := model.RunningSession{}
 	p := Packet{
 		header:          16,
 		remainingLength: 20,
@@ -32,7 +32,7 @@ func connectSuccessEvent(t *testing.T, e chan Packet) {
 
 func TestConnectSuccessWithProperties(t *testing.T) {
 	e := make(chan Packet)
-	s := model.Session{}
+	s := model.RunningSession{}
 	p := Packet{
 		header:          16,
 		remainingLength: 25,

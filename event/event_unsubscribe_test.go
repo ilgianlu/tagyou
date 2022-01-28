@@ -22,11 +22,11 @@ func TestClientUnsubscription(t *testing.T) {
 
 	db.Exec("DELETE FROM sessions")
 	db.Exec("DELETE FROM subscriptions")
-	sess1 := model.Session{ID: 1, ClientId: "pippo", Connected: true, SubscribeAcl: "[]", PublishAcl: "[]"}
+	sess1 := model.Session{ID: 1, ClientId: "pippo", Connected: true}
 	sub1 := model.Subscription{SessionID: sess1.ID, ClientId: "pippo", Topic: "topic1"}
 	ssub1 := model.Subscription{SessionID: sess1.ID, ClientId: "pippo", ShareName: "share1", Topic: "sharedTopic1"}
 
-	sess2 := model.Session{ID: 2, Connected: true, ClientId: "pluto", SubscribeAcl: "[]", PublishAcl: "[]"}
+	sess2 := model.Session{ID: 2, Connected: true, ClientId: "pluto"}
 	sub2 := model.Subscription{SessionID: sess2.ID, ClientId: "pluto", Topic: "topic1"}
 	ssub2 := model.Subscription{SessionID: sess2.ID, ClientId: "pluto", ShareName: "share2", Topic: "sharedTopic1"}
 
