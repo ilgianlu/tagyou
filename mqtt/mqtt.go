@@ -91,8 +91,7 @@ func startTCP(events chan<- *packet.Packet, port string) {
 func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 	defer conn.Close()
 
-	session := model.Session{
-		Connected:      true,
+	session := model.RunningSession{
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
 		ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 		Conn:           conn,
@@ -160,12 +159,12 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 	// log.Println("Out of Scan loop!")
 }
 
-func willEvent(session *model.Session, e chan<- *packet.Packet) {
+func willEvent(session *model.RunningSession, e chan<- *packet.Packet) {
 	p := packet.Packet{Session: session, Event: packet.EVENT_WILL_SEND}
 	e <- &p
 }
 
-func disconnectClient(session *model.Session, e chan<- *packet.Packet) {
+func disconnectClient(session *model.RunningSession, e chan<- *packet.Packet) {
 	p := packet.Packet{Session: session, Event: packet.EVENT_DISCONNECT}
 	e <- &p
 }
