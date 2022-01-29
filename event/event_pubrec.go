@@ -34,7 +34,7 @@ func clientPubrec(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	}
 
 	retry := model.Retry{
-		ClientId:         p.Session.ClientId,
+		ClientId:         p.Session.GetClientId(),
 		PacketIdentifier: p.PacketIdentifier(),
 		ReasonCode:       p.ReasonCode,
 	}

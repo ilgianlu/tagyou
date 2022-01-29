@@ -41,8 +41,12 @@ func sendAck(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *o
 }
 
 func sendPubrec(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *out.OutData) {
+	p.Session.Mu.RLock()
+	clientId := p.Session.ClientId
+	protocolVersion := p.Session.ProtocolVersion
+	p.Session.Mu.RUnlock()
 	r := model.Retry{
-		ClientId:           p.Session.ClientId,
+		ClientId:           clientId,
 		PacketIdentifier:   p.PacketIdentifier(),
 		Qos:                p.QoS(),
 		Dup:                p.Dup(),
@@ -52,6 +56,6 @@ func sendPubrec(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<-
 	}
 	db.Save(&r)
 
-	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
-	sendSimple(p.Session.ClientId, &pubrec, outQueue)
+	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, protocolVersion)
+	sendSimple(clientId, &pubrec, outQueue)
 }
