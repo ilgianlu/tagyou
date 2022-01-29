@@ -101,7 +101,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 	packetSplit := func(b []byte, atEOF bool) (advance int, token []byte, err error) {
 		if len(b) == 0 && atEOF {
 			// socket down - closed
-			if session.ClientId != "" {
+			if session.GetClientId() != "" {
 				willEvent(&session, events)
 				disconnectClient(&session, events)
 				return
@@ -126,7 +126,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				// socket up but silent
 				log.Debug().Msgf("[MQTT] keepalive of %d seconds not respected!", session.KeepAlive*2)
-				if session.ClientId != "" {
+				if session.GetClientId() != "" {
 					willEvent(&session, events)
 					disconnectClient(&session, events)
 					return
