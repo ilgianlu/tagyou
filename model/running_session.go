@@ -32,6 +32,8 @@ func (s *RunningSession) ReservedBit() bool {
 }
 
 func (s *RunningSession) CleanStart() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x02) > 0
 }
 
@@ -69,6 +71,12 @@ func (s *RunningSession) GetProtocolVersion() uint8 {
 	s.Mu.RLock()
 	defer s.Mu.RUnlock()
 	return s.ProtocolVersion
+}
+
+func (s *RunningSession) GetConn() net.Conn {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.Conn
 }
 
 func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {
