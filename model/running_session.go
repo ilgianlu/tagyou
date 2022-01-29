@@ -65,6 +65,12 @@ func (s *RunningSession) GetClientId() string {
 	return s.ClientId
 }
 
+func (s *RunningSession) GetProtocolVersion() uint8 {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.ProtocolVersion
+}
+
 func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {
 	s.Mu.Lock()
 	s.PublishAcl = pubAcl

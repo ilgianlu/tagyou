@@ -45,7 +45,7 @@ func (p *Packet) publishReq() int {
 	if p.QoS() > 0 {
 		i = i + 2 // + 2 for packet identifier
 	}
-	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
+	if p.Session.GetProtocolVersion() >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Error().Msgf("err reading properties %d", err)
