@@ -12,7 +12,7 @@ import (
 func clientPubrel(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	sendPubcomp := func(retry model.Retry) {
 		var o out.OutData
-		o.ClientId = p.Session.ClientId
+		o.ClientId = p.Session.GetClientId()
 		o.Packet = packet.Pubcomp(p.PacketIdentifier(), retry.ReasonCode, p.Session.ProtocolVersion)
 		outQueue <- &o
 	}
@@ -32,7 +32,7 @@ func clientPubrel(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	}
 
 	retry := model.Retry{
-		ClientId:         p.Session.ClientId,
+		ClientId:         p.Session.GetClientId(),
 		PacketIdentifier: p.PacketIdentifier(),
 		ReasonCode:       p.ReasonCode,
 	}

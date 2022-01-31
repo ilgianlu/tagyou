@@ -28,6 +28,8 @@ func (s Session) Expired() bool {
 }
 
 func PersistSession(db *gorm.DB, running *RunningSession, connected bool) (sessionId uint, err error) {
+	running.Mu.RLock()
+	defer running.Mu.RUnlock()
 	sess := Session{
 		LastSeen:        running.LastSeen,
 		ExpiryInterval:  running.ExpiryInterval,

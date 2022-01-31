@@ -69,7 +69,7 @@ func trimWildcard(topic string) string {
 
 func onPing(p *packet.Packet, outQueue chan<- *out.OutData) {
 	var o out.OutData
-	o.ClientId = p.Session.ClientId
+	o.ClientId = p.Session.GetClientId()
 	o.Packet = packet.PingResp()
 	outQueue <- &o
 }
@@ -200,6 +200,8 @@ func saveRetain(db *gorm.DB, p *packet.Packet) {
 }
 
 func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
+	p.Session.Mu.RLock()
+	defer p.Session.Mu.RUnlock()
 	if p.Session.WillTopic != "" {
 		willPacket := packet.Publish(p.Session.ProtocolVersion, p.Session.WillQoS(), p.Session.WillRetain(), p.Session.WillTopic, packet.NewPacketIdentifier(), p.Session.WillMessage)
 		sendForward(db, p.Session.WillTopic, &willPacket, outQueue)
