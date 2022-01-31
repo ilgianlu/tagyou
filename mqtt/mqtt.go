@@ -150,8 +150,13 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 			log.Error().Msgf("[MQTT] parse err %d", parseErr)
 		}
 
-		log.Debug().Msgf("[MQTT] session %s setting keepalive of %d seconds", session.ClientId, session.KeepAlive*2)
-		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(session.KeepAlive*2) * time.Second))
+		session.Mu.RLock()
+		clientId := session.ClientId
+		keepAlive := session.KeepAlive
+		session.Mu.RUnlock()
+
+		log.Debug().Msgf("[MQTT] session %s setting read deadline of %d seconds", clientId, keepAlive*2)
+		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(keepAlive*2) * time.Second))
 		if derr != nil {
 			log.Error().Err(derr).Msg("[MQTT] cannot set read deadline")
 			defer conn.Close()
