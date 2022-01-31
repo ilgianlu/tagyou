@@ -19,7 +19,7 @@ func clientPuback(db *gorm.DB, p *packet.Packet) {
 	}
 
 	retry := model.Retry{
-		ClientId:         p.Session.ClientId,
+		ClientId:         p.Session.GetClientId(),
 		PacketIdentifier: p.PacketIdentifier(),
 	}
 	if err := db.Find(&retry).Error; err != nil {

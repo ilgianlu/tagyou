@@ -27,7 +27,7 @@ func (p *Packet) pubackReq() int {
 	if i < len(p.remainingBytes) {
 		p.ReasonCode = p.remainingBytes[i]
 	}
-	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
+	if p.Session.GetProtocolVersion() >= conf.MQTT_V5 {
 		_, err := p.parseProperties(i)
 		if err != 0 {
 			log.Error().Msgf("err reading properties %d", err)

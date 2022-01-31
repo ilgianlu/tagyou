@@ -70,7 +70,7 @@ func trimWildcard(topic string) string {
 
 func onPing(p *packet.Packet, outQueue chan<- *out.OutData) {
 	var o out.OutData
-	o.ClientId = p.Session.ClientId
+	o.ClientId = p.Session.GetClientId()
 	o.Packet = packet.PingResp()
 	outQueue <- &o
 }

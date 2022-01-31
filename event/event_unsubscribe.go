@@ -13,7 +13,7 @@ import (
 func onUnsubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	reasonCodes := []uint8{}
 	for _, unsub := range p.Subscriptions {
-		rCode := clientUnsubscription(db, p.Session.ClientId, unsub)
+		rCode := clientUnsubscription(db, p.Session.GetClientId(), unsub)
 		reasonCodes = append(reasonCodes, rCode)
 	}
 	clientUnsubscribed(p, reasonCodes, outQueue)
@@ -21,8 +21,8 @@ func onUnsubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) 
 
 func clientUnsubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- *out.OutData) {
 	var o out.OutData
-	o.ClientId = p.Session.ClientId
-	o.Packet = packet.Unsuback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
+	o.ClientId = p.Session.GetClientId()
+	o.Packet = packet.Unsuback(p.PacketIdentifier(), reasonCodes, p.Session.GetProtocolVersion())
 	outQueue <- &o
 }
 
