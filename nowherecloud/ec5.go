@@ -3,6 +3,7 @@ package nowherecloud
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -21,10 +22,16 @@ type metric struct {
 type metricPayload struct {
 	Metrics map[string]metric `json:"metrics"`
 }
+type messageChannel struct {
+	SemanticParts []string `json:"semanticParts"`
+}
 
 type kuraJson struct {
-	Channel string        `json:"channel"`
-	Payload metricPayload `json:"payload"`
+	ScopeId  string         `json:"scopeId"`
+	DeviceId string         `json:"deviceId"`
+	ClientId string         `json:"clientId"`
+	Channel  messageChannel `json:"channel"`
+	Payload  metricPayload  `json:"payload"`
 }
 
 func Init() (*kgo.Writer, error) {
@@ -64,10 +71,19 @@ func Publish(writer *kgo.Writer, topic string, p *packet.Packet) {
 		return
 	}
 	prepared, _ := preparePacket(topic, p)
+	log.Debug().Msg(fmt.Sprintf("[NOWHERE-CLOUD] Publishing to %s", respected))
 	err := writer.WriteMessages(context.Background(), kgo.Message{Topic: respected, Value: prepared})
 	if err != nil {
 		log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to write messages")
 	}
+}
+
+func semanticParts(parts []string) []string {
+	return parts[2:]
+}
+
+func topicParts(topic string) []string {
+	return strings.Split(topic, "/")
 }
 
 func preparePacket(topic string, p *packet.Packet) ([]byte, error) {
@@ -77,8 +93,14 @@ func preparePacket(topic string, p *packet.Packet) ([]byte, error) {
 		return []byte{}, err
 	}
 
+	parts := topicParts(topic)
+
 	kp := kuraJson{
-		Channel: topic,
+		ScopeId:  parts[0],
+		ClientId: parts[1],
+		Channel: messageChannel{
+			SemanticParts: semanticParts(parts),
+		},
 	}
 	kp.Payload.Metrics = make(map[string]metric)
 	for _, m := range decoded.Metric {
