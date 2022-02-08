@@ -29,12 +29,13 @@ func StartMQTT(port string) {
 
 	model.Migrate(db)
 
-	connections := make(model.Connections)
-	events := make(chan *packet.Packet, 1)
-	outQueue := make(chan *out.OutData, 1)
+	connections := model.Connections{}
+	connections.Conns = make(map[string]net.Conn)
+	events := make(chan *packet.Packet)
+	outQueue := make(chan out.OutData)
 
-	go event.RangeEvents(connections, db, events, outQueue)
-	go out.RangeOutQueue(connections, db, outQueue)
+	go event.RangeEvents(&connections, db, events, outQueue)
+	go out.RangeOutQueue(&connections, db, outQueue)
 
 	if conf.CLEAN_EXPIRED_SESSIONS {
 		StartSessionCleaner(db)

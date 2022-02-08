@@ -1,15 +1,25 @@
 package model
 
-import "net"
+import (
+	"net"
+	"sync"
+)
 
-type Connections map[string]net.Conn
+type Connections struct {
+	Conns map[string]net.Conn
+	Mu    sync.RWMutex
+}
 
 func (c *Connections) Add(clientId string, conn net.Conn) {
-	(*c)[clientId] = conn
+	c.Mu.Lock()
+	c.Conns[clientId] = conn
+	c.Mu.Unlock()
 }
 
 func (c *Connections) Exists(clientId string) (net.Conn, bool) {
-	if conn, ok := (*c)[clientId]; ok {
+	c.Mu.RLock()
+	defer c.Mu.RUnlock()
+	if conn, ok := c.Conns[clientId]; ok {
 		return conn, true
 	} else {
 		return nil, false
@@ -24,5 +34,7 @@ func (c *Connections) Close(clientId string) error {
 }
 
 func (c *Connections) Remove(clientId string) {
-	delete(*c, clientId)
+	c.Mu.Lock()
+	delete(c.Conns, clientId)
+	c.Mu.Unlock()
 }
