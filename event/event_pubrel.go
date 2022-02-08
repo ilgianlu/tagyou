@@ -9,12 +9,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func clientPubrel(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
+func clientPubrel(db *gorm.DB, p *packet.Packet, outQueue chan<- out.OutData) {
 	sendPubcomp := func(retry model.Retry) {
 		var o out.OutData
 		o.ClientId = p.Session.GetClientId()
-		o.Packet = packet.Pubcomp(p.PacketIdentifier(), retry.ReasonCode, p.Session.ProtocolVersion)
-		outQueue <- &o
+		toSend := packet.Pubcomp(p.PacketIdentifier(), retry.ReasonCode, p.Session.ProtocolVersion)
+		o.Packet = toSend.ToByteSlice()
+		outQueue <- o
 	}
 
 	onExpectedPubrel := func(retry model.Retry) {

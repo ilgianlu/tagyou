@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func RangeEvents(connections model.Connections, db *gorm.DB, events <-chan *packet.Packet, outQueue chan<- *out.OutData) {
+func RangeEvents(connections *model.Connections, db *gorm.DB, events <-chan *packet.Packet, outQueue chan<- out.OutData) {
 	for p := range events {
 		clientId := p.Session.GetClientId()
 		switch p.Event {
@@ -67,14 +67,15 @@ func trimWildcard(topic string) string {
 	return topic
 }
 
-func onPing(p *packet.Packet, outQueue chan<- *out.OutData) {
+func onPing(p *packet.Packet, outQueue chan<- out.OutData) {
 	var o out.OutData
 	o.ClientId = p.Session.GetClientId()
-	o.Packet = packet.PingResp()
-	outQueue <- &o
+	toSend := packet.PingResp()
+	o.Packet = toSend.ToByteSlice()
+	outQueue <- o
 }
 
-func clientDisconnect(db *gorm.DB, connections model.Connections, clientId string) {
+func clientDisconnect(db *gorm.DB, connections *model.Connections, clientId string) {
 	if _, ok := connections.Exists(clientId); ok {
 		connections.Close(clientId)
 		connections.Remove(clientId)
@@ -82,13 +83,13 @@ func clientDisconnect(db *gorm.DB, connections model.Connections, clientId strin
 	}
 }
 
-func sendForward(db *gorm.DB, topic string, p *packet.Packet, outQueue chan<- *out.OutData) {
+func sendForward(db *gorm.DB, topic string, p *packet.Packet, outQueue chan<- out.OutData) {
 	destSubs := tpc.Explode(topic)
 	go sendSubscribers(db, topic, destSubs, p, outQueue)
 	go sendSharedSubscribers(db, topic, destSubs, p, outQueue)
 }
 
-func sendSubscribers(db *gorm.DB, topic string, destSubs []string, p *packet.Packet, outQueue chan<- *out.OutData) {
+func sendSubscribers(db *gorm.DB, topic string, destSubs []string, p *packet.Packet, outQueue chan<- out.OutData) {
 	subs := []model.Subscription{}
 	if err := db.Where("topic IN (?)", destSubs).Where("shared = false").Find(&subs).Error; err != nil {
 		log.Error().Err(err).Msg("could not query for subscriptions")
@@ -99,7 +100,7 @@ func sendSubscribers(db *gorm.DB, topic string, destSubs []string, p *packet.Pac
 	}
 }
 
-func send(db *gorm.DB, topic string, s model.Subscription, p *packet.Packet, outQueue chan<- *out.OutData) {
+func send(db *gorm.DB, topic string, s model.Subscription, p *packet.Packet, outQueue chan<- out.OutData) {
 	qos := getQos(p.QoS(), s.Qos)
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier
@@ -136,7 +137,7 @@ func send(db *gorm.DB, topic string, s model.Subscription, p *packet.Packet, out
 	}
 }
 
-func sendSharedSubscribers(db *gorm.DB, topic string, destSubs []string, p *packet.Packet, outQueue chan<- *out.OutData) {
+func sendSharedSubscribers(db *gorm.DB, topic string, destSubs []string, p *packet.Packet, outQueue chan<- out.OutData) {
 	subs := []model.Subscription{}
 	if err := db.Where("topic IN (?)", destSubs).Where("shared = true").Order("share_name").Find(&subs).Error; err != nil {
 		log.Error().Err(err).Msg("could not query for subscriptions")
@@ -181,11 +182,11 @@ func getQos(pubQos uint8, subQos uint8) uint8 {
 	}
 }
 
-func sendSimple(clientId string, p *packet.Packet, outQueue chan<- *out.OutData) {
+func sendSimple(clientId string, p *packet.Packet, outQueue chan<- out.OutData) {
 	var o out.OutData
 	o.ClientId = clientId
-	o.Packet = *p
-	outQueue <- &o
+	o.Packet = p.ToByteSlice()
+	outQueue <- o
 }
 
 func saveRetain(db *gorm.DB, p *packet.Packet) {
@@ -199,7 +200,7 @@ func saveRetain(db *gorm.DB, p *packet.Packet) {
 	}
 }
 
-func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
+func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- out.OutData) {
 	p.Session.Mu.RLock()
 	defer p.Session.Mu.RUnlock()
 	if p.Session.WillTopic != "" {
