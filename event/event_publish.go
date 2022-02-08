@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<- *out.OutData) {
+func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<- out.OutData) {
 	if conf.ACL_ON && !p.Session.FromLocalhost() && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
 			sendAck(db, p, packet.PUBACK_NOT_AUTHORIZED, outQueue)
@@ -40,12 +40,12 @@ func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan
 	}
 }
 
-func sendAck(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *out.OutData) {
+func sendAck(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- out.OutData) {
 	puback := packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
 	sendSimple(p.Session.ClientId, &puback, outQueue)
 }
 
-func sendPubrec(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- *out.OutData) {
+func sendPubrec(db *gorm.DB, p *packet.Packet, reasonCode uint8, outQueue chan<- out.OutData) {
 	p.Session.Mu.RLock()
 	clientId := p.Session.ClientId
 	protocolVersion := p.Session.ProtocolVersion

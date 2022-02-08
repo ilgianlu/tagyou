@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func onConnect(db *gorm.DB, connections model.Connections, p *packet.Packet, outQueue chan<- *out.OutData) {
+func onConnect(db *gorm.DB, connections *model.Connections, p *packet.Packet, outQueue chan<- out.OutData) {
 	clientId := p.Session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
 		if !doAuth(db, p.Session) {
@@ -45,7 +45,7 @@ func doAuth(db *gorm.DB, session *model.RunningSession) bool {
 	return true
 }
 
-func checkConnectionTakeOver(p *packet.Packet, connections model.Connections, outQueue chan<- *out.OutData) bool {
+func checkConnectionTakeOver(p *packet.Packet, connections *model.Connections, outQueue chan<- out.OutData) bool {
 	p.Session.Mu.RLock()
 	clientId := p.Session.ClientId
 	protocolVersion := p.Session.ProtocolVersion

@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func onSubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
+func onSubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- out.OutData) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
 		rCode := clientSubscription(db, p.Session, subscription, outQueue)
@@ -19,18 +19,19 @@ func onSubscribe(db *gorm.DB, p *packet.Packet, outQueue chan<- *out.OutData) {
 	clientSubscribed(p, reasonCodes, outQueue)
 }
 
-func clientSubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- *out.OutData) {
+func clientSubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- out.OutData) {
 	p.Session.Mu.RLock()
 	clientId := p.Session.ClientId
 	protocolVersion := p.Session.ProtocolVersion
 	p.Session.Mu.RUnlock()
 	var o out.OutData
 	o.ClientId = clientId
-	o.Packet = packet.Suback(p.PacketIdentifier(), reasonCodes, protocolVersion)
-	outQueue <- &o
+	toSend := packet.Suback(p.PacketIdentifier(), reasonCodes, protocolVersion)
+	o.Packet = toSend.ToByteSlice()
+	outQueue <- o
 }
 
-func clientSubscription(db *gorm.DB, session *model.RunningSession, subscription model.Subscription, outQueue chan<- *out.OutData) uint8 {
+func clientSubscription(db *gorm.DB, session *model.RunningSession, subscription model.Subscription, outQueue chan<- out.OutData) uint8 {
 	session.Mu.RLock()
 	fromLocalhost := session.FromLocalhost()
 	subscribeAcl := session.SubscribeAcl
@@ -47,7 +48,7 @@ func clientSubscription(db *gorm.DB, session *model.RunningSession, subscription
 	return 0
 }
 
-func sendRetain(db *gorm.DB, protocolVersion uint8, subscription model.Subscription, outQueue chan<- *out.OutData) {
+func sendRetain(db *gorm.DB, protocolVersion uint8, subscription model.Subscription, outQueue chan<- out.OutData) {
 	retains := findRetains(db, subscription.Topic)
 	if len(retains) == 0 {
 		return
