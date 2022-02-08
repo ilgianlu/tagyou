@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func sendWill(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<- *out.OutData) {
+func sendWill(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<- out.OutData) {
 	if p.Session.WillTopic != "" {
 		willPacket := packet.Publish(
 			p.Session.ProtocolVersion,
