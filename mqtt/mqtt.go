@@ -145,6 +145,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 		parseErr := p.Parse()
 		if parseErr != 0 {
 			log.Error().Msgf("[MQTT] parse err %d", parseErr)
+			return
 		}
 
 		session.Mu.RLock()
