@@ -9,11 +9,10 @@ import (
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/rs/zerolog/log"
-	kgo "github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
 )
 
-func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<- out.OutData) {
+func onPublish(db *gorm.DB, p *packet.Packet, ncMessages chan<- nowherecloud.NcMessage, outQueue chan<- out.OutData) {
 	if conf.ACL_ON && !p.Session.FromLocalhost() && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
 			sendAck(db, p, packet.PUBACK_NOT_AUTHORIZED, outQueue)
@@ -29,7 +28,8 @@ func onPublish(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan
 	}
 	sendForward(db, p.Topic, p, outQueue)
 	if nowherecloud.KAFKA_ON {
-		nowherecloud.Publish(kwriter, p.Topic, p)
+		// nowherecloud.Publish(kwriter, p.Topic, p)
+		ncMessages <- nowherecloud.NcMessage{Topic: p.Topic, P: p}
 	}
 	if p.QoS() == 1 {
 		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())

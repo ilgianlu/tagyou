@@ -34,14 +34,26 @@ type kuraJson struct {
 	Payload  metricPayload  `json:"payload"`
 }
 
-func Init() (*kgo.Writer, error) {
+type NowhereConnector struct {
+	kWriter *kgo.Writer
+}
+
+type NcMessage struct {
+	Topic string
+	P     *packet.Packet
+}
+
+func (nc *NowhereConnector) Init() (chan NcMessage, error) {
 	Loader()
-	kwriter, err := StartKafka(KAFKA_URL)
+	ncMessages := make(chan NcMessage)
+	kWriter, err := StartKafka(KAFKA_URL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to connect to kafka")
 	}
+	nc.kWriter = kWriter
 	log.Info().Msg("[NOWHERE-CLOUD] kafka connected")
-	return kwriter, nil
+	go nc.rangeNcMessages(ncMessages)
+	return ncMessages, nil
 }
 
 func StartKafka(url string) (*kgo.Writer, error) {
@@ -52,6 +64,7 @@ func StartKafka(url string) (*kgo.Writer, error) {
 	w := &kgo.Writer{
 		Addr:     kgo.TCP(hosts...),
 		Balancer: &kgo.LeastBytes{},
+		Async:    true,
 	}
 	return w, nil
 }
@@ -65,16 +78,18 @@ func StopKafka(writer *kgo.Writer) {
 	}
 }
 
-func Publish(writer *kgo.Writer, topic string, p *packet.Packet) {
-	respected, found := respectFilter(topic)
-	if !found {
-		return
-	}
-	prepared, _ := preparePacket(topic, p)
-	log.Debug().Msg(fmt.Sprintf("[NOWHERE-CLOUD] Publishing to %s", respected))
-	err := writer.WriteMessages(context.Background(), kgo.Message{Topic: respected, Value: prepared})
-	if err != nil {
-		log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to write messages")
+func (nc *NowhereConnector) rangeNcMessages(ncMessage chan NcMessage) {
+	for ncMessage := range ncMessage {
+		respected, found := respectFilter(ncMessage.Topic)
+		if !found {
+			return
+		}
+		prepared, _ := preparePacket(ncMessage.Topic, ncMessage.P)
+		log.Debug().Msg(fmt.Sprintf("[NOWHERE-CLOUD] Publishing to %s", respected))
+		err := nc.kWriter.WriteMessages(context.Background(), kgo.Message{Topic: respected, Value: prepared})
+		if err != nil {
+			log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to write messages")
+		}
 	}
 }
 

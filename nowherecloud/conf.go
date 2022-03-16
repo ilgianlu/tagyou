@@ -13,5 +13,4 @@ func Loader() {
 	KAFKA_ON = os.Getenv("KAFKA_ON") == "true"
 	KAFKA_URL = os.Getenv("KAFKA_URL")
 	KAFKA_TOPICS = strings.Split(os.Getenv("KAFKA_TOPICS"), ",")
-
 }

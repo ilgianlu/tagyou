@@ -30,15 +30,18 @@ func StartMQTT(port string) {
 
 	model.Migrate(db)
 
-	kwriter, err := nowherecloud.Init()
-	defer nowherecloud.StopKafka(kwriter)
+	nowhereConnector := nowherecloud.NowhereConnector{}
+	ncMessages, err := nowhereConnector.Init()
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
 
 	connections := model.Connections{}
 	connections.Conns = make(map[string]net.Conn)
 	events := make(chan *packet.Packet)
 	outQueue := make(chan out.OutData)
 
-	go event.RangeEvents(&connections, db, kwriter, events, outQueue)
+	go event.RangeEvents(&connections, db, ncMessages, events, outQueue)
 	go out.RangeOutQueue(&connections, db, outQueue)
 
 	if conf.CLEAN_EXPIRED_SESSIONS {

@@ -4,11 +4,10 @@ import (
 	"github.com/ilgianlu/tagyou/nowherecloud"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
-	kgo "github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
 )
 
-func sendWill(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<- out.OutData) {
+func sendWill(db *gorm.DB, p *packet.Packet, ncMessages chan<- nowherecloud.NcMessage, outQueue chan<- out.OutData) {
 	if p.Session.WillTopic != "" {
 		willPacket := packet.Publish(
 			p.Session.ProtocolVersion,
@@ -19,7 +18,8 @@ func sendWill(db *gorm.DB, kwriter *kgo.Writer, p *packet.Packet, outQueue chan<
 			p.Session.WillMessage,
 		)
 		if nowherecloud.KAFKA_ON {
-			nowherecloud.Publish(kwriter, p.Session.WillTopic, &willPacket)
+			// nowherecloud.Publish(kwriter, p.Session.WillTopic, &willPacket)
+			ncMessages <- nowherecloud.NcMessage{Topic: p.Session.WillTopic, P: &willPacket}
 		}
 		sendForward(db, p.Session.WillTopic, &willPacket, outQueue)
 	}

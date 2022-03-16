@@ -8,14 +8,14 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/nowherecloud"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	tpc "github.com/ilgianlu/tagyou/topic"
-	kgo "github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
 )
 
-func RangeEvents(connections *model.Connections, db *gorm.DB, kwriter *kgo.Writer, events <-chan *packet.Packet, outQueue chan<- out.OutData) {
+func RangeEvents(connections *model.Connections, db *gorm.DB, ncMessages chan<- nowherecloud.NcMessage, events <-chan *packet.Packet, outQueue chan<- out.OutData) {
 	for p := range events {
 		clientId := p.Session.GetClientId()
 		switch p.Event {
@@ -30,7 +30,7 @@ func RangeEvents(connections *model.Connections, db *gorm.DB, kwriter *kgo.Write
 			onUnsubscribe(db, p, outQueue)
 		case packet.EVENT_PUBLISH:
 			log.Debug().Msgf("//!! EVENT type %d client published to %s %s QoS %d", p.Event, p.Topic, clientId, p.QoS())
-			onPublish(db, kwriter, p, outQueue)
+			onPublish(db, p, ncMessages, outQueue)
 		case packet.EVENT_PUBACKED:
 			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), clientId)
 			clientPuback(db, p)
@@ -51,7 +51,7 @@ func RangeEvents(connections *model.Connections, db *gorm.DB, kwriter *kgo.Write
 			clientDisconnect(db, connections, clientId)
 		case packet.EVENT_WILL_SEND:
 			log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, clientId)
-			sendWill(db, kwriter, p, outQueue)
+			sendWill(db, p, ncMessages, outQueue)
 		case packet.EVENT_PACKET_ERR:
 			log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, clientId)
 			clientDisconnect(db, connections, clientId)
