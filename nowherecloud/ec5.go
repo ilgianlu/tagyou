@@ -82,7 +82,7 @@ func (nc *NowhereConnector) rangeNcMessages(ncMessage chan NcMessage) {
 	for ncMessage := range ncMessage {
 		respected, found := respectFilter(ncMessage.Topic)
 		if !found {
-			return
+			continue
 		}
 		prepared, _ := preparePacket(ncMessage.Topic, ncMessage.P)
 		log.Debug().Msg(fmt.Sprintf("[NOWHERE-CLOUD] Publishing to %s", respected))
