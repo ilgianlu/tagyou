@@ -30,8 +30,8 @@ func StartMQTT(port string) {
 
 	model.Migrate(db)
 
-	nowhereConnector := nowherecloud.NowhereConnector{}
-	ncMessages, err := nowhereConnector.Init()
+	nowhereConnector := nowherecloud.NowhereConnector{MyPodIp: os.Getenv("MY_POD_IP")}
+	ncMessages, ncDevConnects, err := nowhereConnector.Init()
 	if err != nil {
 		log.Fatal().Msg(err.Error())
 	}
@@ -41,7 +41,7 @@ func StartMQTT(port string) {
 	events := make(chan *packet.Packet)
 	outQueue := make(chan out.OutData)
 
-	go event.RangeEvents(&connections, db, ncMessages, events, outQueue)
+	go event.RangeEvents(&connections, db, ncMessages, ncDevConnects, events, outQueue)
 	go out.RangeOutQueue(&connections, db, outQueue)
 
 	if conf.CLEAN_EXPIRED_SESSIONS {

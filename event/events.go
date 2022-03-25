@@ -15,13 +15,20 @@ import (
 	"gorm.io/gorm"
 )
 
-func RangeEvents(connections *model.Connections, db *gorm.DB, ncMessages chan<- nowherecloud.NcMessage, events <-chan *packet.Packet, outQueue chan<- out.OutData) {
+func RangeEvents(
+	connections *model.Connections,
+	db *gorm.DB,
+	ncMessages chan<- nowherecloud.NcMessage,
+	ncDevConnects chan<- nowherecloud.NcDevConnect,
+	events <-chan *packet.Packet,
+	outQueue chan<- out.OutData,
+) {
 	for p := range events {
 		clientId := p.Session.GetClientId()
 		switch p.Event {
 		case packet.EVENT_CONNECT:
 			log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, clientId)
-			onConnect(db, connections, p, outQueue)
+			onConnect(db, connections, p, ncDevConnects, outQueue)
 		case packet.EVENT_SUBSCRIBED:
 			log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, clientId)
 			onSubscribe(db, p, outQueue)

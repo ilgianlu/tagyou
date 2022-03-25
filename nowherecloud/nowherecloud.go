@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/nowherecloud/kura"
@@ -36,6 +37,8 @@ type kuraJson struct {
 
 type NowhereConnector struct {
 	kWriter *kgo.Writer
+	redis   *redis.Client
+	MyPodIp string
 }
 
 type NcMessage struct {
@@ -43,17 +46,27 @@ type NcMessage struct {
 	P     *packet.Packet
 }
 
-func (nc *NowhereConnector) Init() (chan NcMessage, error) {
+type NcDevConnect struct {
+	ClientId string
+}
+
+func (nc *NowhereConnector) Init() (chan NcMessage, chan NcDevConnect, error) {
 	Loader()
 	ncMessages := make(chan NcMessage)
+	ncDevConnects := make(chan NcDevConnect)
+
 	kWriter, err := StartKafka(KAFKA_URL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to connect to kafka")
 	}
 	nc.kWriter = kWriter
 	log.Info().Msg("[NOWHERE-CLOUD] kafka connected")
+
+	nc.redis = StartRedis(REDIS_URL)
+	log.Info().Msg("[NOWHERE-CLOUD] redis connected " + REDIS_URL)
 	go nc.rangeNcMessages(ncMessages)
-	return ncMessages, nil
+	go nc.rangeNcDevConnects(ncDevConnects)
+	return ncMessages, ncDevConnects, nil
 }
 
 func StartKafka(url string) (*kgo.Writer, error) {
@@ -67,6 +80,16 @@ func StartKafka(url string) (*kgo.Writer, error) {
 		Async:    true,
 	}
 	return w, nil
+}
+
+func StartRedis(url string) *redis.Client {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     url,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	return rdb
 }
 
 func StopKafka(writer *kgo.Writer) {
@@ -89,6 +112,17 @@ func (nc *NowhereConnector) rangeNcMessages(ncMessage chan NcMessage) {
 		err := nc.kWriter.WriteMessages(context.Background(), kgo.Message{Topic: respected, Value: prepared})
 		if err != nil {
 			log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to write messages")
+		}
+	}
+}
+
+func (nc *NowhereConnector) rangeNcDevConnects(ncDevConnects chan NcDevConnect) {
+	for ncDevConnect := range ncDevConnects {
+		value := fmt.Sprintf("%s://%s:%s", BROKER_PROTOCOL, nc.MyPodIp, BROKER_PORT)
+		log.Debug().Msg("[NOWHERE-CLOUD]" + ncDevConnect.ClientId + " " + value)
+		err := nc.redis.Set(context.Background(), ncDevConnect.ClientId, value, 0).Err()
+		if err != nil {
+			log.Fatal().Err(err).Msg("[NOWHERE-CLOUD] failed to write client online")
 		}
 	}
 }

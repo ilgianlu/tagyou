@@ -5,12 +5,19 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/nowherecloud"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"gorm.io/gorm"
 )
 
-func onConnect(db *gorm.DB, connections *model.Connections, p *packet.Packet, outQueue chan<- out.OutData) {
+func onConnect(
+	db *gorm.DB,
+	connections *model.Connections,
+	p *packet.Packet,
+	ncDevConnects chan<- nowherecloud.NcDevConnect,
+	outQueue chan<- out.OutData,
+) {
 	clientId := p.Session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
 		if !doAuth(db, p.Session) {
@@ -25,6 +32,7 @@ func onConnect(db *gorm.DB, connections *model.Connections, p *packet.Packet, ou
 
 	startSession(db, p.Session)
 
+	ncDevConnects <- nowherecloud.NcDevConnect{ClientId: p.Session.ClientId}
 	connack := packet.Connack(false, packet.CONNECT_OK, p.Session.GetProtocolVersion())
 	sendSimple(clientId, &connack, outQueue)
 }
