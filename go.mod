@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.3.5
-	github.com/go-redis/redis/v8 v8.11.5 // indirect
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/joho/godotenv v1.4.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/robfig/cron v1.2.0
