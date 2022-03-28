@@ -67,6 +67,12 @@ func (s *RunningSession) GetClientId() string {
 	return s.ClientId
 }
 
+func (s *RunningSession) Established() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.ClientId != ""
+}
+
 func (s *RunningSession) GetProtocolVersion() uint8 {
 	s.Mu.RLock()
 	defer s.Mu.RUnlock()
