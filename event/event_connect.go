@@ -59,7 +59,7 @@ func checkConnectionTakeOver(p *packet.Packet, connections *model.Connections, o
 
 	err := connections.Close(clientId)
 	if err != nil {
-		log.Debug().Msgf("[MQTT] (%s) error taking over another connection", clientId, err)
+		log.Debug().Msgf("[MQTT] (%s) error taking over another connection : %s", clientId, err)
 	}
 	connections.Remove(clientId)
 	return true
