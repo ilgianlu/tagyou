@@ -104,6 +104,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 		if len(b) == 0 && atEOF {
 			// socket down - closed
 			if session.GetClientId() != "" {
+				log.Debug().Msgf("[MQTT] (%s:%d) will due to socket down!", session.GetClientId(), session.LastConnect)
 				willEvent(&session, events)
 				disconnectClient(&session, events)
 				return
@@ -129,6 +130,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 				// socket up but silent
 				log.Debug().Msgf("[MQTT] keepalive of %d seconds not respected!", session.KeepAlive*2)
 				if session.GetClientId() != "" {
+					log.Debug().Msgf("[MQTT] (%s:%d) will due to keepalive not respected!", session.GetClientId(), session.LastConnect)
 					willEvent(&session, events)
 					disconnectClient(&session, events)
 					return

@@ -19,7 +19,7 @@ func onConnect(db *gorm.DB, connections *model.Connections, p *packet.Packet, ou
 	}
 	taken := checkConnectionTakeOver(p, connections, outQueue)
 	if taken {
-		log.Debug().Msgf("%s reconnecting", clientId)
+		log.Debug().Msgf("[MQTT] (%s) reconnecting", clientId)
 	}
 	connections.Add(clientId, p.Session.GetConn())
 
@@ -37,11 +37,11 @@ func doAuth(db *gorm.DB, session *model.RunningSession) bool {
 	session.Mu.RUnlock()
 	ok, pubAcl, subAcl := model.CheckAuth(db, clientId, username, password)
 	if !ok {
-		log.Debug().Msg("wrong connect credentials")
+		log.Debug().Msg("[MQTT] wrong connect credentials")
 		return false
 	}
 	session.ApplyAcl(pubAcl, subAcl)
-	log.Debug().Msgf("auth ok, imported acls %s, %s", pubAcl, subAcl)
+	log.Debug().Msgf("[MQTT] auth ok, imported acls %s, %s", pubAcl, subAcl)
 	return true
 }
 
@@ -59,7 +59,7 @@ func checkConnectionTakeOver(p *packet.Packet, connections *model.Connections, o
 
 	err := connections.Close(clientId)
 	if err != nil {
-		log.Debug().Msgf("%s : error taking over another connection; %s", clientId, err)
+		log.Debug().Msgf("[MQTT] (%s) error taking over another connection", clientId, err)
 	}
 	connections.Remove(clientId)
 	return true
@@ -69,12 +69,12 @@ func startSession(db *gorm.DB, session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if prevSession, ok := model.SessionExists(db, clientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.ProtocolVersion {
-			log.Debug().Msgf("%s Cleaning previous session: Invalid or to clean", clientId)
+			log.Debug().Msgf("[MQTT] (%s) Cleaning previous session: Invalid or to clean", clientId)
 			if err := model.CleanSession(db, clientId); err != nil {
-				log.Err(err).Msgf("%s : error removing previous session", clientId)
+				log.Err(err).Msgf("[MQTT] (%s) error removing previous session", clientId)
 			}
 			if id, err := model.PersistSession(db, session, true); err != nil {
-				log.Err(err).Msgf("%s : error persisting clean session", clientId)
+				log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 			} else {
 				session.ApplySessionId(id)
 			}
@@ -85,9 +85,9 @@ func startSession(db *gorm.DB, session *model.RunningSession) {
 			db.Save(&prevSession)
 		}
 	} else {
-		log.Debug().Msgf("%s Starting new session from running", clientId)
+		log.Debug().Msgf("[MQTT] (%s) Starting new session from running", clientId)
 		if id, err := model.PersistSession(db, session, true); err != nil {
-			log.Err(err).Msgf("%s : error persisting clean session", clientId)
+			log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 		} else {
 			session.ApplySessionId(id)
 		}

@@ -47,13 +47,13 @@ func RangeEvents(connections *model.Connections, db *gorm.DB, events <-chan *pac
 			onPing(p, outQueue)
 		case packet.EVENT_DISCONNECT:
 			log.Debug().Msgf("//!! EVENT type %d client disconnect %s", p.Event, clientId)
-			clientDisconnect(db, connections, clientId)
+			clientDisconnect(db, p, connections, clientId)
 		case packet.EVENT_WILL_SEND:
 			log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, clientId)
 			sendWill(db, p, outQueue)
 		case packet.EVENT_PACKET_ERR:
 			log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, clientId)
-			clientDisconnect(db, connections, clientId)
+			clientDisconnect(db, p, connections, clientId)
 		}
 	}
 }
@@ -75,8 +75,12 @@ func onPing(p *packet.Packet, outQueue chan<- out.OutData) {
 	outQueue <- o
 }
 
-func clientDisconnect(db *gorm.DB, connections *model.Connections, clientId string) {
+func clientDisconnect(db *gorm.DB, p *packet.Packet, connections *model.Connections, clientId string) {
 	if _, ok := connections.Exists(clientId); ok {
+		needDisconnection := needDisconnection(db, p)
+		if !needDisconnection {
+			return
+		}
 		connections.Close(clientId)
 		connections.Remove(clientId)
 		model.DisconnectSession(db, clientId)
@@ -204,7 +208,37 @@ func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- out.OutData) {
 	p.Session.Mu.RLock()
 	defer p.Session.Mu.RUnlock()
 	if p.Session.WillTopic != "" {
+		needWillSend := needWillSend(db, p)
+		if !needWillSend {
+			return
+		}
 		willPacket := packet.Publish(p.Session.ProtocolVersion, p.Session.WillQoS(), p.Session.WillRetain(), p.Session.WillTopic, packet.NewPacketIdentifier(), p.Session.WillMessage)
 		sendForward(db, p.Session.WillTopic, &willPacket, outQueue)
 	}
+}
+
+func needDisconnection(db *gorm.DB, p *packet.Packet) bool {
+	if session, ok := model.SessionExists(db, p.Session.ClientId); ok {
+		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", p.Session.ClientId, session.LastConnect, p.Session.LastConnect)
+		if session.LastConnect > p.Session.LastConnect {
+			// session persisted is newer then running memory session... device reconnected!
+			// no need to send will
+			log.Debug().Msgf("[MQTT] (%s) avoid disconnect! (device reconnected)", p.Session.ClientId)
+			return false
+		}
+	}
+	return true
+}
+
+func needWillSend(db *gorm.DB, p *packet.Packet) bool {
+	if session, ok := model.SessionExists(db, p.Session.ClientId); ok {
+		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", p.Session.ClientId, session.LastConnect, p.Session.LastConnect)
+		if session.LastConnect > p.Session.LastConnect {
+			// session persisted is newer then running memory session... device reconnected!
+			// no need to send will
+			log.Debug().Msgf("[MQTT] (%s) avoid sending will! (device reconnected)", p.Session.ClientId)
+			return false
+		}
+	}
+	return true
 }
