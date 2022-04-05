@@ -96,6 +96,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
 		ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 		Conn:           conn,
+		LastConnect:    time.Now().Unix(),
 	}
 
 	scanner := bufio.NewScanner(conn)

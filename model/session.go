@@ -9,6 +9,7 @@ import (
 type Session struct {
 	ID              uint `gorm:"primary_key"`
 	LastSeen        int64
+	LastConnect     int64
 	ExpiryInterval  int64
 	ClientId        string `gorm:"uniqueIndex:client_unique_session_idx"`
 	Connected       bool
@@ -32,6 +33,7 @@ func PersistSession(db *gorm.DB, running *RunningSession, connected bool) (sessi
 	defer running.Mu.RUnlock()
 	sess := Session{
 		LastSeen:        running.LastSeen,
+		LastConnect:     running.LastConnect,
 		ExpiryInterval:  running.ExpiryInterval,
 		ClientId:        running.ClientId,
 		Connected:       connected,
@@ -45,6 +47,7 @@ func (s *Session) UpdateFromRunning(running *RunningSession) {
 	running.Mu.RLock()
 	s.ProtocolVersion = running.ProtocolVersion
 	s.ExpiryInterval = running.ExpiryInterval
+	s.LastConnect = running.LastConnect
 	s.Connected = true
 	running.Mu.RUnlock()
 }

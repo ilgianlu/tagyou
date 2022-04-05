@@ -13,6 +13,7 @@ type RunningSession struct {
 	ClientId        string
 	ProtocolVersion uint8
 	LastSeen        int64
+	LastConnect     int64
 	ExpiryInterval  int64
 	ConnectFlags    uint8
 	KeepAlive       int
