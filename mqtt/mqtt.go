@@ -107,7 +107,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 				log.Debug().Msgf("[MQTT] (%s:%d) will due to socket down!", session.GetClientId(), session.LastConnect)
 				willEvent(&session, events)
 				disconnectClient(&session, events)
-				return
+				return 0, nil, nil
 			}
 			return 0, b, bufio.ErrFinalToken
 		}
