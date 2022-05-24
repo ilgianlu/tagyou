@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"os"
 	"time"
@@ -113,7 +114,7 @@ func handleConnection(conn net.Conn, events chan<- *packet.Packet) {
 		}
 		pb, err := packet.ReadFromByteSlice(b)
 		if err != nil {
-			log.Error().Err(err).Msg("[MQTT] error reading bytes")
+			log.Error().Err(err).Msg(fmt.Sprintf("[MQTT] error reading bytes - session: %s\n", session.GetClientId()))
 			if !atEOF {
 				return 0, nil, nil
 			}
