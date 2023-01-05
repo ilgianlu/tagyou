@@ -10,6 +10,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/repository"
 	tpc "github.com/ilgianlu/tagyou/topic"
 	"gorm.io/gorm"
 )
@@ -20,7 +21,7 @@ func RangeEvents(connections *model.Connections, db *gorm.DB, events <-chan *pac
 		switch p.Event {
 		case packet.EVENT_CONNECT:
 			log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, clientId)
-			onConnect(db, connections, p, outQueue)
+			onConnect(connections, p, outQueue)
 		case packet.EVENT_SUBSCRIBED:
 			log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, clientId)
 			onSubscribe(db, p, outQueue)
@@ -83,7 +84,7 @@ func clientDisconnect(db *gorm.DB, p *packet.Packet, connections *model.Connecti
 		}
 		connections.Close(clientId)
 		connections.Remove(clientId)
-		model.DisconnectSession(db, clientId)
+		repository.Session.DisconnectSession(clientId)
 	}
 }
 
@@ -205,7 +206,7 @@ func saveRetain(db *gorm.DB, p *packet.Packet) {
 }
 
 func needDisconnection(db *gorm.DB, p *packet.Packet) bool {
-	if session, ok := model.SessionExists(db, p.Session.ClientId); ok {
+	if session, ok := repository.Session.SessionExists(p.Session.ClientId); ok {
 		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", p.Session.ClientId, session.LastConnect, p.Session.LastConnect)
 		if session.LastConnect > p.Session.LastConnect {
 			// session persisted is newer then running memory session... device reconnected!

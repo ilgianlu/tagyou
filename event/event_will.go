@@ -1,9 +1,9 @@
 package event
 
 import (
-	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/repository"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
@@ -22,7 +22,7 @@ func sendWill(db *gorm.DB, p *packet.Packet, outQueue chan<- out.OutData) {
 }
 
 func needWillSend(db *gorm.DB, p *packet.Packet) bool {
-	if session, ok := model.SessionExists(db, p.Session.ClientId); ok {
+	if session, ok := repository.Session.SessionExists(p.Session.ClientId); ok {
 		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", p.Session.ClientId, session.LastConnect, p.Session.LastConnect)
 		if session.LastConnect > p.Session.LastConnect {
 			// session persisted is newer then running memory session... device reconnected!

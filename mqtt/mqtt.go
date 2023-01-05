@@ -14,6 +14,8 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/repository"
+	"github.com/ilgianlu/tagyou/sqlrepository"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -26,6 +28,8 @@ func StartMQTT(port string) {
 		log.Fatal().Err(err).Msg("[MQTT] failed to connect database")
 	}
 	log.Info().Msg("[MQTT] db connected !")
+	repository.Auth = sqlrepository.AuthRepository{Db: db}
+	repository.Session = sqlrepository.SessionRepository{Db: db}
 	defer closeDb(db)
 
 	model.Migrate(db)

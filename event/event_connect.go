@@ -7,13 +7,13 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/repository"
 )
 
-func onConnect(db *gorm.DB, connections *model.Connections, p *packet.Packet, outQueue chan<- out.OutData) {
+func onConnect(connections *model.Connections, p *packet.Packet, outQueue chan<- out.OutData) {
 	clientId := p.Session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
-		if !doAuth(db, p.Session) {
+		if !doAuth(p.Session) {
 			return
 		}
 	}
@@ -23,19 +23,19 @@ func onConnect(db *gorm.DB, connections *model.Connections, p *packet.Packet, ou
 	}
 	connections.Add(clientId, p.Session.GetConn())
 
-	startSession(db, p.Session)
+	startSession(p.Session)
 
 	connack := packet.Connack(false, packet.CONNECT_OK, p.Session.GetProtocolVersion())
 	sendSimple(clientId, &connack, outQueue)
 }
 
-func doAuth(db *gorm.DB, session *model.RunningSession) bool {
+func doAuth(session *model.RunningSession) bool {
 	session.Mu.RLock()
 	clientId := session.ClientId
 	username := session.Username
 	password := session.Password
 	session.Mu.RUnlock()
-	ok, pubAcl, subAcl := model.CheckAuth(db, clientId, username, password)
+	ok, pubAcl, subAcl := CheckAuth(clientId, username, password)
 	if !ok {
 		log.Debug().Msg("[MQTT] wrong connect credentials")
 		return false
@@ -43,6 +43,20 @@ func doAuth(db *gorm.DB, session *model.RunningSession) bool {
 	session.ApplyAcl(pubAcl, subAcl)
 	log.Debug().Msgf("[MQTT] auth ok, imported acls %s, %s", pubAcl, subAcl)
 	return true
+}
+
+func CheckAuth(clientId string, username string, password string) (bool, string, string) {
+	auth, err := repository.Auth.GetByClientIdUsername(clientId, username)
+	if err != nil {
+		return false, "", ""
+	}
+
+	mAuth := model.Auth(auth)
+	if err := mAuth.CheckPassword(password); err != nil {
+		return false, "", ""
+	}
+
+	return true, auth.PublishAcl, auth.SubscribeAcl
 }
 
 func checkConnectionTakeOver(p *packet.Packet, connections *model.Connections, outQueue chan<- out.OutData) bool {
@@ -65,15 +79,15 @@ func checkConnectionTakeOver(p *packet.Packet, connections *model.Connections, o
 	return true
 }
 
-func startSession(db *gorm.DB, session *model.RunningSession) {
+func startSession(session *model.RunningSession) {
 	clientId := session.GetClientId()
-	if prevSession, ok := model.SessionExists(db, clientId); ok {
+	if prevSession, ok := repository.Session.SessionExists(clientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.ProtocolVersion {
 			log.Debug().Msgf("[MQTT] (%s) Cleaning previous session: Invalid or to clean", clientId)
-			if err := model.CleanSession(db, clientId); err != nil {
+			if err := repository.Session.CleanSession(clientId); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error removing previous session", clientId)
 			}
-			if id, err := model.PersistSession(db, session, true); err != nil {
+			if id, err := repository.Session.PersistSession(session, true); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 			} else {
 				session.ApplySessionId(id)
@@ -82,11 +96,11 @@ func startSession(db *gorm.DB, session *model.RunningSession) {
 			log.Debug().Msgf("%s Updating previous session from running", clientId)
 			session.ApplySessionId(prevSession.ID)
 			prevSession.UpdateFromRunning(session)
-			db.Save(&prevSession)
+			repository.Session.Save(&prevSession)
 		}
 	} else {
 		log.Debug().Msgf("[MQTT] (%s) Starting new session from running", clientId)
-		if id, err := model.PersistSession(db, session, true); err != nil {
+		if id, err := repository.Session.PersistSession(session, true); err != nil {
 			log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 		} else {
 			session.ApplySessionId(id)
