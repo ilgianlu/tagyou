@@ -4,16 +4,15 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
 )
 
-func RangeOutQueue(connections *model.Connections, db *gorm.DB, outQueue <-chan OutData) {
+func RangeOutQueue(connections *model.Connections, outQueue <-chan OutData) {
 	for o := range outQueue {
-		simpleSend(connections, db, o.ClientId, o.Packet)
+		simpleSend(connections, o.ClientId, o.Packet)
 	}
 }
 
-func simpleSend(connections *model.Connections, db *gorm.DB, clientId string, p []byte) {
+func simpleSend(connections *model.Connections, clientId string, p []byte) {
 	conn, exists := connections.Exists(clientId)
 	if exists {
 		if conn == nil {

@@ -5,26 +5,23 @@ import (
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func clientPuback(db *gorm.DB, p *packet.Packet) {
-	onRetryFound := func(db *gorm.DB, retry model.Retry) {
+func clientPuback(p *packet.Packet) {
+	onRetryFound := func(retry model.Retry) {
 		// if retry in wait for pub rec -> send pub rel
 		if retry.AckStatus == model.WAIT_FOR_PUB_ACK {
-			db.Delete(&retry)
+			persistence.RetryRepository.Delete(retry)
 		} else {
 			log.Info().Msgf("puback for invalid retry status %s %d %d", retry.ClientId, retry.PacketIdentifier, retry.AckStatus)
 		}
 	}
 
-	retry := model.Retry{
-		ClientId:         p.Session.GetClientId(),
-		PacketIdentifier: p.PacketIdentifier(),
-	}
-	if err := db.Find(&retry).Error; err != nil {
+	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifier(p.Session.GetClientId(), p.PacketIdentifier())
+	if err != nil {
 		log.Info().Msgf("puback for invalid retry %s %d", retry.ClientId, retry.PacketIdentifier)
 	} else {
-		onRetryFound(db, retry)
+		onRetryFound(retry)
 	}
 }

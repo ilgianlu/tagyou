@@ -5,7 +5,6 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 /**
@@ -16,15 +15,15 @@ Acl
 */
 
 type Auth struct {
-	ID                   uint   `gorm:"primaryKey"`
-	ClientId             string `gorm:"index:auth_cred_idx,unique"`
-	Username             string `gorm:"index:auth_cred_idx,unique"`
+	ID                   uint
+	ClientId             string
+	Username             string
 	Password             []byte `json:"-"`
 	SubscribeAcl         string
 	PublishAcl           string
 	CreatedAt            int64
-	InputPassword        string `gorm:"-" json:",omitempty"`
-	InputPasswordConfirm string `gorm:"-" json:",omitempty"`
+	InputPassword        string
+	InputPasswordConfirm string
 }
 
 func (a *Auth) Validate() bool {
@@ -44,7 +43,7 @@ func (a *Auth) ValidPassword() bool {
 	return false
 }
 
-func (a *Auth) checkPassword(password string) error {
+func (a *Auth) CheckPassword(password string) error {
 	return bcrypt.CompareHashAndPassword(a.Password, []byte(password))
 }
 
@@ -56,17 +55,4 @@ func (a *Auth) SetPassword(password string) error {
 	}
 	a.Password = pwd
 	return nil
-}
-
-func CheckAuth(db *gorm.DB, clientId string, username string, password string) (bool, string, string) {
-	var auth Auth
-	if err := db.Where("client_id = ? and username = ?", clientId, username).First(&auth).Error; err != nil {
-		return false, "", ""
-	}
-
-	if err := auth.checkPassword(password); err != nil {
-		return false, "", ""
-	}
-
-	return true, auth.PublishAcl, auth.SubscribeAcl
 }

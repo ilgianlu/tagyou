@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -14,63 +13,18 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 func StartMQTT(port string) {
-	conf.Loader()
-	db, err := openDb()
-	if err != nil {
-		log.Fatal().Err(err).Msg("[MQTT] failed to connect database")
-	}
-	log.Info().Msg("[MQTT] db connected !")
-	defer closeDb(db)
-
-	model.Migrate(db)
-
 	connections := model.Connections{}
 	connections.Conns = make(map[string]net.Conn)
 	events := make(chan *packet.Packet)
 	outQueue := make(chan out.OutData)
 
-	go event.RangeEvents(&connections, db, events, outQueue)
-	go out.RangeOutQueue(&connections, db, outQueue)
+	go event.RangeEvents(&connections, events, outQueue)
+	go out.RangeOutQueue(&connections, outQueue)
 
-	if conf.CLEAN_EXPIRED_SESSIONS {
-		StartSessionCleaner(db)
-	}
-	if conf.CLEAN_EXPIRED_RETRIES {
-		StartRetryCleaner(db)
-	}
 	startTCP(events, port)
-}
-
-func openDb() (*gorm.DB, error) {
-	logLevel := logger.Silent
-	if os.Getenv("DEBUG") != "" {
-		logLevel = logger.Info
-	}
-	return gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
-		Logger: logger.New(
-			&log.Logger,
-			logger.Config{
-				SlowThreshold: 200 * time.Millisecond,
-				LogLevel:      logLevel,
-				Colorful:      true,
-			},
-		),
-	})
-}
-
-func closeDb(db *gorm.DB) {
-	sql, err := db.DB()
-	if err != nil {
-		log.Error().Err(err).Msg("could not close DB")
-		return
-	}
-	sql.Close()
 }
 
 func startTCP(events chan<- *packet.Packet, port string) {
