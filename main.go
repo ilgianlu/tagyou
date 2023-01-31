@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/ilgianlu/tagyou/api"
+	"github.com/ilgianlu/tagyou/cleanup"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	mq "github.com/ilgianlu/tagyou/mqtt"
@@ -44,10 +45,10 @@ func main() {
 	persistence.InitSqlRepositories(db)
 
 	if conf.CLEAN_EXPIRED_SESSIONS {
-		StartSessionCleaner(db)
+		cleanup.StartSessionCleaner(db)
 	}
 	if conf.CLEAN_EXPIRED_RETRIES {
-		StartRetryCleaner(db)
+		cleanup.StartRetryCleaner(db)
 	}
 
 	go api.StartApi(os.Getenv("API_PORT"))
@@ -56,7 +57,7 @@ func main() {
 
 func loadEnv() error {
 	env := os.Getenv("TAGYOU_ENV")
-	if "" == env {
+	if env == "" {
 		env = "default"
 	}
 	return dotenv.Load(".env." + env + ".local")
