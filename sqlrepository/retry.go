@@ -1,18 +1,9 @@
 package sqlrepository
 
 import (
-	"time"
-
-	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/model"
+	"gorm.io/gorm"
 )
-
-// qos 1
-const WAIT_FOR_PUB_ACK = 10
-
-// qos 2
-const WAIT_FOR_PUB_REC = 20
-const WAIT_FOR_PUB_REL = 20
-const WAIT_FOR_PUB_COMP = 21
 
 type Retry struct {
 	ID                 uint   `gorm:"primaryKey"`
@@ -25,9 +16,12 @@ type Retry struct {
 	AckStatus          uint8
 	CreatedAt          int64
 	SessionID          uint
-	ReasonCode         uint8 `gorm:"-"`
 }
 
-func (r Retry) Expired() bool {
-	return r.CreatedAt+int64(conf.RETRY_EXPIRATION) < time.Now().Unix()
+type RetrySqlRepository struct {
+	Db *gorm.DB
+}
+
+func (r RetrySqlRepository) SaveOne(retry model.Retry) error {
+	return r.Db.Save(&retry).Error
 }

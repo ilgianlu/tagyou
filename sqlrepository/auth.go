@@ -24,11 +24,11 @@ type Auth struct {
 	InputPasswordConfirm string `gorm:"-" json:",omitempty"`
 }
 
-type AuthRepository struct {
+type AuthSqlRepository struct {
 	Db *gorm.DB
 }
 
-func (ar AuthRepository) GetByClientIdUsername(clientId string, username string) (model.Auth, error) {
+func (ar AuthSqlRepository) GetByClientIdUsername(clientId string, username string) (model.Auth, error) {
 	var auth Auth
 	if err := ar.Db.Where("client_id = ? and username = ?", clientId, username).First(&auth).Error; err != nil {
 		return model.Auth{}, err

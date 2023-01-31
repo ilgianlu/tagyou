@@ -1,7 +1,7 @@
 package repository
 
-type Retain struct {
-	Topic              string `gorm:"primaryKey"`
-	ApplicationMessage []byte
-	CreatedAt          int64
+import "github.com/ilgianlu/tagyou/model"
+
+type RetainRepository interface {
+	FindRetains(subscribedTopic string) []model.Retain
 }

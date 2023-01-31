@@ -1,9 +1,5 @@
 package model
 
-import (
-	"gorm.io/gorm"
-)
-
 type Subscription struct {
 	ID                uint   `gorm:"primary_key"`
 	ClientId          string `gorm:"uniqueIndex:sub_pars_idx"`
@@ -21,20 +17,3 @@ type Subscription struct {
 }
 
 type SubscriptionGroup map[string][]Subscription
-
-func (s *Subscription) IsOnline(db *gorm.DB) bool {
-	session := Session{}
-	if err := db.Where("id = ?", s.SessionID).First(&session).Error; err != nil {
-		return false
-	} else {
-		return session.Connected
-	}
-}
-
-func FindToUnsubscribe(db *gorm.DB, shareName string, topic string, clientId string) (Subscription, error) {
-	var sub Subscription
-	if err := db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).First(&sub).Error; err != nil {
-		return sub, err
-	}
-	return sub, nil
-}

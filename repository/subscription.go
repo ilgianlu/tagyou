@@ -1,40 +1,12 @@
 package repository
 
-import (
-	"gorm.io/gorm"
-)
+import "github.com/ilgianlu/tagyou/model"
 
-type Subscription struct {
-	ID                uint   `gorm:"primary_key"`
-	ClientId          string `gorm:"uniqueIndex:sub_pars_idx"`
-	Topic             string `gorm:"uniqueIndex:sub_pars_idx"`
-	RetainHandling    uint8
-	RetainAsPublished uint8
-	NoLocal           uint8
-	Qos               uint8
-	ProtocolVersion   uint8
-	Enabled           bool
-	CreatedAt         int64
-	SessionID         uint
-	Shared            bool   `gorm:"default:false"`
-	ShareName         string `gorm:"uniqueIndex:sub_pars_idx"`
-}
-
-type SubscriptionGroup map[string][]Subscription
-
-func (s *Subscription) IsOnline(db *gorm.DB) bool {
-	session := Session{}
-	if err := db.Where("id = ?", s.SessionID).First(&session).Error; err != nil {
-		return false
-	} else {
-		return session.Connected
-	}
-}
-
-func FindToUnsubscribe(db *gorm.DB, shareName string, topic string, clientId string) (Subscription, error) {
-	var sub Subscription
-	if err := db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).First(&sub).Error; err != nil {
-		return sub, err
-	}
-	return sub, nil
+type SubscriptionRepository interface {
+	CreateOne(model.Subscription) error
+	DeleteOne(model.Subscription) error
+	FindToUnsubscribe(shareName string, topic string, clientId string) (model.Subscription, error)
+	FindSubscriptions(topics []string, shared bool) []model.Subscription
+	FindOrderedSubscriptions(topics []string, shared bool, orderField string) []model.Subscription
+	IsOnline(sub model.Subscription) bool
 }

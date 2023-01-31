@@ -25,11 +25,11 @@ func (s *Session) BeforeDelete(tx *gorm.DB) (err error) {
 	return nil
 }
 
-type SessionRepository struct {
+type SessionSqlRepository struct {
 	Db *gorm.DB
 }
 
-func (sr SessionRepository) PersistSession(running *model.RunningSession, connected bool) (sessionId uint, err error) {
+func (sr SessionSqlRepository) PersistSession(running *model.RunningSession, connected bool) (sessionId uint, err error) {
 	running.Mu.RLock()
 	defer running.Mu.RUnlock()
 	sess := Session{
@@ -44,7 +44,7 @@ func (sr SessionRepository) PersistSession(running *model.RunningSession, connec
 	return sess.ID, saveErr
 }
 
-func (sr SessionRepository) CleanSession(clientId string) error {
+func (sr SessionSqlRepository) CleanSession(clientId string) error {
 	sess := Session{}
 	if err := sr.Db.Where("client_id = ?", clientId).First(&sess).Error; err != nil {
 		return err
@@ -52,7 +52,7 @@ func (sr SessionRepository) CleanSession(clientId string) error {
 	return sr.Db.Delete(&sess).Error
 }
 
-func (sr SessionRepository) SessionExists(clientId string) (model.Session, bool) {
+func (sr SessionSqlRepository) SessionExists(clientId string) (model.Session, bool) {
 	session := Session{}
 	if err := sr.Db.Where("client_id = ?", clientId).First(&session).Error; err != nil {
 		return model.Session{}, false
@@ -70,13 +70,31 @@ func (sr SessionRepository) SessionExists(clientId string) (model.Session, bool)
 	}
 }
 
-func (sr SessionRepository) DisconnectSession(clientId string) {
+func (sr SessionSqlRepository) DisconnectSession(clientId string) {
 	sr.Db.Model(&Session{}).Where("client_id = ?", clientId).Updates(map[string]interface{}{
 		"Connected": false,
 		"LastSeen":  time.Now().Unix(),
 	})
 }
 
-func (sr SessionRepository) Save(session *model.Session) {
+func (sr SessionSqlRepository) GetById(sessionId uint) (model.Session, error) {
+	var session Session
+	if err := sr.Db.Where("id = ?", sessionId).First(&session).Error; err != nil {
+		return model.Session{}, err
+	}
+
+	mSession := model.Session{
+		ID:              session.ID,
+		LastSeen:        session.LastSeen,
+		LastConnect:     session.LastConnect,
+		ExpiryInterval:  session.ExpiryInterval,
+		ClientId:        session.ClientId,
+		Connected:       session.Connected,
+		ProtocolVersion: session.ProtocolVersion,
+	}
+	return mSession, nil
+}
+
+func (sr SessionSqlRepository) Save(session *model.Session) {
 	sr.Db.Save(session)
 }
