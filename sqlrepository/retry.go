@@ -25,3 +25,28 @@ type RetrySqlRepository struct {
 func (r RetrySqlRepository) SaveOne(retry model.Retry) error {
 	return r.Db.Save(&retry).Error
 }
+
+func (r RetrySqlRepository) Delete(retry model.Retry) error {
+	return r.Db.Delete(&retry).Error
+}
+
+func (r RetrySqlRepository) FirstByClientIdPacketIdentifier(clientId string, packetIdentifier int) (model.Retry, error) {
+	retry := model.Retry{
+		ClientId:         clientId,
+		PacketIdentifier: packetIdentifier,
+	}
+	err := r.Db.First(&retry).Error
+
+	return retry, err
+}
+
+func (r RetrySqlRepository) FirstByClientIdPacketIdentifierReasonCode(clientId string, packetIdentifier int, reasonCode uint8) (model.Retry, error) {
+	retry := model.Retry{
+		ClientId:         clientId,
+		PacketIdentifier: packetIdentifier,
+		ReasonCode:       reasonCode,
+	}
+	err := r.Db.First(&retry).Error
+
+	return retry, err
+}

@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/persistence"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -34,6 +35,8 @@ func TestGroupSubscribers(t *testing.T) {
 
 	model.Migrate(db)
 
+	persistence.InitSqlRepositories(db)
+
 	db.Exec("DELETE FROM sessions")
 	db.Exec("DELETE FROM subscriptions")
 	sess1 := model.Session{ID: 1, Connected: true}
@@ -52,7 +55,7 @@ func TestGroupSubscribers(t *testing.T) {
 	sessions := []model.Session{sess1, sess2, sess3, sess4, sess5, sess6}
 	db.Create(&ungrouped)
 	db.Create(&sessions)
-	groups := groupSubscribers(db, ungrouped)
+	groups := groupSubscribers(ungrouped)
 	if group, ok := groups["share1"]; ok {
 		res := []uint{sess1.ID, sess3.ID}
 		data := []uint{}

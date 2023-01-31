@@ -7,7 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/ilgianlu/tagyou/repository"
+	"github.com/ilgianlu/tagyou/persistence"
 )
 
 func onConnect(connections *model.Connections, p *packet.Packet, outQueue chan<- out.OutData) {
@@ -46,7 +46,7 @@ func doAuth(session *model.RunningSession) bool {
 }
 
 func CheckAuth(clientId string, username string, password string) (bool, string, string) {
-	auth, err := repository.Auth.GetByClientIdUsername(clientId, username)
+	auth, err := persistence.AuthRepository.GetByClientIdUsername(clientId, username)
 	if err != nil {
 		return false, "", ""
 	}
@@ -81,13 +81,13 @@ func checkConnectionTakeOver(p *packet.Packet, connections *model.Connections, o
 
 func startSession(session *model.RunningSession) {
 	clientId := session.GetClientId()
-	if prevSession, ok := repository.Session.SessionExists(clientId); ok {
+	if prevSession, ok := persistence.SessionRepository.SessionExists(clientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.ProtocolVersion {
 			log.Debug().Msgf("[MQTT] (%s) Cleaning previous session: Invalid or to clean", clientId)
-			if err := repository.Session.CleanSession(clientId); err != nil {
+			if err := persistence.SessionRepository.CleanSession(clientId); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error removing previous session", clientId)
 			}
-			if id, err := repository.Session.PersistSession(session, true); err != nil {
+			if id, err := persistence.SessionRepository.PersistSession(session, true); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 			} else {
 				session.ApplySessionId(id)
@@ -96,11 +96,11 @@ func startSession(session *model.RunningSession) {
 			log.Debug().Msgf("%s Updating previous session from running", clientId)
 			session.ApplySessionId(prevSession.ID)
 			prevSession.UpdateFromRunning(session)
-			repository.Session.Save(&prevSession)
+			persistence.SessionRepository.Save(&prevSession)
 		}
 	} else {
 		log.Debug().Msgf("[MQTT] (%s) Starting new session from running", clientId)
-		if id, err := repository.Session.PersistSession(session, true); err != nil {
+		if id, err := persistence.SessionRepository.PersistSession(session, true); err != nil {
 			log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 		} else {
 			session.ApplySessionId(id)

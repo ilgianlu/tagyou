@@ -25,6 +25,14 @@ func (r RetainSqlRepository) FindRetains(subscribedTopic string) []model.Retain 
 	return retains
 }
 
+func (r RetainSqlRepository) Create(retain model.Retain) error {
+	return r.Db.Create(&retain).Error
+}
+
+func (r RetainSqlRepository) Delete(retain model.Retain) error {
+	return r.Db.Delete(&retain).Error
+}
+
 func trimWildcard(topic string) string {
 	lci := len(topic) - 1
 	lc := topic[lci]
