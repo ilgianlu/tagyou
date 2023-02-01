@@ -64,6 +64,6 @@ func (s SubscriptionSqlRepository) IsOnline(sub model.Subscription) bool {
 	}
 }
 
-func (s SubscriptionSqlRepository) DeleteOne(sub model.Subscription) error {
-	return s.Db.Delete(&sub).Error
+func (s SubscriptionSqlRepository) DeleteByClientIdTopicShareName(clientId string, topic string, shareName string) error {
+	return s.Db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).Delete(&Subscription{}).Error
 }

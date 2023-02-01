@@ -49,7 +49,7 @@ func TestClientUnsubscription(t *testing.T) {
 		t.Errorf("expecting 17 (no subscription to unsub), received %d", res)
 	}
 
-	res = clientUnsubscription("pluto", model.Subscription{Topic: "sharedTopic1", ShareName: "share2"})
+	res = clientUnsubscription("pluto", model.Subscription{ClientId: "pluto", Topic: "sharedTopic1", ShareName: "share2"})
 	if res != 0 {
 		t.Errorf("expecting 0 (success), received %d", res)
 	}

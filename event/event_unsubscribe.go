@@ -33,7 +33,7 @@ func clientUnsubscription(clientId string, unsub model.Subscription) uint8 {
 		log.Error().Err(err).Msg("error unsubscribing")
 		return conf.UNSUB_NO_SUB_EXISTED
 	} else {
-		persistence.SubscriptionRepository.DeleteOne(sub)
+		persistence.SubscriptionRepository.DeleteByClientIdTopicShareName(clientId, sub.Topic, sub.ShareName)
 		return conf.SUCCESS
 	}
 }
