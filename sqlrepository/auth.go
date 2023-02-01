@@ -16,7 +16,7 @@ type Auth struct {
 	ID                   uint   `gorm:"primaryKey"`
 	ClientId             string `gorm:"index:auth_cred_idx,unique"`
 	Username             string `gorm:"index:auth_cred_idx,unique"`
-	Password             []byte `json:"-"`
+	Password             []byte
 	SubscribeAcl         string
 	PublishAcl           string
 	CreatedAt            int64
@@ -34,5 +34,16 @@ func (ar AuthSqlRepository) GetByClientIdUsername(clientId string, username stri
 		return model.Auth{}, err
 	}
 
-	return model.Auth(auth), nil
+	mAuth := model.Auth{
+		ClientId:             auth.ClientId,
+		Username:             auth.Username,
+		Password:             auth.Password,
+		SubscribeAcl:         auth.SubscribeAcl,
+		PublishAcl:           auth.PublishAcl,
+		CreatedAt:            auth.CreatedAt,
+		InputPassword:        auth.InputPassword,
+		InputPasswordConfirm: auth.InputPasswordConfirm,
+	}
+
+	return mAuth, nil
 }

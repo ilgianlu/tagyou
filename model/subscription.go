@@ -1,7 +1,6 @@
 package model
 
 type Subscription struct {
-	ID                uint
 	ClientId          string
 	Topic             string
 	RetainHandling    uint8

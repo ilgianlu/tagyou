@@ -1,7 +1,7 @@
 package model
 
 type Retain struct {
-	Topic              string `gorm:"primaryKey"`
+	Topic              string
 	ApplicationMessage []byte
 	CreatedAt          int64
 }

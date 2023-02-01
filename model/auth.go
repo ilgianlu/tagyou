@@ -15,7 +15,6 @@ Acl
 */
 
 type Auth struct {
-	ID                   uint
 	ClientId             string
 	Username             string
 	Password             []byte `json:"-"`
