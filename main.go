@@ -13,9 +13,9 @@ import (
 	"github.com/ilgianlu/tagyou/api"
 	"github.com/ilgianlu/tagyou/cleanup"
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/model"
 	mq "github.com/ilgianlu/tagyou/mqtt"
 	"github.com/ilgianlu/tagyou/persistence"
+	"github.com/ilgianlu/tagyou/sqlrepository"
 	dotenv "github.com/joho/godotenv"
 )
 
@@ -40,7 +40,7 @@ func main() {
 	log.Info().Msg("[MQTT] db connected !")
 	defer closeDb(db)
 
-	model.Migrate(db)
+	sqlrepository.Migrate(db)
 
 	persistence.InitSqlRepositories(db)
 

@@ -21,3 +21,21 @@ func InitSqlRepositories(db *gorm.DB) {
 	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
 	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
 }
+
+func Migrate(db *gorm.DB) {
+	if err := db.AutoMigrate(&sqlrepository.Auth{}); err != nil {
+		return
+	}
+	if err := db.AutoMigrate(&sqlrepository.Retry{}); err != nil {
+		return
+	}
+	if err := db.AutoMigrate(&sqlrepository.Retain{}); err != nil {
+		return
+	}
+	if err := db.AutoMigrate(&sqlrepository.Session{}); err != nil {
+		return
+	}
+	if err := db.AutoMigrate(&sqlrepository.Subscription{}); err != nil {
+		return
+	}
+}

@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/sqlrepository"
 	"github.com/rs/zerolog/log"
 
 	"github.com/julienschmidt/httprouter"
@@ -18,7 +18,7 @@ func TestGetSessions(t *testing.T) {
 	if err != nil {
 		log.Fatal().Msgf("[API] [TEST] failed to connect database %s", err)
 	}
-	model.Migrate(db)
+	sqlrepository.Migrate(db)
 	// db.LogMode(true)
 	defer closeDb(db)
 	r := httptest.NewRequest(http.MethodGet, "/sessions", nil)

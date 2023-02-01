@@ -8,6 +8,7 @@ import (
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
+	"github.com/ilgianlu/tagyou/sqlrepository"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -19,7 +20,7 @@ func TestClientUnsubscription(t *testing.T) {
 		log.Fatal().Err(err).Msg("[API] failed to connect database")
 	}
 
-	model.Migrate(db)
+	sqlrepository.Migrate(db)
 
 	persistence.InitSqlRepositories(db)
 
