@@ -1,52 +1,90 @@
 package badgerrepository
 
 import (
+	"strconv"
+
+	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
 )
 
-type Retry struct {
-	ID                 uint   `gorm:"primaryKey"`
-	ClientId           string `gorm:"uniqueIndex:client_identifier_idx"`
-	ApplicationMessage []byte
-	PacketIdentifier   int `gorm:"uniqueIndex:client_identifier_idx"`
-	Qos                uint8
-	Dup                bool
-	Retries            uint8
-	AckStatus          uint8
-	CreatedAt          int64
-	SessionID          uint
+type RetryBadgerRepository struct {
+	Db *badger.DB
 }
 
-type RetrySqlRepository struct {
-	Db *gorm.DB
+func RetryKey(clientId string, packetIdentifier int, reasonCode uint8) []byte {
+	k := []byte(clientId)
+	k = append(k, []byte(strconv.Itoa(packetIdentifier))...)
+	k = append(k, reasonCode)
+	return k
 }
 
-func (r RetrySqlRepository) SaveOne(retry model.Retry) error {
-	return r.Db.Save(&retry).Error
+func RetryPrefix(clientId string, packetIdentifier int) []byte {
+	k := []byte(clientId)
+	k = append(k, []byte(strconv.Itoa(packetIdentifier))...)
+	return k
 }
 
-func (r RetrySqlRepository) Delete(retry model.Retry) error {
-	return r.Db.Delete(&retry).Error
+func RetryValue(retry model.Retry) ([]byte, error) {
+	return model.GobEncode(retry)
 }
 
-func (r RetrySqlRepository) FirstByClientIdPacketIdentifier(clientId string, packetIdentifier int) (model.Retry, error) {
-	retry := model.Retry{
-		ClientId:         clientId,
-		PacketIdentifier: packetIdentifier,
-	}
-	err := r.Db.First(&retry).Error
-
-	return retry, err
+func (r RetryBadgerRepository) SaveOne(retry model.Retry) error {
+	return r.Db.Update(func(txn *badger.Txn) error {
+		k := RetryKey(retry.ClientId, retry.PacketIdentifier, retry.ReasonCode)
+		v, err := RetryValue(retry)
+		if err != nil {
+			return err
+		}
+		return txn.Set(k, v)
+	})
 }
 
-func (r RetrySqlRepository) FirstByClientIdPacketIdentifierReasonCode(clientId string, packetIdentifier int, reasonCode uint8) (model.Retry, error) {
-	retry := model.Retry{
-		ClientId:         clientId,
-		PacketIdentifier: packetIdentifier,
-		ReasonCode:       reasonCode,
-	}
-	err := r.Db.First(&retry).Error
+func (r RetryBadgerRepository) Delete(retry model.Retry) error {
+	return r.Db.Update(func(txn *badger.Txn) error {
+		k := RetryKey(retry.ClientId, retry.PacketIdentifier, retry.ReasonCode)
+		return txn.Delete(k)
+	})
+}
 
-	return retry, err
+func (r RetryBadgerRepository) FirstByClientIdPacketIdentifier(clientId string, packetIdentifier int) (model.Retry, error) {
+	var retry model.Retry
+	r.Db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.ValidForPrefix(RetryPrefix(clientId, packetIdentifier)); it.Next() {
+			item := it.Item()
+			item.Value(func(val []byte) error {
+				ret, err := model.GobDecode[model.Retry](val)
+				if err != nil {
+					return err
+				}
+				retry = ret
+				return nil
+			})
+		}
+		return nil
+	})
+	return retry, nil
+}
+
+func (r RetryBadgerRepository) FirstByClientIdPacketIdentifierReasonCode(clientId string, packetIdentifier int, reasonCode uint8) (model.Retry, error) {
+	key := RetryKey(clientId, packetIdentifier, reasonCode)
+	ret := model.Retry{}
+
+	err := r.Db.View(func(txn *badger.Txn) error {
+		rItem, err := txn.Get([]byte(key))
+		if err != nil {
+			return err
+		}
+		rItem.Value(func(val []byte) error {
+			ret, err = model.GobDecode[model.Retry](val)
+			return err
+		})
+
+		return err
+	})
+
+	return ret, err
 }
