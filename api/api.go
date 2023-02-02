@@ -14,19 +14,9 @@ import (
 	SubscriptionController "github.com/ilgianlu/tagyou/api/controllers/subscription"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/julienschmidt/httprouter"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 func StartApi(httpPort string) {
-	db, err := openDb()
-	if err != nil {
-		log.Fatal().Err(err).Msgf("[API] failed to connect database %s", os.Getenv("DB_PATH")+os.Getenv("DB_NAME"))
-	}
-	log.Info().Msg("[API] db connected !")
-	defer closeDb(db)
-
 	clientOptions := mqtt.NewClientOptions().
 		SetClientID("api").
 		AddBroker(os.Getenv("LISTEN_PORT")).
@@ -40,45 +30,19 @@ func StartApi(httpPort string) {
 	go mqttConnect(c)
 
 	r := httprouter.New()
-	uc := AuthController.New(db)
+	uc := AuthController.New()
 	uc.RegisterRoutes(r)
-	sc := SessionController.New(db)
+	sc := SessionController.New()
 	sc.RegisterRoutes(r)
 	mc := MessageController.New(c)
 	mc.RegisterRoutes(r)
-	subc := SubscriptionController.New(db)
+	subc := SubscriptionController.New()
 	subc.RegisterRoutes(r)
 
 	log.Info().Msgf("[API] http listening on %s", httpPort)
 	if err := http.ListenAndServe(httpPort, r); err != nil {
 		log.Fatal().Err(err).Msg("[API] http listener broken")
 	}
-}
-
-func openDb() (*gorm.DB, error) {
-	logLevel := logger.Silent
-	if os.Getenv("DEBUG") != "" {
-		logLevel = logger.Info
-	}
-	return gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
-		Logger: logger.New(
-			&log.Logger,
-			logger.Config{
-				SlowThreshold: 200 * time.Millisecond,
-				LogLevel:      logLevel,
-				Colorful:      true,
-			},
-		),
-	})
-}
-
-func closeDb(db *gorm.DB) {
-	sql, err := db.DB()
-	if err != nil {
-		log.Fatal().Err(err).Msg("[API] could not close DB")
-		return
-	}
-	sql.Close()
 }
 
 func mqttConnect(c mqtt.Client) {

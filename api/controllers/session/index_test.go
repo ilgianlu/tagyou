@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/sqlrepository"
 	"github.com/rs/zerolog/log"
 
@@ -19,10 +20,11 @@ func TestGetSessions(t *testing.T) {
 		log.Fatal().Msgf("[API] [TEST] failed to connect database %s", err)
 	}
 	sqlrepository.Migrate(db)
+	persistence.InitSqlRepositories(db)
 	// db.LogMode(true)
 	defer closeDb(db)
 	r := httptest.NewRequest(http.MethodGet, "/sessions", nil)
-	sc := New(db)
+	sc := New()
 	recorder := httptest.NewRecorder()
 	params := httprouter.Params{}
 	sc.GetSessions(recorder, r, params)

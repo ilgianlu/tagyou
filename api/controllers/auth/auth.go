@@ -1,54 +1,44 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
-	"gorm.io/gorm"
 )
 
 const resourceName string = "/auths"
 
 type AuthController struct {
-	db *gorm.DB
 }
 
-func New(db *gorm.DB) *AuthController {
-	return &AuthController{db}
+func New() *AuthController {
+	return &AuthController{}
 }
 
 func (uc AuthController) RegisterRoutes(r *httprouter.Router) {
 	r.GET(resourceName, uc.GetAuths)
 	r.GET(resourceName+"/:id", uc.GetAuth)
 	r.POST(resourceName, uc.CreateAuth)
-	r.PUT(resourceName+"/:id", uc.UpdateAuth)
 	r.DELETE(resourceName+"/:id", uc.RemoveAuth)
 }
 
 func (uc AuthController) getOne(w http.ResponseWriter, r *http.Request, p httprouter.Params) (model.Auth, error) {
-	auth := model.Auth{}
-
 	id := p.ByName("id")
-	authId, err := strconv.Atoi(id)
-	if err != nil {
-		log.Printf("passing bad id: %s\n", err)
+
+	idParts := strings.Split(id, "-")
+	if len(idParts) != 2 {
 		w.WriteHeader(http.StatusBadRequest)
-		return auth, fmt.Errorf("passing bad id: %s\n", err)
+		return model.Auth{}, fmt.Errorf("invalid auth id")
 	}
 
-	if err := uc.db.Where("id = ?", authId).First(&auth).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			w.WriteHeader(http.StatusNoContent)
-			return auth, fmt.Errorf("error getting auth row: %s\n", err)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			return auth, fmt.Errorf("error getting auth row: %s\n", err)
-		}
+	auth, err := persistence.AuthRepository.GetByClientIdUsername(idParts[0], idParts[1])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return auth, fmt.Errorf("error getting auth row: %s", err)
 	}
 
 	return auth, nil

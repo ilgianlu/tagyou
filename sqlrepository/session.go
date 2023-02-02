@@ -29,6 +29,27 @@ type SessionSqlRepository struct {
 	Db *gorm.DB
 }
 
+func MapSession(session Session) model.Session {
+	mSession := model.Session{
+		ID:              session.ID,
+		LastSeen:        session.LastSeen,
+		LastConnect:     session.LastConnect,
+		ExpiryInterval:  session.ExpiryInterval,
+		ClientId:        session.ClientId,
+		Connected:       session.Connected,
+		ProtocolVersion: session.ProtocolVersion,
+	}
+	return mSession
+}
+
+func MapSessions(sessions []Session) []model.Session {
+	mSessions := []model.Session{}
+	for _, s := range sessions {
+		mSessions = append(mSessions, MapSession(s))
+	}
+	return mSessions
+}
+
 func (sr SessionSqlRepository) PersistSession(running *model.RunningSession, connected bool) (sessionId uint, err error) {
 	running.Mu.RLock()
 	defer running.Mu.RUnlock()
@@ -95,6 +116,15 @@ func (sr SessionSqlRepository) GetById(sessionId uint) (model.Session, error) {
 	return mSession, nil
 }
 
+func (sr SessionSqlRepository) GetAll() []model.Session {
+	sessions := []Session{}
+	if err := sr.Db.Find(&sessions).Error; err != nil {
+		return []model.Session{}
+	}
+
+	return MapSessions(sessions)
+}
+
 func (sr SessionSqlRepository) Save(session *model.Session) {
-	sr.Db.Save(session)
+	sr.Db.Save(&session)
 }
