@@ -2,20 +2,16 @@ package session
 
 import (
 	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"net/http"
 
-	"github.com/ilgianlu/tagyou/model"
+	"github.com/rs/zerolog/log"
+
+	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
 )
 
 func (sc SessionController) GetSessions(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	sessions := []model.Session{}
-	if err := sc.db.Find(&sessions).Error; err != nil {
-		log.Printf("error getting session rows: %s\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	sessions := persistence.SessionRepository.GetAll()
 	if res, err := json.Marshal(sessions); err != nil {
 		log.Printf("error marshaling session rows: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)

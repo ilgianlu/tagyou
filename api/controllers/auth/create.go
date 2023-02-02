@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -27,7 +28,7 @@ func (uc AuthController) CreateAuth(w http.ResponseWriter, r *http.Request, p ht
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if err := uc.db.Save(&auth).Error; err != nil {
+	if err := persistence.AuthRepository.Create(auth); err != nil {
 		log.Error().Err(err).Msg("error saving new auth")
 		w.WriteHeader(http.StatusInternalServerError)
 		return

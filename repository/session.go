@@ -10,5 +10,6 @@ type SessionRepository interface {
 	SessionExists(clientId string) (model.Session, bool)
 	DisconnectSession(clientId string)
 	GetById(sessionId uint) (model.Session, error)
+	GetAll() []model.Session
 	Save(*model.Session)
 }

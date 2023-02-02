@@ -9,4 +9,5 @@ type SubscriptionRepository interface {
 	FindSubscriptions(topics []string, shared bool) []model.Subscription
 	FindOrderedSubscriptions(topics []string, shared bool, orderField string) []model.Subscription
 	IsOnline(sub model.Subscription) bool
+	GetAll() []model.Subscription
 }
