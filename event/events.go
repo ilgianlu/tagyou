@@ -129,7 +129,7 @@ func send(topic string, s model.Subscription, p *packet.Packet, outQueue chan<- 
 }
 
 func sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet, outQueue chan<- out.OutData) {
-	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true, "share_name")
+	subs := persistence.SubscriptionRepository.FindSubscriptions(destSubs, true)
 	grouped := groupSubscribers(subs)
 	for _, group := range grouped {
 		dest := pickDest(group, 1)
@@ -150,10 +150,11 @@ func pickDest(group []model.Subscription, mode int8) model.Subscription {
 func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
 	grouped := model.SubscriptionGroup{}
 	for _, s := range subs {
+		if persistence.SessionRepository.IsOnline(s.ClientId) {
+			continue
+		}
 		if val, ok := grouped[s.ShareName]; ok {
-			if persistence.SessionRepository.IsOnline(s.ClientId) {
-				grouped[s.ShareName] = append(val, s)
-			}
+			grouped[s.ShareName] = append(val, s)
 		} else {
 			grouped[s.ShareName] = []model.Subscription{s}
 		}

@@ -15,7 +15,7 @@ func GobEncode(e any) ([]byte, error) {
 	return res.Bytes(), nil
 }
 
-func GobDecode[T Auth | Retain | Retry](v []byte) (T, error) {
+func GobDecode[T Auth | Retain | Retry | Session | Subscription](v []byte) (T, error) {
 	valReader := bytes.NewReader(v)
 	decoder := gob.NewDecoder(valReader)
 	var t T

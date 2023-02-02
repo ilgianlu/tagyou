@@ -1,69 +1,121 @@
 package badgerrepository
 
 import (
+	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/rs/zerolog/log"
-	"gorm.io/gorm"
 )
 
-type Subscription struct {
-	ID                uint   `gorm:"primary_key"`
-	ClientId          string `gorm:"uniqueIndex:sub_pars_idx"`
-	Topic             string `gorm:"uniqueIndex:sub_pars_idx"`
-	RetainHandling    uint8
-	RetainAsPublished uint8
-	NoLocal           uint8
-	Qos               uint8
-	ProtocolVersion   uint8
-	Enabled           bool
-	CreatedAt         int64
-	SessionID         uint
-	Shared            bool   `gorm:"default:false"`
-	ShareName         string `gorm:"uniqueIndex:sub_pars_idx"`
+type SubscriptionBadgerRepository struct {
+	Db *badger.DB
 }
 
-type SubscriptionSqlRepository struct {
-	Db *gorm.DB
+func SubscriptionKey(clientId string, topic string, shareName string) []byte {
+	k := []byte(topic)
+	k = append(k, 0x00)
+	k = append(k, []byte(clientId)...)
+	k = append(k, []byte(shareName)...)
+	return k
 }
 
-func (s SubscriptionSqlRepository) CreateOne(sub model.Subscription) error {
-	err := s.Db.Create(&sub).Error
-	return err
+func SubscriptionValue(sub model.Subscription) ([]byte, error) {
+	return model.GobEncode(sub)
 }
 
-func (s SubscriptionSqlRepository) FindToUnsubscribe(shareName string, topic string, clientId string) (model.Subscription, error) {
-	var sub model.Subscription
-	if err := s.Db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).First(&sub).Error; err != nil {
-		return sub, err
+func (s SubscriptionBadgerRepository) CreateOne(sub model.Subscription) error {
+	return s.Db.Update(func(txn *badger.Txn) error {
+		k := SubscriptionKey(sub.ClientId, sub.Topic, sub.ShareName)
+		v, err := SubscriptionValue(sub)
+		if err != nil {
+			return err
+		}
+		return txn.Set(k, v)
+	})
+}
+
+func (s SubscriptionBadgerRepository) FindToUnsubscribe(shareName string, topic string, clientId string) (model.Subscription, error) {
+	key := SubscriptionKey(clientId, topic, shareName)
+	sub := model.Subscription{}
+
+	err := s.Db.View(func(txn *badger.Txn) error {
+		sItem, err := txn.Get([]byte(key))
+		if err != nil {
+			return err
+		}
+		sItem.Value(func(val []byte) error {
+			sub, err = model.GobDecode[model.Subscription](val)
+			return err
+		})
+
+		return err
+	})
+
+	return sub, err
+}
+
+func (s SubscriptionBadgerRepository) FindSubscriptions(topics []string, shared bool) []model.Subscription {
+	subscriptions := []model.Subscription{}
+	for _, tpc := range topics {
+		subs := s.findBySubTopic(tpc)
+		subscriptions = append(subscriptions, subs...)
 	}
-	return sub, nil
-}
-
-func (s SubscriptionSqlRepository) FindSubscriptions(topics []string, shared bool) []model.Subscription {
-	subs := []model.Subscription{}
-	if err := s.Db.Where("topic IN (?)", topics).Where("shared = ?", shared).Find(&subs).Error; err != nil {
-		log.Error().Err(err).Msg("could not query for subscriptions")
+	result := []model.Subscription{}
+	for _, s := range subscriptions {
+		if s.Shared == shared {
+			result = append(result, s)
+		}
 	}
-	return subs
+	return result
 }
 
-func (s SubscriptionSqlRepository) FindOrderedSubscriptions(topics []string, shared bool, orderField string) []model.Subscription {
-	subs := []model.Subscription{}
-	if err := s.Db.Where("topic IN (?)", topics).Where("shared = ?", shared).Order(orderField).Find(&subs).Error; err != nil {
-		log.Error().Err(err).Msg("could not query for subscriptions")
-	}
-	return subs
+func (s SubscriptionBadgerRepository) findBySubTopic(topic string) []model.Subscription {
+	subscriptions := []model.Subscription{}
+	prefix := []byte(topic)
+	prefix = append(prefix, 0x00)
+	s.Db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			item.Value(func(val []byte) error {
+				sub, err := model.GobDecode[model.Subscription](val)
+				if err != nil {
+					return err
+				}
+				subscriptions = append(subscriptions, sub)
+				return nil
+			})
+		}
+		return nil
+	})
+	return subscriptions
 }
 
-func (s SubscriptionSqlRepository) IsOnline(sub model.Subscription) bool {
-	session := model.Session{}
-	if err := s.Db.Where("id = ?", sub.SessionID).First(&session).Error; err != nil {
-		return false
-	} else {
-		return session.Connected
-	}
+func (s SubscriptionBadgerRepository) DeleteByClientIdTopicShareName(clientId string, topic string, shareName string) error {
+	return s.Db.Update(func(txn *badger.Txn) error {
+		k := SubscriptionKey(clientId, topic, shareName)
+		return txn.Delete(k)
+	})
 }
 
-func (s SubscriptionSqlRepository) DeleteByClientIdTopicShareName(clientId string, topic string, shareName string) error {
-	return s.Db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).Delete(&Subscription{}).Error
+func (s SubscriptionBadgerRepository) GetAll() []model.Subscription {
+	subscriptions := []model.Subscription{}
+	s.Db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			item.Value(func(val []byte) error {
+				sub, err := model.GobDecode[model.Subscription](val)
+				if err != nil {
+					return err
+				}
+				subscriptions = append(subscriptions, sub)
+				return nil
+			})
+		}
+		return nil
+	})
+	return subscriptions
 }

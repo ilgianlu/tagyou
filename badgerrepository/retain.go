@@ -1,27 +1,18 @@
 package badgerrepository
 
 import (
-	"strings"
-
 	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/topic"
 )
-
-const RETAIN_PREFIX = "retain@"
 
 type RetainBadgerRepository struct {
 	Db *badger.DB
 }
 
 func RetainKey(topic string) []byte {
-	k := []byte(RETAIN_PREFIX)
-	k = append(k, []byte(topic)...)
+	k := []byte(topic)
 	return k
-}
-
-func TopicFromKey(key []byte) string {
-	return strings.TrimPrefix(string(key), RETAIN_PREFIX)
 }
 
 func RetainValue(retain model.Retain) ([]byte, error) {
@@ -37,8 +28,7 @@ func (r RetainBadgerRepository) FindRetains(subscribedTopic string) []model.Reta
 		defer it.Close()
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
-			tpc := TopicFromKey(item.Key())
-			if topic.Match(tpc, subscribedTopic) {
+			if topic.Match(string(item.Key()), subscribedTopic) {
 				item.Value(func(val []byte) error {
 					ret, err := model.GobDecode[model.Retain](val)
 					if err != nil {

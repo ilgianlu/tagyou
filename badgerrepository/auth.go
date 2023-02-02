@@ -5,11 +5,8 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-const AUTH_PREFIX = "auth@"
-
 func AuthKey(clientId string, username string) []byte {
-	k := []byte(AUTH_PREFIX)
-	k = append(k, []byte(clientId)...)
+	k := []byte(clientId)
 	k = append(k, []byte(username)...)
 	return k
 }

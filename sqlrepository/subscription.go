@@ -47,14 +47,6 @@ func (s SubscriptionSqlRepository) FindSubscriptions(topics []string, shared boo
 	return subs
 }
 
-func (s SubscriptionSqlRepository) FindOrderedSubscriptions(topics []string, shared bool, orderField string) []model.Subscription {
-	subs := []model.Subscription{}
-	if err := s.Db.Where("topic IN (?)", topics).Where("shared = ?", shared).Order(orderField).Find(&subs).Error; err != nil {
-		log.Error().Err(err).Msg("could not query for subscriptions")
-	}
-	return subs
-}
-
 func (s SubscriptionSqlRepository) DeleteByClientIdTopicShareName(clientId string, topic string, shareName string) error {
 	return s.Db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).Delete(&Subscription{}).Error
 }

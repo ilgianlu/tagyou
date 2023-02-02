@@ -12,6 +12,8 @@ func InitBadgerRepositories() {
 	RetainRepository = badgerrepository.RetainBadgerRepository{Db: dbb}
 	dbc, _ := badger.Open(badger.DefaultOptions("db/retry.db"))
 	RetryRepository = badgerrepository.RetryBadgerRepository{Db: dbc}
-	// SessionRepository = badgerrepository.SessionBadgerRepository{Db: db}
-	// SubscriptionRepository = badgerrepository.SubscriptionBadgerRepository{Db: db}
+	dbd, _ := badger.Open(badger.DefaultOptions("db/session.db"))
+	SessionRepository = badgerrepository.SessionBadgerRepository{Db: dbd}
+	dbe, _ := badger.Open(badger.DefaultOptions("db/subscription.db"))
+	SubscriptionRepository = badgerrepository.SubscriptionBadgerRepository{Db: dbe}
 }

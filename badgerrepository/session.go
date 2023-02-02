@@ -3,36 +3,37 @@ package badgerrepository
 import (
 	"time"
 
+	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
 )
 
-type Session struct {
-	ID              uint `gorm:"primary_key"`
-	LastSeen        int64
-	LastConnect     int64
-	ExpiryInterval  int64
-	ClientId        string `gorm:"uniqueIndex:client_unique_session_idx"`
-	Connected       bool
-	ProtocolVersion uint8
-	Subscriptions   []Subscription `json:"-"`
-	Retries         []Retry        `json:"-"`
+type SessionBadgerRepository struct {
+	Db *badger.DB
 }
 
-func (s *Session) BeforeDelete(tx *gorm.DB) (err error) {
-	tx.Where("session_id = ?", s.ID).Delete(&Subscription{})
-	tx.Where("session_id = ?", s.ID).Delete(&Retry{})
-	return nil
+func SessionKey(clientId string) []byte {
+	return []byte(clientId)
 }
 
-type SessionSqlRepository struct {
-	Db *gorm.DB
+func SessionValue(session model.Session) ([]byte, error) {
+	return model.GobEncode(session)
 }
 
-func (sr SessionSqlRepository) PersistSession(running *model.RunningSession, connected bool) (sessionId uint, err error) {
+func (sr SessionBadgerRepository) sessionSave(session model.Session) error {
+	return sr.Db.Update(func(txn *badger.Txn) error {
+		k := SessionKey(session.ClientId)
+		v, err := SessionValue(session)
+		if err != nil {
+			return err
+		}
+		return txn.Set(k, v)
+	})
+}
+
+func (sr SessionBadgerRepository) PersistSession(running *model.RunningSession, connected bool) (sessionId uint, err error) {
 	running.Mu.RLock()
 	defer running.Mu.RUnlock()
-	sess := Session{
+	sess := model.Session{
 		LastSeen:        running.LastSeen,
 		LastConnect:     running.LastConnect,
 		ExpiryInterval:  running.ExpiryInterval,
@@ -40,61 +41,108 @@ func (sr SessionSqlRepository) PersistSession(running *model.RunningSession, con
 		Connected:       connected,
 		ProtocolVersion: running.ProtocolVersion,
 	}
-	saveErr := sr.Db.Save(&sess).Error
+	saveErr := sr.sessionSave(sess)
 	return sess.ID, saveErr
 }
 
-func (sr SessionSqlRepository) CleanSession(clientId string) error {
-	sess := Session{}
-	if err := sr.Db.Where("client_id = ?", clientId).First(&sess).Error; err != nil {
-		return err
-	}
-	return sr.Db.Delete(&sess).Error
-}
-
-func (sr SessionSqlRepository) SessionExists(clientId string) (model.Session, bool) {
-	session := Session{}
-	if err := sr.Db.Where("client_id = ?", clientId).First(&session).Error; err != nil {
-		return model.Session{}, false
-	} else {
-		mSession := model.Session{
-			ID:              session.ID,
-			LastSeen:        session.LastSeen,
-			LastConnect:     session.LastConnect,
-			ExpiryInterval:  session.ExpiryInterval,
-			ClientId:        session.ClientId,
-			Connected:       session.Connected,
-			ProtocolVersion: session.ProtocolVersion,
-		}
-		return mSession, true
-	}
-}
-
-func (sr SessionSqlRepository) DisconnectSession(clientId string) {
-	sr.Db.Model(&Session{}).Where("client_id = ?", clientId).Updates(map[string]interface{}{
-		"Connected": false,
-		"LastSeen":  time.Now().Unix(),
+func (sr SessionBadgerRepository) CleanSession(clientId string) error {
+	return sr.Db.Update(func(txn *badger.Txn) error {
+		k := SessionKey(clientId)
+		return txn.Delete(k)
 	})
 }
 
-func (sr SessionSqlRepository) GetById(sessionId uint) (model.Session, error) {
-	var session Session
-	if err := sr.Db.Where("id = ?", sessionId).First(&session).Error; err != nil {
-		return model.Session{}, err
-	}
+func (sr SessionBadgerRepository) SessionExists(clientId string) (model.Session, bool) {
+	var session model.Session
+	key := SessionKey(clientId)
+	err := sr.Db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		item.Value(func(val []byte) error {
+			sess, err := model.GobDecode[model.Session](val)
+			if err != nil {
+				return err
+			}
+			session = sess
+			return nil
+		})
+		return nil
+	})
 
-	mSession := model.Session{
-		ID:              session.ID,
-		LastSeen:        session.LastSeen,
-		LastConnect:     session.LastConnect,
-		ExpiryInterval:  session.ExpiryInterval,
-		ClientId:        session.ClientId,
-		Connected:       session.Connected,
-		ProtocolVersion: session.ProtocolVersion,
-	}
-	return mSession, nil
+	return session, err == nil
 }
 
-func (sr SessionSqlRepository) Save(session *model.Session) {
-	sr.Db.Save(session)
+func (sr SessionBadgerRepository) DisconnectSession(clientId string) {
+	sr.Db.View(func(txn *badger.Txn) error {
+		key := SessionKey(clientId)
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		var session model.Session
+		item.Value(func(val []byte) error {
+			session, err := model.GobDecode[model.Session](val)
+			if err != nil {
+				return err
+			}
+			session.Connected = false
+			session.LastSeen = time.Now().Unix()
+			return nil
+		})
+		value, err := SessionValue(session)
+		err = txn.Set(key, value)
+		return nil
+	})
+}
+
+func (sr SessionBadgerRepository) GetAll() []model.Session {
+	sessions := []model.Session{}
+	sr.Db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			item.Value(func(val []byte) error {
+				sess, err := model.GobDecode[model.Session](val)
+				if err != nil {
+					return err
+				}
+				sessions = append(sessions, sess)
+				return nil
+			})
+		}
+		return nil
+	})
+	return sessions
+}
+
+func (sr SessionBadgerRepository) Save(session *model.Session) {
+	sr.sessionSave(*session)
+}
+
+func (sr SessionBadgerRepository) IsOnline(clientId string) bool {
+	var res bool
+	sr.Db.View(func(txn *badger.Txn) error {
+		key := SessionKey(clientId)
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		var session model.Session
+		item.Value(func(val []byte) error {
+			session, err := model.GobDecode[model.Session](val)
+			if err != nil {
+				return err
+			}
+			res = session.Connected
+			return nil
+		})
+		value, err := SessionValue(session)
+		err = txn.Set(key, value)
+		return nil
+	})
+	return res
 }
