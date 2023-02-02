@@ -67,3 +67,11 @@ func (s SubscriptionSqlRepository) IsOnline(sub model.Subscription) bool {
 func (s SubscriptionSqlRepository) DeleteByClientIdTopicShareName(clientId string, topic string, shareName string) error {
 	return s.Db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).Delete(&Subscription{}).Error
 }
+
+func (s SubscriptionSqlRepository) GetAll() []model.Subscription {
+	subs := []model.Subscription{}
+	if err := s.Db.Find(&subs).Error; err != nil {
+		log.Error().Err(err).Msg("could not query for subscriptions")
+	}
+	return subs
+}

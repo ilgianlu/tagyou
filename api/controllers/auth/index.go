@@ -2,20 +2,16 @@ package auth
 
 import (
 	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"net/http"
 
-	"github.com/ilgianlu/tagyou/model"
+	"github.com/rs/zerolog/log"
+
+	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
 )
 
 func (uc AuthController) GetAuths(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	auths := []model.Auth{}
-	if err := uc.db.Find(&auths).Error; err != nil {
-		log.Printf("error getting auth rows: %s\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	auths := persistence.AuthRepository.GetAll()
 	if res, err := json.Marshal(auths); err != nil {
 		log.Printf("error marshaling auth rows: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
