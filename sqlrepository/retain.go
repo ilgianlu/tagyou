@@ -1,10 +1,8 @@
 package sqlrepository
 
 import (
-	"strings"
-
-	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/topic"
 	"gorm.io/gorm"
 )
 
@@ -20,9 +18,16 @@ type RetainSqlRepository struct {
 }
 
 func (r RetainSqlRepository) FindRetains(subscribedTopic string) []model.Retain {
-	trimmedTopic := trimWildcard(subscribedTopic)
-	var retains []model.Retain
-	r.Db.Where("topic LIKE ?", strings.Join([]string{trimmedTopic, "%"}, "")).Find(&retains)
+	var allRetains []model.Retain
+	r.Db.Find(&allRetains)
+
+	retains := []model.Retain{}
+	for _, ret := range allRetains {
+		if topic.Match(ret.Topic, subscribedTopic) {
+			retains = append(retains, ret)
+		}
+	}
+
 	return retains
 }
 
@@ -31,14 +36,5 @@ func (r RetainSqlRepository) Create(retain model.Retain) error {
 }
 
 func (r RetainSqlRepository) Delete(retain model.Retain) error {
-	return r.Db.Delete(&retain).Error
-}
-
-func trimWildcard(topic string) string {
-	lci := len(topic) - 1
-	lc := topic[lci]
-	if string(lc) == conf.WILDCARD_MULTI_LEVEL {
-		topic = topic[:lci]
-	}
-	return topic
+	return r.Db.Where("topic = ?", retain.Topic).Delete(&retain).Error
 }
