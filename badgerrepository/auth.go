@@ -1,9 +1,6 @@
 package badgerrepository
 
 import (
-	"bytes"
-	"encoding/gob"
-
 	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/model"
 )
@@ -15,13 +12,7 @@ func AuthKey(clientId string, username string) []byte {
 }
 
 func AuthValue(auth model.Auth) ([]byte, error) {
-	res := bytes.Buffer{}
-	enc := gob.NewEncoder(&res)
-	err := enc.Encode(auth)
-	if err != nil {
-		return []byte{}, err
-	}
-	return res.Bytes(), nil
+	return auth.GobEncode()
 }
 
 type AuthBadgerRepository struct {
@@ -38,17 +29,56 @@ func (ar AuthBadgerRepository) GetByClientIdUsername(clientId string, username s
 			return err
 		}
 		aItem.Value(func(val []byte) error {
-			valReader := bytes.NewReader(val)
-			decoder := gob.NewDecoder(valReader)
-			err := decoder.Decode(&a)
-			if err != nil {
-				return err
-			}
-			return nil
+			a, err = model.AuthGobDecode(val)
+			return err
 		})
 
 		return err
 	})
 
 	return a, err
+}
+
+func (ar AuthBadgerRepository) Create(auth model.Auth) error {
+	return ar.Db.Update(func(txn *badger.Txn) error {
+		k := AuthKey(auth.ClientId, auth.Username)
+		v, err := AuthValue(auth)
+		if err != nil {
+			return err
+		}
+		return txn.Set(k, v)
+	})
+}
+
+func (ar AuthBadgerRepository) DeleteByClientIdUsername(clientId string, username string) error {
+	return ar.Db.Update(func(txn *badger.Txn) error {
+		k := AuthKey(clientId, username)
+		return txn.Delete(k)
+	})
+}
+
+func (ar AuthBadgerRepository) GetAll() []model.Auth {
+	auths := []model.Auth{}
+	ar.Db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 10
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			err := item.Value(func(v []byte) error {
+				a, err := model.AuthGobDecode(v)
+				if err != nil {
+					return err
+				}
+				auths = append(auths, a)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return auths
 }
