@@ -98,24 +98,6 @@ func (sr SessionSqlRepository) DisconnectSession(clientId string) {
 	})
 }
 
-func (sr SessionSqlRepository) GetById(sessionId uint) (model.Session, error) {
-	var session Session
-	if err := sr.Db.Where("id = ?", sessionId).First(&session).Error; err != nil {
-		return model.Session{}, err
-	}
-
-	mSession := model.Session{
-		ID:              session.ID,
-		LastSeen:        session.LastSeen,
-		LastConnect:     session.LastConnect,
-		ExpiryInterval:  session.ExpiryInterval,
-		ClientId:        session.ClientId,
-		Connected:       session.Connected,
-		ProtocolVersion: session.ProtocolVersion,
-	}
-	return mSession, nil
-}
-
 func (sr SessionSqlRepository) GetAll() []model.Session {
 	sessions := []Session{}
 	if err := sr.Db.Find(&sessions).Error; err != nil {
@@ -127,4 +109,13 @@ func (sr SessionSqlRepository) GetAll() []model.Session {
 
 func (sr SessionSqlRepository) Save(session *model.Session) {
 	sr.Db.Save(&session)
+}
+
+func (s SessionSqlRepository) IsOnline(clientId string) bool {
+	session := model.Session{}
+	if err := s.Db.Where("client_id = ?", clientId).First(&session).Error; err != nil {
+		return false
+	} else {
+		return session.Connected
+	}
 }
