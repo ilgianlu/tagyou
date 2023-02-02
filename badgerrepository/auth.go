@@ -5,14 +5,17 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
+const AUTH_PREFIX = "auth@"
+
 func AuthKey(clientId string, username string) []byte {
-	k := []byte(clientId)
+	k := []byte(AUTH_PREFIX)
+	k = append(k, []byte(clientId)...)
 	k = append(k, []byte(username)...)
 	return k
 }
 
 func AuthValue(auth model.Auth) ([]byte, error) {
-	return auth.GobEncode()
+	return model.GobEncode(auth)
 }
 
 type AuthBadgerRepository struct {
@@ -29,7 +32,7 @@ func (ar AuthBadgerRepository) GetByClientIdUsername(clientId string, username s
 			return err
 		}
 		aItem.Value(func(val []byte) error {
-			a, err = model.AuthGobDecode(val)
+			a, err = model.GobDecode[model.Auth](val)
 			return err
 		})
 
@@ -67,7 +70,7 @@ func (ar AuthBadgerRepository) GetAll() []model.Auth {
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
 			err := item.Value(func(v []byte) error {
-				a, err := model.AuthGobDecode(v)
+				a, err := model.GobDecode[model.Auth](v)
 				if err != nil {
 					return err
 				}

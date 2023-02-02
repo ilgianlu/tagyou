@@ -9,7 +9,8 @@ import (
 )
 
 type Retain struct {
-	Topic              string `gorm:"primaryKey"`
+	ID                 uint `gorm:"primary_key"`
+	Topic              string
 	ApplicationMessage []byte
 	CreatedAt          int64
 }

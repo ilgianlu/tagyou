@@ -1,9 +1,6 @@
 package model
 
 import (
-	"bytes"
-	"encoding/gob"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -26,24 +23,6 @@ type Auth struct {
 	CreatedAt            int64
 	InputPassword        string
 	InputPasswordConfirm string
-}
-
-func (a Auth) GobEncode() ([]byte, error) {
-	res := bytes.Buffer{}
-	enc := gob.NewEncoder(&res)
-	err := enc.Encode(&a)
-	if err != nil {
-		return []byte{}, err
-	}
-	return res.Bytes(), nil
-}
-
-func AuthGobDecode(v []byte) (Auth, error) {
-	valReader := bytes.NewReader(v)
-	decoder := gob.NewDecoder(valReader)
-	a := Auth{}
-	err := decoder.Decode(&a)
-	return a, err
 }
 
 func (a *Auth) Validate() bool {
