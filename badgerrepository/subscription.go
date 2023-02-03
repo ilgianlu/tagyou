@@ -2,10 +2,10 @@ package badgerrepository
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/rs/zerolog/log"
 )
 
 type SubscriptionBadgerRepository struct {
@@ -50,7 +50,6 @@ func (s SubscriptionBadgerRepository) FindToUnsubscribe(shareName string, topic 
 			return err
 		}
 		sItem.Value(func(val []byte) error {
-			log.Println(val)
 			sub, err = model.GobDecode[model.Subscription](val)
 			return err
 		})
@@ -86,11 +85,10 @@ func (s SubscriptionBadgerRepository) findBySubTopic(topic string) []model.Subsc
 		defer it.Close()
 		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
-			log.Println(item.Key())
 			item.Value(func(val []byte) error {
 				sub, err := model.GobDecode[model.Subscription](val)
 				if err != nil {
-					log.Println(err)
+					log.Err(err).Msg("error during gob decode of subscription")
 					return err
 				}
 				subscriptions = append(subscriptions, sub)
