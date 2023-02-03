@@ -1,6 +1,8 @@
 package badgerrepository
 
 import (
+	"fmt"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/model"
 )
@@ -24,6 +26,11 @@ func SubscriptionValue(sub model.Subscription) ([]byte, error) {
 func (s SubscriptionBadgerRepository) CreateOne(sub model.Subscription) error {
 	return s.Db.Update(func(txn *badger.Txn) error {
 		k := SubscriptionKey(sub.ClientId, sub.Topic, sub.ShareName)
+		_, err := txn.Get(k)
+		if err != badger.ErrKeyNotFound {
+			return fmt.Errorf("subscription is already set for %s", sub.ClientId)
+		}
+
 		v, err := SubscriptionValue(sub)
 		if err != nil {
 			return err
