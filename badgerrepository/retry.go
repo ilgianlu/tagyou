@@ -56,7 +56,8 @@ func (r RetryBadgerRepository) FirstByClientIdPacketIdentifier(clientId string, 
 		opts.PrefetchValues = false
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		for it.Rewind(); it.ValidForPrefix(RetryPrefix(clientId, packetIdentifier)); it.Next() {
+		prefix := RetryPrefix(clientId, packetIdentifier)
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			item.Value(func(val []byte) error {
 				ret, err := model.GobDecode[model.Retry](val)
