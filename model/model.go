@@ -8,7 +8,7 @@ import (
 func GobEncode(e any) ([]byte, error) {
 	res := bytes.Buffer{}
 	enc := gob.NewEncoder(&res)
-	err := enc.Encode(&e)
+	err := enc.Encode(e)
 	if err != nil {
 		return []byte{}, err
 	}
