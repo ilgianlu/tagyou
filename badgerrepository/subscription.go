@@ -83,7 +83,7 @@ func (s SubscriptionBadgerRepository) findBySubTopic(topic string) []model.Subsc
 		opts := badger.DefaultIteratorOptions
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			item.Value(func(val []byte) error {
 				sub, err := model.GobDecode[model.Subscription](val)

@@ -63,14 +63,20 @@ func TestFindSubscriptions(t *testing.T) {
 
 	subscriptionRepository := SubscriptionBadgerRepository{Db: dbe}
 
+	ze := model.Subscription{ClientId: "clientOut", Topic: "outoftime"}
 	un := model.Subscription{ClientId: "client1", Topic: "topic1"}
 	du := model.Subscription{ClientId: "client1", Topic: "topic2"}
 	tr := model.Subscription{ClientId: "client2", Topic: "topic1"}
 	qu := model.Subscription{ClientId: "client3", Topic: "topic3"}
+	ci := model.Subscription{ClientId: "client4", Topic: "topic/#"}
+	se := model.Subscription{ClientId: "client5", Topic: "topic/+/message"}
+	subscriptionRepository.CreateOne(ze)
 	subscriptionRepository.CreateOne(un)
 	subscriptionRepository.CreateOne(du)
 	subscriptionRepository.CreateOne(tr)
 	subscriptionRepository.CreateOne(qu)
+	subscriptionRepository.CreateOne(ci)
+	subscriptionRepository.CreateOne(se)
 
 	subs := subscriptionRepository.FindSubscriptions([]string{"topic1"}, false)
 	if len(subs) != 2 {
@@ -81,5 +87,12 @@ func TestFindSubscriptions(t *testing.T) {
 	}
 	if subs[1].ClientId != "client2" {
 		t.Errorf("expected client id %s , found %s", "client2", subs[1].ClientId)
+	}
+	newSubs := subscriptionRepository.FindSubscriptions([]string{"topic/#"}, false)
+	if len(newSubs) != 1 {
+		t.Errorf("expected %d subscriptions, found %d", 1, len(newSubs))
+	}
+	if newSubs[0].ClientId != "client4" {
+		t.Errorf("expected client id %s , found %s", "client4", newSubs[0].ClientId)
 	}
 }
