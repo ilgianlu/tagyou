@@ -1,4 +1,4 @@
-package cleanup
+package sqlrepository
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/sqlrepository"
 	"github.com/rs/zerolog/log"
 
 	"gorm.io/driver/sqlite"
@@ -19,19 +18,19 @@ func TestRetryCleaner(t *testing.T) {
 		log.Fatal().Err(err).Msg("[API] failed to connect database")
 	}
 
-	sqlrepository.Migrate(db)
+	Migrate(db)
 
 	db.Exec("DELETE FROM sessions")
 	db.Exec("DELETE FROM retries")
 
-	s1 := sqlrepository.Session{ClientId: "sessionOne"}
+	s1 := Session{ClientId: "sessionOne"}
 	if err := db.Create(&s1).Error; err != nil {
 		t.Errorf("session create should not throw err: %s", err)
 	}
 
 	sId := s1.ID
 
-	un := sqlrepository.Retry{
+	un := Retry{
 		ClientId:           "uno",
 		ApplicationMessage: []byte{1, 2, 3},
 		PacketIdentifier:   50,
@@ -44,7 +43,7 @@ func TestRetryCleaner(t *testing.T) {
 	}
 	db.Create(&un)
 
-	du := sqlrepository.Retry{
+	du := Retry{
 		ClientId:           "due",
 		ApplicationMessage: []byte{4, 5, 6},
 		PacketIdentifier:   51,
@@ -57,7 +56,7 @@ func TestRetryCleaner(t *testing.T) {
 	}
 	db.Create(&du)
 
-	before := []sqlrepository.Retry{}
+	before := []Retry{}
 	db.Find(&before)
 
 	fmt.Println(before)
@@ -68,7 +67,7 @@ func TestRetryCleaner(t *testing.T) {
 
 	cleanRetries(db)
 
-	after := []sqlrepository.Retry{}
+	after := []Retry{}
 	db.Find(&after)
 
 	if len(after) != 1 {

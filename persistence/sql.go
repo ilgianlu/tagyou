@@ -1,32 +1,24 @@
 package persistence
 
 import (
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/sqlrepository"
 	"gorm.io/gorm"
 )
 
 func InitSqlRepositories(db *gorm.DB) {
+	sqlrepository.Migrate(db)
+
 	AuthRepository = sqlrepository.AuthSqlRepository{Db: db}
 	SessionRepository = sqlrepository.SessionSqlRepository{Db: db}
 	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
 	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
 	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
-}
 
-func Migrate(db *gorm.DB) {
-	if err := db.AutoMigrate(&sqlrepository.Auth{}); err != nil {
-		return
+	if conf.CLEAN_EXPIRED_SESSIONS {
+		sqlrepository.StartSessionCleaner(db)
 	}
-	if err := db.AutoMigrate(&sqlrepository.Retry{}); err != nil {
-		return
-	}
-	if err := db.AutoMigrate(&sqlrepository.Retain{}); err != nil {
-		return
-	}
-	if err := db.AutoMigrate(&sqlrepository.Session{}); err != nil {
-		return
-	}
-	if err := db.AutoMigrate(&sqlrepository.Subscription{}); err != nil {
-		return
+	if conf.CLEAN_EXPIRED_RETRIES {
+		sqlrepository.StartRetryCleaner(db)
 	}
 }

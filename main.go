@@ -11,11 +11,9 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/ilgianlu/tagyou/api"
-	"github.com/ilgianlu/tagyou/cleanup"
 	"github.com/ilgianlu/tagyou/conf"
 	mq "github.com/ilgianlu/tagyou/mqtt"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/sqlrepository"
 	dotenv "github.com/joho/godotenv"
 )
 
@@ -40,16 +38,7 @@ func main() {
 	log.Info().Msg("[MQTT] db connected !")
 	defer closeDb(db)
 
-	sqlrepository.Migrate(db)
-
 	persistence.InitSqlRepositories(db)
-
-	if conf.CLEAN_EXPIRED_SESSIONS {
-		cleanup.StartSessionCleaner(db)
-	}
-	if conf.CLEAN_EXPIRED_RETRIES {
-		cleanup.StartRetryCleaner(db)
-	}
 
 	go api.StartApi(os.Getenv("API_PORT"))
 	mq.StartMQTT(os.Getenv("LISTEN_PORT"))
