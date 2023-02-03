@@ -92,8 +92,11 @@ func (sr SessionBadgerRepository) DisconnectSession(clientId string) {
 			return nil
 		})
 		value, err := SessionValue(session)
+		if err != nil {
+			return err
+		}
 		err = txn.Set(key, value)
-		return nil
+		return err
 	})
 }
 
@@ -141,8 +144,11 @@ func (sr SessionBadgerRepository) IsOnline(clientId string) bool {
 			return nil
 		})
 		value, err := SessionValue(session)
+		if err != nil {
+			return err
+		}
 		err = txn.Set(key, value)
-		return nil
+		return err
 	})
 	return res
 }

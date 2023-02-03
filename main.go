@@ -2,13 +2,9 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 
 	"github.com/ilgianlu/tagyou/api"
 	"github.com/ilgianlu/tagyou/conf"
@@ -31,14 +27,9 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	db, err := openDb()
-	if err != nil {
-		log.Fatal().Err(err).Msg("[MQTT] failed to connect database")
-	}
-	log.Info().Msg("[MQTT] db connected !")
-	defer closeDb(db)
-
-	persistence.InitSqlRepositories(db)
+	p := persistence.SqlPersistence{}
+	p.Init()
+	defer p.Close()
 
 	go api.StartApi(os.Getenv("API_PORT"))
 	mq.StartMQTT(os.Getenv("LISTEN_PORT"))
@@ -50,30 +41,4 @@ func loadEnv() error {
 		env = "default"
 	}
 	return dotenv.Load(".env." + env + ".local")
-}
-
-func openDb() (*gorm.DB, error) {
-	logLevel := logger.Silent
-	if os.Getenv("DEBUG") != "" {
-		logLevel = logger.Info
-	}
-	return gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
-		Logger: logger.New(
-			&log.Logger,
-			logger.Config{
-				SlowThreshold: 200 * time.Millisecond,
-				LogLevel:      logLevel,
-				Colorful:      true,
-			},
-		),
-	})
-}
-
-func closeDb(db *gorm.DB) {
-	sql, err := db.DB()
-	if err != nil {
-		log.Error().Err(err).Msg("could not close DB")
-		return
-	}
-	sql.Close()
 }

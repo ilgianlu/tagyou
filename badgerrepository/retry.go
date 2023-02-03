@@ -2,8 +2,10 @@ package badgerrepository
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 )
 
@@ -35,7 +37,8 @@ func (r RetryBadgerRepository) SaveOne(retry model.Retry) error {
 		if err != nil {
 			return err
 		}
-		return txn.Set(k, v)
+		e := badger.NewEntry(k, v).WithTTL(time.Duration(int64(conf.RETRY_EXPIRATION)))
+		return txn.SetEntry(e)
 	})
 }
 
