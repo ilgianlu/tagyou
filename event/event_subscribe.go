@@ -57,6 +57,6 @@ func sendRetain(protocolVersion uint8, subscription model.Subscription, outQueue
 	}
 	for _, r := range retains {
 		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		sendForward(r.Topic, &p, outQueue)
+		sendSimple(subscription.ClientId, &p, outQueue)
 	}
 }
