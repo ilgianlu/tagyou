@@ -27,7 +27,7 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	p := persistence.SqlPersistence{}
+	p := persistence.BadgerPersistence{}
 	p.Init()
 	defer p.Close()
 

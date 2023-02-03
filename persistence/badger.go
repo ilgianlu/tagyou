@@ -1,8 +1,11 @@
 package persistence
 
 import (
+	"encoding/gob"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/badgerrepository"
+	"github.com/ilgianlu/tagyou/model"
 )
 
 type BadgerPersistence struct {
@@ -18,6 +21,12 @@ var (
 )
 
 func (p BadgerPersistence) Init() error {
+	gob.Register(model.Auth{})
+	gob.Register(model.Retain{})
+	gob.Register(model.Retry{})
+	gob.Register(model.Session{})
+	gob.Register(model.Subscription{})
+
 	dba, _ := badger.Open(badger.DefaultOptions("db/auth.db"))
 	AuthRepository = badgerrepository.AuthBadgerRepository{Db: dba}
 	badgerrepository.StartGarbageCollection(dba)
