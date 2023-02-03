@@ -1,11 +1,14 @@
 package event
 
 import (
+	"fmt"
+
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
+	"github.com/rs/zerolog/log"
 )
 
 func onSubscribe(p *packet.Packet, outQueue chan<- out.OutData) {
@@ -39,8 +42,8 @@ func clientSubscription(session *model.RunningSession, subscription model.Subscr
 	if conf.ACL_ON && !fromLocalhost && !CheckAcl(subscription.Topic, subscribeAcl) {
 		return conf.SUB_TOPIC_FILTER_INVALID
 	}
-	// db.Create(&subscription)
-	persistence.SubscriptionRepository.CreateOne(subscription)
+	log.Debug().Msg(fmt.Sprintf("%s client is subscribing %s", subscription.ClientId, subscription.Topic))
+	persistence.SubscriptionRepository.Create(subscription)
 	if !subscription.Shared {
 		sendRetain(protocolVersion, subscription, outQueue)
 	}

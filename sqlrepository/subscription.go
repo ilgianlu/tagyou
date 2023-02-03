@@ -26,7 +26,7 @@ type SubscriptionSqlRepository struct {
 	Db *gorm.DB
 }
 
-func (s SubscriptionSqlRepository) CreateOne(sub model.Subscription) error {
+func (s SubscriptionSqlRepository) Create(sub model.Subscription) error {
 	err := s.Db.Create(&sub).Error
 	return err
 }

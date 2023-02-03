@@ -18,17 +18,17 @@ func TestCreate(t *testing.T) {
 	subscriptionRepository := SubscriptionBadgerRepository{Db: dbe}
 
 	un := model.Subscription{ClientId: "uno", Topic: "uno"}
-	if err := subscriptionRepository.CreateOne(un); err != nil {
+	if err := subscriptionRepository.Create(un); err != nil {
 		t.Errorf("subscription create should not throw err: %s", err)
 	}
 
 	unBis := model.Subscription{ClientId: "uno", Topic: "uno"}
-	if err := subscriptionRepository.CreateOne(unBis); err == nil {
+	if err := subscriptionRepository.Create(unBis); err == nil {
 		t.Error("subscription (duplicate client id and topic) create should throw err!")
 	}
 
 	du := model.Subscription{ClientId: "due", Topic: "uno"}
-	if err := subscriptionRepository.CreateOne(du); err != nil {
+	if err := subscriptionRepository.Create(du); err != nil {
 		t.Errorf("subscription create should not throw err: %s", err)
 	}
 }
@@ -43,8 +43,8 @@ func TestFindToUnsubscribe(t *testing.T) {
 
 	un := model.Subscription{ClientId: "client1", Topic: "topic1"}
 	du := model.Subscription{ClientId: "client2", Topic: "topic2"}
-	subscriptionRepository.CreateOne(un)
-	subscriptionRepository.CreateOne(du)
+	subscriptionRepository.Create(un)
+	subscriptionRepository.Create(du)
 
 	sub, err := subscriptionRepository.FindToUnsubscribe("", "topic1", "client1")
 	if err != nil {
@@ -70,13 +70,13 @@ func TestFindSubscriptions(t *testing.T) {
 	qu := model.Subscription{ClientId: "client3", Topic: "topic3"}
 	ci := model.Subscription{ClientId: "client4", Topic: "topic/#"}
 	se := model.Subscription{ClientId: "client5", Topic: "topic/+/message"}
-	subscriptionRepository.CreateOne(ze)
-	subscriptionRepository.CreateOne(un)
-	subscriptionRepository.CreateOne(du)
-	subscriptionRepository.CreateOne(tr)
-	subscriptionRepository.CreateOne(qu)
-	subscriptionRepository.CreateOne(ci)
-	subscriptionRepository.CreateOne(se)
+	subscriptionRepository.Create(ze)
+	subscriptionRepository.Create(un)
+	subscriptionRepository.Create(du)
+	subscriptionRepository.Create(tr)
+	subscriptionRepository.Create(qu)
+	subscriptionRepository.Create(ci)
+	subscriptionRepository.Create(se)
 
 	subs := subscriptionRepository.FindSubscriptions([]string{"topic1"}, false)
 	if len(subs) != 2 {

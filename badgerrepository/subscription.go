@@ -24,7 +24,7 @@ func SubscriptionValue(sub model.Subscription) ([]byte, error) {
 	return model.GobEncode(sub)
 }
 
-func (s SubscriptionBadgerRepository) CreateOne(sub model.Subscription) error {
+func (s SubscriptionBadgerRepository) Create(sub model.Subscription) error {
 	return s.Db.Update(func(txn *badger.Txn) error {
 		k := SubscriptionKey(sub.ClientId, sub.Topic, sub.ShareName)
 		_, err := txn.Get(k)
