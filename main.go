@@ -27,7 +27,14 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	p := persistence.BadgerPersistence{}
+	var p persistence.Persistence
+	if conf.BACKEND_PERSISTENCE == conf.BACKEND_BADGER {
+		p = persistence.BadgerPersistence{}
+	} else if conf.BACKEND_PERSISTENCE == conf.BACKEND_SQLITE {
+		p = persistence.SqlPersistence{}
+	} else {
+		log.Fatal().Msg("No valid backend selected")
+	}
 	p.Init()
 	defer p.Close()
 

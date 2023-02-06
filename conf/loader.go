@@ -12,6 +12,11 @@ func Loader() {
 	CLEAN_EXPIRED_RETRIES = os.Getenv("CLEAN_EXPIRED_RETRIES") == "true"
 
 	var s string
+	s = os.Getenv("BACKEND_PERSISTENCE")
+	if s == BACKEND_SQLITE || s == BACKEND_BADGER {
+		BACKEND_PERSISTENCE = s
+	}
+
 	s = os.Getenv("CLEAN_EXPIRED_SESSIONS_INTERVAL")
 	if s != "" {
 		ces, err := strconv.Atoi(s)

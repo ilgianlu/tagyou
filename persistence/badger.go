@@ -6,14 +6,15 @@ import (
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/ilgianlu/tagyou/badgerrepository"
+	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 )
 
-const DB_AUTH = "db/auth.db"
-const DB_RETAIN = "db/retain.db"
-const DB_RETRY = "db/retry.db"
-const DB_SESSION = "db/session.db"
-const DB_SUBSCRIPTION = "db/subscription.db"
+var DB_AUTH = conf.DB_PATH + "auth.db"
+var DB_RETAIN = conf.DB_PATH + "retain.db"
+var DB_RETRY = conf.DB_PATH + "retry.db"
+var DB_SESSION = conf.DB_PATH + "session.db"
+var DB_SUBSCRIPTION = conf.DB_PATH + "subscription.db"
 
 type BadgerPersistence struct {
 	dba *badger.DB

@@ -16,7 +16,7 @@ type SqlPersistence struct {
 	db *gorm.DB
 }
 
-func (p *SqlPersistence) Init() error {
+func (p SqlPersistence) Init() error {
 	db, err := openDb()
 	if err != nil {
 		log.Error().Err(err).Msg("could not open DB")
@@ -59,7 +59,7 @@ func openDb() (*gorm.DB, error) {
 	if os.Getenv("DEBUG") != "" {
 		logLevel = logger.Info
 	}
-	return gorm.Open(sqlite.Open(os.Getenv("DB_PATH")+os.Getenv("DB_NAME")), &gorm.Config{
+	return gorm.Open(sqlite.Open(conf.DB_PATH+conf.DB_NAME), &gorm.Config{
 		Logger: logger.New(
 			&log.Logger,
 			logger.Config{
