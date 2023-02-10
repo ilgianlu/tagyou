@@ -3,33 +3,27 @@ package event
 import (
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func onSubscribe(p *packet.Packet, outQueue chan<- out.OutData) {
+func onSubscribe(connections *model.Connections, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
-		rCode := clientSubscription(p.Session, subscription, outQueue)
+		rCode := clientSubscription(connections, p.Session, subscription)
 		reasonCodes = append(reasonCodes, rCode)
 	}
-	clientSubscribed(p, reasonCodes, outQueue)
+	clientSubscribed(connections, p, reasonCodes)
 }
 
-func clientSubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- out.OutData) {
+func clientSubscribed(connections *model.Connections, p *packet.Packet, reasonCodes []uint8) {
 	p.Session.Mu.RLock()
-	clientId := p.Session.ClientId
-	protocolVersion := p.Session.ProtocolVersion
+	toSend := packet.Suback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
+	SimpleSend(connections, p.Session.ClientId, toSend.ToByteSlice())
 	p.Session.Mu.RUnlock()
-	var o out.OutData
-	o.ClientId = clientId
-	toSend := packet.Suback(p.PacketIdentifier(), reasonCodes, protocolVersion)
-	o.Packet = toSend.ToByteSlice()
-	outQueue <- o
 }
 
-func clientSubscription(session *model.RunningSession, subscription model.Subscription, outQueue chan<- out.OutData) uint8 {
+func clientSubscription(connections *model.Connections, session *model.RunningSession, subscription model.Subscription) uint8 {
 	session.Mu.RLock()
 	fromLocalhost := session.FromLocalhost()
 	subscribeAcl := session.SubscribeAcl
@@ -42,18 +36,18 @@ func clientSubscription(session *model.RunningSession, subscription model.Subscr
 	// db.Create(&subscription)
 	persistence.SubscriptionRepository.CreateOne(subscription)
 	if !subscription.Shared {
-		sendRetain(protocolVersion, subscription, outQueue)
+		sendRetain(connections, protocolVersion, subscription)
 	}
 	return 0
 }
 
-func sendRetain(protocolVersion uint8, subscription model.Subscription, outQueue chan<- out.OutData) {
+func sendRetain(connections *model.Connections, protocolVersion uint8, subscription model.Subscription) {
 	retains := persistence.RetainRepository.FindRetains(subscription.Topic)
 	if len(retains) == 0 {
 		return
 	}
 	for _, r := range retains {
 		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		sendSimple(subscription.ClientId, &p, outQueue)
+		SimpleSend(connections, subscription.ClientId, p.ToByteSlice())
 	}
 }
