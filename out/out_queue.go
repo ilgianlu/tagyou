@@ -6,13 +6,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func RangeOutQueue(connections *model.Connections, outQueue <-chan OutData) {
-	for o := range outQueue {
-		simpleSend(connections, o.ClientId, o.Packet)
-	}
-}
-
-func simpleSend(connections *model.Connections, clientId string, p []byte) {
+func SimpleSend(connections *model.Connections, clientId string, p []byte) {
 	conn, exists := connections.Exists(clientId)
 	if exists {
 		if conn == nil {

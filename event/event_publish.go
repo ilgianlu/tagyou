@@ -11,12 +11,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func onPublish(p *packet.Packet, outQueue chan<- out.OutData) {
+func onPublish(connections *model.Connections, p *packet.Packet) {
 	if conf.ACL_ON && !p.Session.FromLocalhost() && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
-			sendAck(p, packet.PUBACK_NOT_AUTHORIZED, outQueue)
+			sendAck(connections, p, packet.PUBACK_NOT_AUTHORIZED)
 		} else if p.QoS() == 2 {
-			sendPubrec(p, packet.PUBREC_NOT_AUTHORIZED, outQueue)
+			sendPubrec(connections, p, packet.PUBREC_NOT_AUTHORIZED)
 		}
 		return
 	}
@@ -25,22 +25,22 @@ func onPublish(p *packet.Packet, outQueue chan<- out.OutData) {
 		log.Debug().Msgf("[PUBLISH] to retain")
 		saveRetain(p)
 	}
-	sendForward(p.Topic, p, outQueue)
+	sendForward(connections, p.Topic, p)
 	if p.QoS() == 1 {
 		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())
-		sendAck(p, packet.PUBACK_SUCCESS, outQueue)
+		sendAck(connections, p, packet.PUBACK_SUCCESS)
 	} else if p.QoS() == 2 {
 		log.Debug().Msgf("[PUBLISH] QoS 2 return PUBREC")
-		sendPubrec(p, packet.PUBREC_SUCCESS, outQueue)
+		sendPubrec(connections, p, packet.PUBREC_SUCCESS)
 	}
 }
 
-func sendAck(p *packet.Packet, reasonCode uint8, outQueue chan<- out.OutData) {
+func sendAck(connections *model.Connections, p *packet.Packet, reasonCode uint8) {
 	puback := packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
-	sendSimple(p.Session.ClientId, &puback, outQueue)
+	out.SimpleSend(connections, p.Session.ClientId, puback.ToByteSlice())
 }
 
-func sendPubrec(p *packet.Packet, reasonCode uint8, outQueue chan<- out.OutData) {
+func sendPubrec(connections *model.Connections, p *packet.Packet, reasonCode uint8) {
 	p.Session.Mu.RLock()
 	clientId := p.Session.ClientId
 	protocolVersion := p.Session.ProtocolVersion
@@ -57,5 +57,5 @@ func sendPubrec(p *packet.Packet, reasonCode uint8, outQueue chan<- out.OutData)
 	persistence.RetryRepository.SaveOne(r)
 
 	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, protocolVersion)
-	sendSimple(clientId, &pubrec, outQueue)
+	out.SimpleSend(connections, clientId, pubrec.ToByteSlice())
 }
