@@ -4,7 +4,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 )
@@ -12,7 +11,7 @@ import (
 func clientPubrec(connections *model.Connections, p *packet.Packet) {
 	sendPubrel := func(retry model.Retry) {
 		toSend := packet.Pubrel(retry.PacketIdentifier, retry.ReasonCode, p.Session.ProtocolVersion)
-		out.SimpleSend(connections, retry.ClientId, toSend.ToByteSlice())
+		SimpleSend(connections, retry.ClientId, toSend.ToByteSlice())
 	}
 
 	onExpectedPubrec := func(retry model.Retry) {

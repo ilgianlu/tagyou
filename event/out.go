@@ -1,4 +1,4 @@
-package out
+package event
 
 import (
 	"github.com/rs/zerolog/log"

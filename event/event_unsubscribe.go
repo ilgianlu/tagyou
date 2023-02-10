@@ -5,7 +5,6 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 )
@@ -21,7 +20,7 @@ func onUnsubscribe(connections *model.Connections, p *packet.Packet) {
 
 func clientUnsubscribed(connections *model.Connections, p *packet.Packet, reasonCodes []uint8) {
 	toSend := packet.Unsuback(p.PacketIdentifier(), reasonCodes, p.Session.GetProtocolVersion())
-	out.SimpleSend(connections, p.Session.GetClientId(), toSend.ToByteSlice())
+	SimpleSend(connections, p.Session.GetClientId(), toSend.ToByteSlice())
 }
 
 func clientUnsubscription(clientId string, unsub model.Subscription) uint8 {

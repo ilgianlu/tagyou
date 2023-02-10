@@ -5,7 +5,6 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 )
@@ -26,7 +25,7 @@ func onConnect(connections *model.Connections, p *packet.Packet) {
 	startSession(p.Session)
 
 	connack := packet.Connack(false, packet.CONNECT_OK, p.Session.GetProtocolVersion())
-	out.SimpleSend(connections, clientId, connack.ToByteSlice())
+	SimpleSend(connections, clientId, connack.ToByteSlice())
 }
 
 func doAuth(session *model.RunningSession) bool {
@@ -69,7 +68,7 @@ func checkConnectionTakeOver(p *packet.Packet, connections *model.Connections) b
 	}
 
 	pkt := packet.Connack(false, packet.SESSION_TAKEN_OVER, protocolVersion)
-	out.SimpleSend(connections, clientId, pkt.ToByteSlice())
+	SimpleSend(connections, clientId, pkt.ToByteSlice())
 
 	err := connections.Close(clientId)
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 	tpc "github.com/ilgianlu/tagyou/topic"
@@ -60,7 +59,7 @@ func RangeEvents(connections *model.Connections, events <-chan *packet.Packet) {
 
 func onPing(connections *model.Connections, p *packet.Packet) {
 	toSend := packet.PingResp()
-	out.SimpleSend(connections, p.Session.GetClientId(), toSend.ToByteSlice())
+	SimpleSend(connections, p.Session.GetClientId(), toSend.ToByteSlice())
 }
 
 func clientDisconnect(p *packet.Packet, connections *model.Connections, clientId string) {
@@ -93,7 +92,7 @@ func send(connections *model.Connections, topic string, s model.Subscription, p 
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier
 		p := packet.Publish(s.ProtocolVersion, conf.QOS0, p.Retain(), topic, 0, p.ApplicationMessage())
-		out.SimpleSend(connections, s.ClientId, p.ToByteSlice())
+		SimpleSend(connections, s.ClientId, p.ToByteSlice())
 	} else if qos == conf.QOS1 {
 		// prepare publish packet qos 1 (if sub permit) new packet identifier
 		p := packet.Publish(s.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
@@ -107,7 +106,7 @@ func send(connections *model.Connections, topic string, s model.Subscription, p 
 			CreatedAt:          time.Now().Unix(),
 		}
 		persistence.RetryRepository.SaveOne(r)
-		out.SimpleSend(connections, r.ClientId, p.ToByteSlice())
+		SimpleSend(connections, r.ClientId, p.ToByteSlice())
 	} else if qos == 2 {
 		// prepare publish packet qos 2 (if sub permit) new packet identifier
 		p := packet.Publish(s.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
@@ -121,7 +120,7 @@ func send(connections *model.Connections, topic string, s model.Subscription, p 
 			CreatedAt:          time.Now().Unix(),
 		}
 		persistence.RetryRepository.SaveOne(r)
-		out.SimpleSend(connections, r.ClientId, p.ToByteSlice())
+		SimpleSend(connections, r.ClientId, p.ToByteSlice())
 	}
 }
 

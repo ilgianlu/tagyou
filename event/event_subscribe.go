@@ -3,7 +3,6 @@ package event
 import (
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 )
@@ -20,7 +19,7 @@ func onSubscribe(connections *model.Connections, p *packet.Packet) {
 func clientSubscribed(connections *model.Connections, p *packet.Packet, reasonCodes []uint8) {
 	p.Session.Mu.RLock()
 	toSend := packet.Suback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
-	out.SimpleSend(connections, p.Session.ClientId, toSend.ToByteSlice())
+	SimpleSend(connections, p.Session.ClientId, toSend.ToByteSlice())
 	p.Session.Mu.RUnlock()
 }
 
@@ -49,6 +48,6 @@ func sendRetain(connections *model.Connections, protocolVersion uint8, subscript
 	}
 	for _, r := range retains {
 		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		out.SimpleSend(connections, subscription.ClientId, p.ToByteSlice())
+		SimpleSend(connections, subscription.ClientId, p.ToByteSlice())
 	}
 }

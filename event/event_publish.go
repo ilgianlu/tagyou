@@ -5,7 +5,6 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/rs/zerolog/log"
@@ -37,7 +36,7 @@ func onPublish(connections *model.Connections, p *packet.Packet) {
 
 func sendAck(connections *model.Connections, p *packet.Packet, reasonCode uint8) {
 	puback := packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
-	out.SimpleSend(connections, p.Session.ClientId, puback.ToByteSlice())
+	SimpleSend(connections, p.Session.ClientId, puback.ToByteSlice())
 }
 
 func sendPubrec(connections *model.Connections, p *packet.Packet, reasonCode uint8) {
@@ -57,5 +56,5 @@ func sendPubrec(connections *model.Connections, p *packet.Packet, reasonCode uin
 	persistence.RetryRepository.SaveOne(r)
 
 	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, protocolVersion)
-	out.SimpleSend(connections, clientId, pubrec.ToByteSlice())
+	SimpleSend(connections, clientId, pubrec.ToByteSlice())
 }
