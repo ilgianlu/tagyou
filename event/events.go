@@ -76,8 +76,8 @@ func clientDisconnect(p *packet.Packet, connections *model.Connections, clientId
 
 func sendForward(connections *model.Connections, topic string, p *packet.Packet) {
 	destSubs := tpc.Explode(topic)
-	go sendSubscribers(connections, topic, destSubs, p)
-	go sendSharedSubscribers(connections, topic, destSubs, p)
+	sendSubscribers(connections, topic, destSubs, p)
+	sendSharedSubscribers(connections, topic, destSubs, p)
 }
 
 func sendSubscribers(connections *model.Connections, topic string, destSubs []string, p *packet.Packet) {
