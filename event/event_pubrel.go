@@ -4,18 +4,14 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func clientPubrel(p *packet.Packet, outQueue chan<- out.OutData) {
+func clientPubrel(connections *model.Connections, p *packet.Packet) {
 	sendPubcomp := func(retry model.Retry) {
-		var o out.OutData
-		o.ClientId = p.Session.GetClientId()
 		toSend := packet.Pubcomp(p.PacketIdentifier(), retry.ReasonCode, p.Session.ProtocolVersion)
-		o.Packet = toSend.ToByteSlice()
-		outQueue <- o
+		SimpleSend(connections, p.Session.GetClientId(), toSend.ToByteSlice())
 	}
 
 	onExpectedPubrel := func(retry model.Retry) {

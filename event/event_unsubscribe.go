@@ -5,26 +5,22 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/out"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func onUnsubscribe(p *packet.Packet, outQueue chan<- out.OutData) {
+func onUnsubscribe(connections *model.Connections, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, unsub := range p.Subscriptions {
 		rCode := clientUnsubscription(p.Session.GetClientId(), unsub)
 		reasonCodes = append(reasonCodes, rCode)
 	}
-	clientUnsubscribed(p, reasonCodes, outQueue)
+	clientUnsubscribed(connections, p, reasonCodes)
 }
 
-func clientUnsubscribed(p *packet.Packet, reasonCodes []uint8, outQueue chan<- out.OutData) {
-	var o out.OutData
-	o.ClientId = p.Session.GetClientId()
+func clientUnsubscribed(connections *model.Connections, p *packet.Packet, reasonCodes []uint8) {
 	toSend := packet.Unsuback(p.PacketIdentifier(), reasonCodes, p.Session.GetProtocolVersion())
-	o.Packet = toSend.ToByteSlice()
-	outQueue <- o
+	SimpleSend(connections, p.Session.GetClientId(), toSend.ToByteSlice())
 }
 
 func clientUnsubscription(clientId string, unsub model.Subscription) uint8 {
