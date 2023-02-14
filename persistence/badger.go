@@ -10,11 +10,11 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-var DB_AUTH = conf.DB_PATH + "auth.db"
-var DB_RETAIN = conf.DB_PATH + "retain.db"
-var DB_RETRY = conf.DB_PATH + "retry.db"
-var DB_SESSION = conf.DB_PATH + "session.db"
-var DB_SUBSCRIPTION = conf.DB_PATH + "subscription.db"
+var DB_AUTH string
+var DB_RETAIN string
+var DB_RETRY string
+var DB_SESSION string
+var DB_SUBSCRIPTION string
 
 type BadgerPersistence struct {
 	dba *badger.DB
@@ -29,6 +29,12 @@ var (
 )
 
 func (p BadgerPersistence) Init() error {
+	DB_AUTH = conf.DB_PATH + "auth.db"
+	DB_RETAIN = conf.DB_PATH + "retain.db"
+	DB_RETRY = conf.DB_PATH + "retry.db"
+	DB_SESSION = conf.DB_PATH + "session.db"
+	DB_SUBSCRIPTION = conf.DB_PATH + "subscription.db"
+
 	gob.Register(model.Auth{})
 	gob.Register(model.Retain{})
 	gob.Register(model.Retry{})
