@@ -8,7 +8,6 @@ import (
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/sqlrepository"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -34,9 +33,8 @@ func TestGroupSubscribers(t *testing.T) {
 		log.Fatal().Err(err).Msg("[API] failed to connect database")
 	}
 
-	sqlrepository.Migrate(db)
-
-	persistence.InitSqlRepositories(db)
+	p := persistence.SqlPersistence{}
+	p.InnerInit(db)
 
 	db.Exec("DELETE FROM sessions")
 	db.Exec("DELETE FROM subscriptions")

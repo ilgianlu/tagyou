@@ -12,6 +12,16 @@ func Loader() {
 	CLEAN_EXPIRED_RETRIES = os.Getenv("CLEAN_EXPIRED_RETRIES") == "true"
 
 	var s string
+	s = os.Getenv("DB_PATH")
+	if s != "" {
+		DB_PATH = s
+	}
+
+	s = os.Getenv("DB_NAME")
+	if s != "" {
+		DB_NAME = s
+	}
+
 	s = os.Getenv("CLEAN_EXPIRED_SESSIONS_INTERVAL")
 	if s != "" {
 		ces, err := strconv.Atoi(s)
