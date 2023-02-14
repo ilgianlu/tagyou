@@ -8,6 +8,5 @@ type SubscriptionRepository interface {
 	FindToUnsubscribe(shareName string, topic string, clientId string) (model.Subscription, error)
 	FindSubscriptions(topics []string, shared bool) []model.Subscription
 	FindOrderedSubscriptions(topics []string, shared bool, orderField string) []model.Subscription
-	IsOnline(sub model.Subscription) bool
 	GetAll() []model.Subscription
 }

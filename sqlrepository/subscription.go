@@ -55,15 +55,6 @@ func (s SubscriptionSqlRepository) FindOrderedSubscriptions(topics []string, sha
 	return subs
 }
 
-func (s SubscriptionSqlRepository) IsOnline(sub model.Subscription) bool {
-	session := model.Session{}
-	if err := s.Db.Where("id = ?", sub.SessionID).First(&session).Error; err != nil {
-		return false
-	} else {
-		return session.Connected
-	}
-}
-
 func (s SubscriptionSqlRepository) DeleteByClientIdTopicShareName(clientId string, topic string, shareName string) error {
 	return s.Db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).Delete(&Subscription{}).Error
 }

@@ -128,3 +128,12 @@ func (sr SessionSqlRepository) GetAll() []model.Session {
 func (sr SessionSqlRepository) Save(session *model.Session) {
 	sr.Db.Save(&session)
 }
+
+func (sr SessionSqlRepository) IsOnline(sessionId uint) bool {
+	session := model.Session{}
+	if err := sr.Db.Where("id = ?", sessionId).First(&session).Error; err != nil {
+		return false
+	} else {
+		return session.Connected
+	}
+}

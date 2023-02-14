@@ -12,4 +12,5 @@ type SessionRepository interface {
 	GetById(sessionId uint) (model.Session, error)
 	GetAll() []model.Session
 	Save(*model.Session)
+	IsOnline(sessionId uint) bool
 }

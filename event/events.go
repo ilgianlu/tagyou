@@ -147,7 +147,7 @@ func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
 	grouped := model.SubscriptionGroup{}
 	for _, s := range subs {
 		if val, ok := grouped[s.ShareName]; ok {
-			if persistence.SubscriptionRepository.IsOnline(s) {
+			if persistence.SessionRepository.IsOnline(s.SessionID) {
 				grouped[s.ShareName] = append(val, s)
 			}
 		} else {
