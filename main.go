@@ -32,7 +32,7 @@ func main() {
 	defer p.Close()
 
 	go api.StartApi(os.Getenv("API_PORT"))
-	mq.StartMQTT(os.Getenv("LISTEN_PORT"))
+	mq.Start(os.Getenv("LISTEN_PORT"), os.Getenv("WS_PORT"))
 }
 
 func loadEnv() error {
