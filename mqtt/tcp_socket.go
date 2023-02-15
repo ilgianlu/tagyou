@@ -2,7 +2,6 @@ package mqtt
 
 import (
 	"bufio"
-	"fmt"
 	"net"
 	"time"
 
@@ -45,28 +44,7 @@ func handleTcpConnection(connections *model.Connections, conn net.Conn) {
 	}
 
 	scanner := bufio.NewScanner(conn)
-	packetSplit := func(b []byte, atEOF bool) (advance int, token []byte, err error) {
-		if len(b) == 0 && atEOF {
-			// socket down - closed
-			if session.GetClientId() != "" {
-				log.Debug().Msgf("[MQTT] (%s:%d) will due to socket down!", session.GetClientId(), session.LastConnect)
-				willEvent(&session, events)
-				disconnectClient(&session, events)
-				return 0, nil, nil
-			}
-			return 0, b, bufio.ErrFinalToken
-		}
-		pb, err := packet.ReadFromByteSlice(b)
-		if err != nil {
-			if !atEOF {
-				return 0, nil, nil
-			}
-			log.Error().Err(err).Msg(fmt.Sprintf("[MQTT] error reading bytes - session: %s\n", session.GetClientId()))
-			return 0, pb, bufio.ErrFinalToken
-		}
-		return len(pb), pb, nil
-	}
-	scanner.Split(packetSplit)
+	scanner.Split(packetSplit(&session, events))
 
 	for scanner.Scan() {
 		err := scanner.Err()
@@ -84,15 +62,8 @@ func handleTcpConnection(connections *model.Connections, conn net.Conn) {
 		}
 
 		b := scanner.Bytes()
-		p, err := packet.Start(b)
+		p, err := packetParse(&session, b)
 		if err != nil {
-			log.Error().Err(err).Msg("[MQTT] Start err")
-			return
-		}
-		p.Session = &session
-		parseErr := p.Parse()
-		if parseErr != 0 {
-			log.Error().Msgf("[MQTT] parse err %d", parseErr)
 			return
 		}
 
