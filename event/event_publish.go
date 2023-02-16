@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func onPublish(connections *model.Connections, p *packet.Packet) {
+func OnPublish(connections *model.Connections, p *packet.Packet) {
 	if conf.ACL_ON && !p.Session.FromLocalhost() && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
 			sendAck(connections, p, packet.PUBACK_NOT_AUTHORIZED)
