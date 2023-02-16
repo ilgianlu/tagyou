@@ -2,8 +2,8 @@ package mqtt
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -16,26 +16,10 @@ import (
 	"nhooyr.io/websocket"
 )
 
-type WebsocketConnection struct {
-	conn websocket.Conn
-}
-
-func (c WebsocketConnection) Write(b []byte) (n int, e error) {
-	err := c.conn.Write(context.Background(), websocket.MessageBinary, b)
-	return len(b), err
-}
-
-func (c WebsocketConnection) Close() error {
-	return c.conn.Close(websocket.StatusNormalClosure, "")
-}
-
-func (c WebsocketConnection) RemoteAddr() net.Addr {
-	return &net.IPAddr{}
-}
-
 func StartWebSocket(port string, connections *model.Connections) {
 	r := httprouter.New()
 	r.GET("/ws", AcceptWebsocket(connections))
+	r.POST("/messages", PostMessage(connections))
 
 	log.Info().Msgf("[WS] websocket listening on %s", port)
 	if err := http.ListenAndServe(port, r); err != nil {
@@ -61,7 +45,7 @@ func AcceptWebsocket(connections *model.Connections) func(http.ResponseWriter, *
 		session := model.RunningSession{
 			KeepAlive:      conf.DEFAULT_KEEPALIVE,
 			ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
-			Conn:           WebsocketConnection{conn: *c},
+			Conn:           model.WebsocketConnection{Conn: *c},
 			LastConnect:    time.Now().Unix(),
 		}
 
@@ -72,6 +56,43 @@ func AcceptWebsocket(connections *model.Connections) func(http.ResponseWriter, *
 		handleMqtt(&session, bytesFromWs, events)
 	}
 
+}
+
+func PostMessage(connections *model.Connections) func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+
+	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+		mess := model.Message{}
+		if err := json.NewDecoder(r.Body).Decode(&mess); err != nil {
+			log.Printf("error decoding json input: %s\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// mc.mqttClient.Publish(mess.Topic, mess.Qos, mess.Retained, payloadFromPayloadType(mess.Payload, mess.PayloadType))
+		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload, mess.PayloadType))
+		msg.Topic = mess.Topic
+		event.OnPublish(connections, &msg)
+
+		if res, err := json.Marshal("message published"); err != nil {
+			log.Printf("error marshaling response message: %s\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			numBytes, err := w.Write(res)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Wrote %d bytes json result\n", numBytes)
+		}
+	}
+
+}
+
+func payloadFromPayloadType(payload string, payloadType byte) []byte {
+	return []byte(payload)
 }
 
 func readFromWs(session *model.RunningSession, r *http.Request, c *websocket.Conn, bytesFromWs chan<- []byte) {

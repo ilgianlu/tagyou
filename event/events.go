@@ -28,7 +28,7 @@ func RangeEvents(connections *model.Connections, events <-chan *packet.Packet) {
 			onUnsubscribe(connections, p)
 		case packet.EVENT_PUBLISH:
 			log.Debug().Msgf("//!! EVENT type %d client published to %s %s QoS %d", p.Event, p.Topic, clientId, p.QoS())
-			onPublish(connections, p)
+			OnPublish(connections, p)
 		case packet.EVENT_PUBACKED:
 			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), clientId)
 			clientPuback(p)
