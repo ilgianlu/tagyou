@@ -105,7 +105,7 @@ func handleMqtt(session *model.RunningSession, bytesFromWs <-chan []byte, events
 
 		pb, err := packet.ReadFromByteSlice(buf)
 		if err != nil {
-			log.Err(err).Msg("error during ReadFromByteSlice")
+			log.Debug().Msgf("error during ReadFromByteSlice : %s", err.Error())
 			continue
 		}
 
@@ -113,6 +113,7 @@ func handleMqtt(session *model.RunningSession, bytesFromWs <-chan []byte, events
 
 		p, err := packetParse(session, pb)
 		if err != nil {
+			log.Debug().Msgf("error during packet parse : %s", err.Error())
 			return
 		}
 

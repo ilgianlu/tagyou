@@ -26,7 +26,7 @@ func packetSplit(session *model.RunningSession, events chan<- *packet.Packet) fu
 			if !atEOF {
 				return 0, nil, nil
 			}
-			log.Error().Err(err).Msg(fmt.Sprintf("[MQTT] error reading bytes - session: %s\n", session.GetClientId()))
+			log.Debug().Msgf("[MQTT] error reading bytes - session: %s : %s", session.GetClientId(), err.Error())
 			return 0, pb, bufio.ErrFinalToken
 		}
 		return len(pb), pb, nil
