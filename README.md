@@ -29,7 +29,7 @@ Tag "latest" is continuously refresh by github actions built on development bran
 
 ## contribution
 
-I'm developing on linux, visual studio code, go lang 1.16, using go modules.
+I'm developing on linux, visual studio code, go lang 1.19, using go modules.
 
 Build and modify should not more difficult than cloning the repo, branching, opening a pull request. Please open an issue before contributing and feel free to include @ilgianlu
 for the review.
