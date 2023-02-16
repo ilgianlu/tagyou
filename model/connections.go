@@ -5,18 +5,24 @@ import (
 	"sync"
 )
 
+type TagyouConn interface {
+	Write(b []byte) (n int, err error)
+	Close() error
+	RemoteAddr() net.Addr
+}
+
 type Connections struct {
-	Conns map[string]net.Conn
+	Conns map[string]TagyouConn
 	Mu    sync.RWMutex
 }
 
-func (c *Connections) Add(clientId string, conn net.Conn) {
+func (c *Connections) Add(clientId string, conn TagyouConn) {
 	c.Mu.Lock()
 	c.Conns[clientId] = conn
 	c.Mu.Unlock()
 }
 
-func (c *Connections) Exists(clientId string) (net.Conn, bool) {
+func (c *Connections) Exists(clientId string) (TagyouConn, bool) {
 	c.Mu.RLock()
 	defer c.Mu.RUnlock()
 	if conn, ok := c.Conns[clientId]; ok {

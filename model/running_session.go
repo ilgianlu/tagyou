@@ -1,7 +1,6 @@
 package model
 
 import (
-	"net"
 	"strings"
 	"sync"
 
@@ -24,7 +23,7 @@ type RunningSession struct {
 	Password        string
 	SubscribeAcl    string
 	PublishAcl      string
-	Conn            net.Conn
+	Conn            TagyouConn
 	Mu              sync.RWMutex
 }
 
@@ -74,10 +73,16 @@ func (s *RunningSession) GetProtocolVersion() uint8 {
 	return s.ProtocolVersion
 }
 
-func (s *RunningSession) GetConn() net.Conn {
+func (s *RunningSession) GetConn() TagyouConn {
 	s.Mu.RLock()
 	defer s.Mu.RUnlock()
 	return s.Conn
+}
+
+func (s *RunningSession) GetKeepAlive() int {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.KeepAlive
 }
 
 func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {

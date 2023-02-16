@@ -274,12 +274,11 @@ func ReadFromByteSlice(buff []byte) ([]byte, error) {
 	i := 1
 	rl, k, err := ReadVarInt(buff[i:])
 	if err != nil {
-		log.Printf("header: malformed remainingLength format: %s", err)
+		log.Err(err).Msg("header: malformed remainingLength format")
 		return nil, err
 	}
 	i = i + k
 	if len(buff[i:]) < rl {
-		log.Debug().Msg("remaining bytes: not enough bytes in buffer")
 		return nil, fmt.Errorf("remaining bytes: not enough bytes in buffer")
 	}
 	i = i + rl

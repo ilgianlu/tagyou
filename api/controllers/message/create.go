@@ -2,8 +2,9 @@ package message
 
 import (
 	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -24,7 +25,7 @@ func (mc MessageController) PostMessage(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	mc.mqttClient.Publish(mess.Topic, mess.Qos, mess.Retained, payloadFromPayloadType(mess.Payload, mess.PayloadType))
+	// mc.mqttClient.Publish(mess.Topic, mess.Qos, mess.Retained, payloadFromPayloadType(mess.Payload, mess.PayloadType))
 
 	if res, err := json.Marshal("message published"); err != nil {
 		log.Printf("error marshaling response message: %s\n", err)
@@ -42,6 +43,6 @@ func (mc MessageController) PostMessage(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func payloadFromPayloadType(payload string, payloadType byte) []byte {
-	return []byte(payload)
-}
+// func payloadFromPayloadType(payload string, payloadType byte) []byte {
+// 	return []byte(payload)
+// }
