@@ -10,6 +10,7 @@ require (
 	golang.org/x/crypto v0.5.0
 	gorm.io/driver/sqlite v1.4.4
 	gorm.io/gorm v1.24.3
+	nhooyr.io/websocket v1.8.7
 )
 
 require (
@@ -20,5 +21,4 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	golang.org/x/sys v0.4.0 // indirect
-	nhooyr.io/websocket v1.8.7 // indirect
 )
