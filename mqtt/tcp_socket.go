@@ -14,7 +14,6 @@ import (
 )
 
 func StartMQTT(port string, connections *model.Connections) {
-	// start tcp socket
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Error().Err(err).Msg("[MQTT] tcp listen error")
@@ -81,8 +80,6 @@ func handleTcpConnection(connections *model.Connections, conn net.Conn) {
 
 		events <- &p
 	}
-
-	// log.Println("Out of Scan loop!")
 }
 
 func willEvent(session *model.RunningSession, e chan<- *packet.Packet) {
