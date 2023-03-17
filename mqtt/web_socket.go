@@ -28,7 +28,6 @@ func StartWebSocket(port string, connections *model.Connections) {
 }
 
 func AcceptWebsocket(connections *model.Connections) func(http.ResponseWriter, *http.Request, httprouter.Params) {
-
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			Subprotocols: []string{"mqtt"},
@@ -55,11 +54,9 @@ func AcceptWebsocket(connections *model.Connections) func(http.ResponseWriter, *
 		go readFromWs(&session, r, c, bytesFromWs)
 		handleMqtt(&session, bytesFromWs, events)
 	}
-
 }
 
 func PostMessage(connections *model.Connections) func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		mess := model.Message{}
 		if err := json.NewDecoder(r.Body).Decode(&mess); err != nil {
@@ -68,7 +65,6 @@ func PostMessage(connections *model.Connections) func(w http.ResponseWriter, r *
 			return
 		}
 
-		// mc.mqttClient.Publish(mess.Topic, mess.Qos, mess.Retained, payloadFromPayloadType(mess.Payload, mess.PayloadType))
 		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload, mess.PayloadType))
 		msg.Topic = mess.Topic
 		event.OnPublish(connections, &msg)
@@ -88,7 +84,6 @@ func PostMessage(connections *model.Connections) func(w http.ResponseWriter, r *
 			log.Printf("Wrote %d bytes json result\n", numBytes)
 		}
 	}
-
 }
 
 func payloadFromPayloadType(payload string, payloadType byte) []byte {
@@ -97,19 +92,14 @@ func payloadFromPayloadType(payload string, payloadType byte) []byte {
 
 func readFromWs(session *model.RunningSession, r *http.Request, c *websocket.Conn, bytesFromWs chan<- []byte) {
 	for {
-		// log.Debug().Msg(fmt.Sprintf("keep alive set %d secs", session.GetKeepAlive()*2))
-		// ctx, cancel := context.WithTimeout(r.Context(), time.Duration(session.GetKeepAlive()*2)*time.Second)
-
 		msgType, msg, err := c.Read(context.Background())
 		if err != nil {
 			log.Err(err).Msg("error reading message")
-			// cancel()
 			return
 		}
 
 		log.Debug().Msg(fmt.Sprintf("received type %s : %s", msgType.String(), string(msg)))
 		bytesFromWs <- msg
-		// cancel()
 	}
 }
 
@@ -139,6 +129,5 @@ func handleMqtt(session *model.RunningSession, bytesFromWs <-chan []byte, events
 		}
 
 		events <- &p
-
 	}
 }

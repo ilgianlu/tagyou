@@ -34,7 +34,7 @@ func doAuth(session *model.RunningSession) bool {
 	username := session.Username
 	password := session.Password
 	session.Mu.RUnlock()
-	ok, pubAcl, subAcl := CheckAuth(clientId, username, password)
+	ok, pubAcl, subAcl := checkAuth(clientId, username, password)
 	if !ok {
 		log.Debug().Msg("[MQTT] wrong connect credentials")
 		return false
@@ -44,14 +44,16 @@ func doAuth(session *model.RunningSession) bool {
 	return true
 }
 
-func CheckAuth(clientId string, username string, password string) (bool, string, string) {
+func checkAuth(clientId string, username string, password string) (bool, string, string) {
 	auth, err := persistence.AuthRepository.GetByClientIdUsername(clientId, username)
 	if err != nil {
+		log.Debug().Msg("[MQTT] could not find user")
 		return false, "", ""
 	}
 
 	mAuth := model.Auth(auth)
 	if err := mAuth.CheckPassword(password); err != nil {
+		log.Debug().Msg("[MQTT] wrong password")
 		return false, "", ""
 	}
 
