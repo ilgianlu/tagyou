@@ -1,13 +1,13 @@
 package event
 
 import (
-	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
+	"github.com/ilgianlu/tagyou/sender"
 	"github.com/rs/zerolog/log"
 )
 
-func sendWill(connections *model.Connections, p *packet.Packet) {
+func sendWill(sender sender.Sender, p *packet.Packet) {
 	p.Session.Mu.RLock()
 	defer p.Session.Mu.RUnlock()
 	if p.Session.WillTopic != "" {
@@ -16,7 +16,7 @@ func sendWill(connections *model.Connections, p *packet.Packet) {
 			return
 		}
 		willPacket := packet.Publish(p.Session.ProtocolVersion, p.Session.WillQoS(), p.Session.WillRetain(), p.Session.WillTopic, packet.NewPacketIdentifier(), p.Session.WillMessage)
-		sendForward(connections, p.Session.WillTopic, &willPacket)
+		sender.Forward(p.Session.WillTopic, &willPacket)
 	}
 }
 

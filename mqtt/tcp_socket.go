@@ -26,7 +26,7 @@ func StartMQTT(port string, sender sender.Sender, connections *model.Connections
 		if err != nil {
 			log.Error().Err(err).Msg("[MQTT] tcp accept error")
 		}
-		go handleTcpConnection(connections, conn)
+		go handleTcpConnection(sender, connections, conn)
 	}
 }
 
@@ -34,7 +34,7 @@ func handleTcpConnection(sender sender.Sender, connections *model.Connections, c
 	defer conn.Close()
 
 	events := make(chan *packet.Packet)
-	go event.RangeEvents(connections, events)
+	go event.RangeEvents(sender, connections, events)
 
 	session := model.RunningSession{
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,

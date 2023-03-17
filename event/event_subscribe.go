@@ -5,25 +5,26 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
+	"github.com/ilgianlu/tagyou/sender"
 )
 
-func onSubscribe(connections *model.Connections, p *packet.Packet) {
+func onSubscribe(sender sender.Sender, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
-		rCode := clientSubscription(connections, p.Session, subscription)
+		rCode := clientSubscription(sender, p.Session, subscription)
 		reasonCodes = append(reasonCodes, rCode)
 	}
-	clientSubscribed(connections, p, reasonCodes)
+	clientSubscribed(sender, p, reasonCodes)
 }
 
-func clientSubscribed(connections *model.Connections, p *packet.Packet, reasonCodes []uint8) {
+func clientSubscribed(sender sender.Sender, p *packet.Packet, reasonCodes []uint8) {
 	p.Session.Mu.RLock()
 	toSend := packet.Suback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
-	SimpleSend(connections, p.Session.ClientId, toSend.ToByteSlice())
+	sender.Send(p.Session.ClientId, toSend.ToByteSlice())
 	p.Session.Mu.RUnlock()
 }
 
-func clientSubscription(connections *model.Connections, session *model.RunningSession, subscription model.Subscription) uint8 {
+func clientSubscription(sender sender.Sender, session *model.RunningSession, subscription model.Subscription) uint8 {
 	session.Mu.RLock()
 	fromLocalhost := session.FromLocalhost()
 	subscribeAcl := session.SubscribeAcl
@@ -36,18 +37,18 @@ func clientSubscription(connections *model.Connections, session *model.RunningSe
 	// db.Create(&subscription)
 	persistence.SubscriptionRepository.CreateOne(subscription)
 	if !subscription.Shared {
-		sendRetain(connections, protocolVersion, subscription)
+		sendRetain(sender, protocolVersion, subscription)
 	}
 	return 0
 }
 
-func sendRetain(connections *model.Connections, protocolVersion uint8, subscription model.Subscription) {
+func sendRetain(sender sender.Sender, protocolVersion uint8, subscription model.Subscription) {
 	retains := persistence.RetainRepository.FindRetains(subscription.Topic)
 	if len(retains) == 0 {
 		return
 	}
 	for _, r := range retains {
 		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		SimpleSend(connections, subscription.ClientId, p.ToByteSlice())
+		sender.Send(subscription.ClientId, p.ToByteSlice())
 	}
 }
