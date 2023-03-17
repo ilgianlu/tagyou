@@ -14,7 +14,7 @@ import (
 	"github.com/ilgianlu/tagyou/sender"
 )
 
-func StartMQTT(port string, sender sender.Sender, connections *model.Connections) {
+func StartMQTT(port string, sender sender.Sender) {
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Error().Err(err).Msg("[MQTT] tcp listen error")
@@ -26,15 +26,15 @@ func StartMQTT(port string, sender sender.Sender, connections *model.Connections
 		if err != nil {
 			log.Error().Err(err).Msg("[MQTT] tcp accept error")
 		}
-		go handleTcpConnection(sender, connections, conn)
+		go handleTcpConnection(sender, conn)
 	}
 }
 
-func handleTcpConnection(sender sender.Sender, connections *model.Connections, conn net.Conn) {
+func handleTcpConnection(sender sender.Sender, conn net.Conn) {
 	defer conn.Close()
 
 	events := make(chan *packet.Packet)
-	go event.RangeEvents(sender, connections, events)
+	go event.RangeEvents(sender, events)
 
 	session := model.RunningSession{
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,

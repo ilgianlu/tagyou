@@ -11,13 +11,13 @@ import (
 	"github.com/ilgianlu/tagyou/sender"
 )
 
-func RangeEvents(sender sender.Sender, connections *model.Connections, events <-chan *packet.Packet) {
+func RangeEvents(sender sender.Sender, events <-chan *packet.Packet) {
 	for p := range events {
 		clientId := p.Session.GetClientId()
 		switch p.Event {
 		case packet.EVENT_CONNECT:
 			log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, clientId)
-			onConnect(connections, sender, p)
+			onConnect(sender, p)
 		case packet.EVENT_SUBSCRIBED:
 			log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, clientId)
 			onSubscribe(sender, p)
@@ -44,13 +44,13 @@ func RangeEvents(sender sender.Sender, connections *model.Connections, events <-
 			onPing(sender, p)
 		case packet.EVENT_DISCONNECT:
 			log.Debug().Msgf("//!! EVENT type %d client disconnect %s", p.Event, clientId)
-			clientDisconnect(p, connections, clientId)
+			clientDisconnect(sender, p, clientId)
 		case packet.EVENT_WILL_SEND:
 			log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, clientId)
 			sendWill(sender, p)
 		case packet.EVENT_PACKET_ERR:
 			log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, clientId)
-			clientDisconnect(p, connections, clientId)
+			clientDisconnect(sender, p, clientId)
 		}
 	}
 }
@@ -60,14 +60,13 @@ func onPing(sender sender.Sender, p *packet.Packet) {
 	sender.Send(p.Session.GetClientId(), toSend.ToByteSlice())
 }
 
-func clientDisconnect(p *packet.Packet, connections *model.Connections, clientId string) {
-	if _, ok := connections.Exists(clientId); ok {
+func clientDisconnect(sender sender.Sender, p *packet.Packet, clientId string) {
+	if sender.DestinationExists(clientId) {
 		needDisconnection := needDisconnection(p)
 		if !needDisconnection {
 			return
 		}
-		connections.Close(clientId)
-		connections.Remove(clientId)
+		sender.RemoveDestination(clientId)
 		persistence.SessionRepository.DisconnectSession(clientId)
 	}
 }

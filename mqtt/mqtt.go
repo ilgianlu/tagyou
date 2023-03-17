@@ -12,6 +12,6 @@ func Start(mqttPort string, wsPort string) {
 
 	sender := sender.SimpleSender{Connections: &connections}
 
-	go StartWebSocket(wsPort, sender, &connections)
-	StartMQTT(mqttPort, sender, &connections)
+	go StartWebSocket(wsPort, sender)
+	StartMQTT(mqttPort, sender)
 }

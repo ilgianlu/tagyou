@@ -17,9 +17,9 @@ import (
 	"nhooyr.io/websocket"
 )
 
-func StartWebSocket(port string, sender sender.Sender, connections *model.Connections) {
+func StartWebSocket(port string, sender sender.Sender) {
 	r := httprouter.New()
-	r.GET("/ws", AcceptWebsocket(sender, connections))
+	r.GET("/ws", AcceptWebsocket(sender))
 	r.POST("/messages", PostMessage(sender))
 
 	log.Info().Msgf("[WS] websocket listening on %s", port)
@@ -28,7 +28,7 @@ func StartWebSocket(port string, sender sender.Sender, connections *model.Connec
 	}
 }
 
-func AcceptWebsocket(sender sender.Sender, connections *model.Connections) func(http.ResponseWriter, *http.Request, httprouter.Params) {
+func AcceptWebsocket(sender sender.Sender) func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			Subprotocols: []string{"mqtt"},
@@ -40,7 +40,7 @@ func AcceptWebsocket(sender sender.Sender, connections *model.Connections) func(
 		}
 
 		events := make(chan *packet.Packet)
-		go event.RangeEvents(sender, connections, events)
+		go event.RangeEvents(sender, events)
 
 		session := model.RunningSession{
 			KeepAlive:      conf.DEFAULT_KEEPALIVE,

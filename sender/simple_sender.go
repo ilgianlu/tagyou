@@ -17,6 +17,23 @@ type SimpleSender struct {
 	Connections *model.Connections
 }
 
+func (s SimpleSender) AddDestination(clientId string, conn model.TagyouConn) {
+	s.Connections.Add(clientId, conn)
+}
+
+func (s SimpleSender) RemoveDestination(clientId string) {
+	err := s.Connections.Close(clientId)
+	if err != nil {
+		log.Debug().Err(err).Msgf("could not clone connection %s", clientId)
+	}
+	s.Connections.Remove(clientId)
+}
+
+func (s SimpleSender) DestinationExists(clientId string) bool {
+	_, exists := s.Connections.Exists(clientId)
+	return exists
+}
+
 func (s SimpleSender) Send(clientId string, payload []byte) {
 	conn, exists := s.Connections.Exists(clientId)
 	if exists {
