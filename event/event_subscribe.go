@@ -5,26 +5,26 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/sender"
+	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onSubscribe(sender sender.Sender, p *packet.Packet) {
+func onSubscribe(router routers.Router, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
-		rCode := clientSubscription(sender, p.Session, subscription)
+		rCode := clientSubscription(router, p.Session, subscription)
 		reasonCodes = append(reasonCodes, rCode)
 	}
-	clientSubscribed(sender, p, reasonCodes)
+	clientSubscribed(router, p, reasonCodes)
 }
 
-func clientSubscribed(sender sender.Sender, p *packet.Packet, reasonCodes []uint8) {
+func clientSubscribed(router routers.Router, p *packet.Packet, reasonCodes []uint8) {
 	p.Session.Mu.RLock()
 	toSend := packet.Suback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
-	sender.Send(p.Session.ClientId, toSend.ToByteSlice())
+	router.Send(p.Session.ClientId, toSend.ToByteSlice())
 	p.Session.Mu.RUnlock()
 }
 
-func clientSubscription(sender sender.Sender, session *model.RunningSession, subscription model.Subscription) uint8 {
+func clientSubscription(router routers.Router, session *model.RunningSession, subscription model.Subscription) uint8 {
 	session.Mu.RLock()
 	fromLocalhost := session.FromLocalhost()
 	subscribeAcl := session.SubscribeAcl
@@ -37,18 +37,18 @@ func clientSubscription(sender sender.Sender, session *model.RunningSession, sub
 	// db.Create(&subscription)
 	persistence.SubscriptionRepository.CreateOne(subscription)
 	if !subscription.Shared {
-		sendRetain(sender, protocolVersion, subscription)
+		sendRetain(router, protocolVersion, subscription)
 	}
 	return 0
 }
 
-func sendRetain(sender sender.Sender, protocolVersion uint8, subscription model.Subscription) {
+func sendRetain(router routers.Router, protocolVersion uint8, subscription model.Subscription) {
 	retains := persistence.RetainRepository.FindRetains(subscription.Topic)
 	if len(retains) == 0 {
 		return
 	}
 	for _, r := range retains {
 		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		sender.Send(subscription.ClientId, p.ToByteSlice())
+		router.Send(subscription.ClientId, p.ToByteSlice())
 	}
 }

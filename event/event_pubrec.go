@@ -6,13 +6,13 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/sender"
+	"github.com/ilgianlu/tagyou/routers"
 )
 
-func clientPubrec(sender sender.Sender, p *packet.Packet) {
+func clientPubrec(router routers.Router, p *packet.Packet) {
 	sendPubrel := func(retry model.Retry) {
 		toSend := packet.Pubrel(retry.PacketIdentifier, retry.ReasonCode, p.Session.ProtocolVersion)
-		sender.Send(retry.ClientId, toSend.ToByteSlice())
+		router.Send(retry.ClientId, toSend.ToByteSlice())
 	}
 
 	onExpectedPubrec := func(retry model.Retry) {

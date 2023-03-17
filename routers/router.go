@@ -1,11 +1,11 @@
-package sender
+package routers
 
 import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 )
 
-type Sender interface {
+type Router interface {
 	Send(clientId string, payload []byte)
 	Forward(topic string, packet *packet.Packet)
 	AddDestination(clientId string, conn model.TagyouConn)

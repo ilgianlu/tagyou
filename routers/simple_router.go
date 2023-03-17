@@ -1,4 +1,4 @@
-package sender
+package routers
 
 import (
 	"math/rand"
@@ -13,15 +13,15 @@ import (
 	tpc "github.com/ilgianlu/tagyou/topic"
 )
 
-type SimpleSender struct {
+type SimpleRouter struct {
 	Connections *model.Connections
 }
 
-func (s SimpleSender) AddDestination(clientId string, conn model.TagyouConn) {
+func (s SimpleRouter) AddDestination(clientId string, conn model.TagyouConn) {
 	s.Connections.Add(clientId, conn)
 }
 
-func (s SimpleSender) RemoveDestination(clientId string) {
+func (s SimpleRouter) RemoveDestination(clientId string) {
 	err := s.Connections.Close(clientId)
 	if err != nil {
 		log.Debug().Err(err).Msgf("could not clone connection %s", clientId)
@@ -29,12 +29,12 @@ func (s SimpleSender) RemoveDestination(clientId string) {
 	s.Connections.Remove(clientId)
 }
 
-func (s SimpleSender) DestinationExists(clientId string) bool {
+func (s SimpleRouter) DestinationExists(clientId string) bool {
 	_, exists := s.Connections.Exists(clientId)
 	return exists
 }
 
-func (s SimpleSender) Send(clientId string, payload []byte) {
+func (s SimpleRouter) Send(clientId string, payload []byte) {
 	conn, exists := s.Connections.Exists(clientId)
 	if exists {
 		if conn == nil {
@@ -55,20 +55,20 @@ func (s SimpleSender) Send(clientId string, payload []byte) {
 	}
 }
 
-func (s SimpleSender) Forward(topic string, p *packet.Packet) {
+func (s SimpleRouter) Forward(topic string, p *packet.Packet) {
 	destSubs := tpc.Explode(topic)
 	s.sendSubscribers(topic, destSubs, p)
 	s.sendSharedSubscribers(topic, destSubs, p)
 }
 
-func (s SimpleSender) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s SimpleRouter) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
 	subs := persistence.SubscriptionRepository.FindSubscriptions(destSubs, false)
 	for _, sub := range subs {
 		s.forwardSend(topic, sub, p)
 	}
 }
 
-func (s SimpleSender) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
 	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true, "share_name")
 	grouped := groupSubscribers(subs)
 	for _, group := range grouped {
@@ -101,7 +101,7 @@ func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
 	return grouped
 }
 
-func (s SimpleSender) forwardSend(topic string, sub model.Subscription, p *packet.Packet) {
+func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packet.Packet) {
 	qos := getQos(p.QoS(), sub.Qos)
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier

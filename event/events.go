@@ -8,65 +8,65 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/sender"
+	"github.com/ilgianlu/tagyou/routers"
 )
 
-func RangeEvents(sender sender.Sender, events <-chan *packet.Packet) {
+func RangeEvents(router routers.Router, events <-chan *packet.Packet) {
 	for p := range events {
 		clientId := p.Session.GetClientId()
 		switch p.Event {
 		case packet.EVENT_CONNECT:
 			log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, clientId)
-			onConnect(sender, p)
+			onConnect(router, p)
 		case packet.EVENT_SUBSCRIBED:
 			log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, clientId)
-			onSubscribe(sender, p)
+			onSubscribe(router, p)
 		case packet.EVENT_UNSUBSCRIBED:
 			log.Debug().Msgf("//!! EVENT type %d client unsubscribed %s", p.Event, clientId)
-			onUnsubscribe(sender, p)
+			onUnsubscribe(router, p)
 		case packet.EVENT_PUBLISH:
 			log.Debug().Msgf("//!! EVENT type %d client published to %s %s QoS %d", p.Event, p.Topic, clientId, p.QoS())
-			OnPublish(sender, p)
+			OnPublish(router, p)
 		case packet.EVENT_PUBACKED:
 			log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), clientId)
 			clientPuback(p)
 		case packet.EVENT_PUBRECED:
 			log.Debug().Msgf("//!! EVENT type %d pub received message %d %s", p.Event, p.PacketIdentifier(), clientId)
-			clientPubrec(sender, p)
+			clientPubrec(router, p)
 		case packet.EVENT_PUBRELED:
 			log.Debug().Msgf("//!! EVENT type %d pub releases message %d %s", p.Event, p.PacketIdentifier(), clientId)
-			clientPubrel(sender, p)
+			clientPubrel(router, p)
 		case packet.EVENT_PUBCOMPED:
 			log.Debug().Msgf("//!! EVENT type %d pub complete message %d %s", p.Event, p.PacketIdentifier(), clientId)
 			clientPubcomp(p)
 		case packet.EVENT_PING:
 			log.Debug().Msgf("//!! EVENT type %d client ping %s", p.Event, clientId)
-			onPing(sender, p)
+			onPing(router, p)
 		case packet.EVENT_DISCONNECT:
 			log.Debug().Msgf("//!! EVENT type %d client disconnect %s", p.Event, clientId)
-			clientDisconnect(sender, p, clientId)
+			clientDisconnect(router, p, clientId)
 		case packet.EVENT_WILL_SEND:
 			log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, clientId)
-			sendWill(sender, p)
+			sendWill(router, p)
 		case packet.EVENT_PACKET_ERR:
 			log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, clientId)
-			clientDisconnect(sender, p, clientId)
+			clientDisconnect(router, p, clientId)
 		}
 	}
 }
 
-func onPing(sender sender.Sender, p *packet.Packet) {
+func onPing(router routers.Router, p *packet.Packet) {
 	toSend := packet.PingResp()
-	sender.Send(p.Session.GetClientId(), toSend.ToByteSlice())
+	router.Send(p.Session.GetClientId(), toSend.ToByteSlice())
 }
 
-func clientDisconnect(sender sender.Sender, p *packet.Packet, clientId string) {
-	if sender.DestinationExists(clientId) {
+func clientDisconnect(router routers.Router, p *packet.Packet, clientId string) {
+	if router.DestinationExists(clientId) {
 		needDisconnection := needDisconnection(p)
 		if !needDisconnection {
 			return
 		}
-		sender.RemoveDestination(clientId)
+		router.RemoveDestination(clientId)
 		persistence.SessionRepository.DisconnectSession(clientId)
 	}
 }

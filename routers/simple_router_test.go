@@ -1,4 +1,4 @@
-package sender
+package routers
 
 import (
 	"sort"
