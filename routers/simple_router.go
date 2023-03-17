@@ -14,32 +14,32 @@ import (
 )
 
 type SimpleRouter struct {
-	Connections *model.Connections
+	Conns Connections
 }
 
 func (s SimpleRouter) AddDestination(clientId string, conn model.TagyouConn) {
-	s.Connections.Add(clientId, conn)
+	s.Conns.Add(clientId, conn)
 }
 
 func (s SimpleRouter) RemoveDestination(clientId string) {
-	err := s.Connections.Close(clientId)
+	err := s.Conns.Close(clientId)
 	if err != nil {
 		log.Debug().Err(err).Msgf("could not clone connection %s", clientId)
 	}
-	s.Connections.Remove(clientId)
+	s.Conns.Remove(clientId)
 }
 
 func (s SimpleRouter) DestinationExists(clientId string) bool {
-	_, exists := s.Connections.Exists(clientId)
+	_, exists := s.Conns.Exists(clientId)
 	return exists
 }
 
 func (s SimpleRouter) Send(clientId string, payload []byte) {
-	conn, exists := s.Connections.Exists(clientId)
+	conn, exists := s.Conns.Exists(clientId)
 	if exists {
 		if conn == nil {
 			log.Error().Msgf("cannot write to %s net.Conn, c is nil (removing)", clientId)
-			s.Connections.Remove(clientId)
+			s.Conns.Remove(clientId)
 			return
 		}
 		// packetBytes := p.ToByteSlice()
