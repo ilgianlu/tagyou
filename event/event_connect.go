@@ -7,25 +7,26 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
+	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onConnect(connections *model.Connections, p *packet.Packet) {
+func onConnect(router routers.Router, p *packet.Packet) {
 	clientId := p.Session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
 		if !doAuth(p.Session) {
 			return
 		}
 	}
-	taken := checkConnectionTakeOver(p, connections)
+	taken := checkConnectionTakeOver(p, router)
 	if taken {
 		log.Debug().Msgf("[MQTT] (%s) reconnecting", clientId)
 	}
-	connections.Add(clientId, p.Session.GetConn())
+	router.AddDestination(clientId, p.Session.GetConn())
 
 	startSession(p.Session)
 
 	connack := packet.Connack(false, packet.CONNECT_OK, p.Session.GetProtocolVersion())
-	SimpleSend(connections, clientId, connack.ToByteSlice())
+	router.Send(clientId, connack.ToByteSlice())
 }
 
 func doAuth(session *model.RunningSession) bool {
@@ -60,23 +61,19 @@ func checkAuth(clientId string, username string, password string) (bool, string,
 	return true, auth.PublishAcl, auth.SubscribeAcl
 }
 
-func checkConnectionTakeOver(p *packet.Packet, connections *model.Connections) bool {
+func checkConnectionTakeOver(p *packet.Packet, router routers.Router) bool {
 	p.Session.Mu.RLock()
 	clientId := p.Session.ClientId
 	protocolVersion := p.Session.ProtocolVersion
 	p.Session.Mu.RUnlock()
-	if _, ok := connections.Exists(clientId); !ok {
+	if router.DestinationExists(clientId) {
 		return false
 	}
 
 	pkt := packet.Connack(false, packet.SESSION_TAKEN_OVER, protocolVersion)
-	SimpleSend(connections, clientId, pkt.ToByteSlice())
+	router.Send(clientId, pkt.ToByteSlice())
 
-	err := connections.Close(clientId)
-	if err != nil {
-		log.Debug().Msgf("[MQTT] (%s) error taking over another connection : %s", clientId, err)
-	}
-	connections.Remove(clientId)
+	router.RemoveDestination(clientId)
 	return true
 }
 

@@ -11,9 +11,10 @@ import (
 	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/routers"
 )
 
-func StartMQTT(port string, connections *model.Connections) {
+func StartMQTT(port string, router routers.Router) {
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Error().Err(err).Msg("[MQTT] tcp listen error")
@@ -25,15 +26,15 @@ func StartMQTT(port string, connections *model.Connections) {
 		if err != nil {
 			log.Error().Err(err).Msg("[MQTT] tcp accept error")
 		}
-		go handleTcpConnection(connections, conn)
+		go handleTcpConnection(router, conn)
 	}
 }
 
-func handleTcpConnection(connections *model.Connections, conn net.Conn) {
+func handleTcpConnection(router routers.Router, conn net.Conn) {
 	defer conn.Close()
 
 	events := make(chan *packet.Packet)
-	go event.RangeEvents(connections, events)
+	go event.RangeEvents(router, events)
 
 	session := model.RunningSession{
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,

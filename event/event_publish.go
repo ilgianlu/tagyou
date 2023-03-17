@@ -7,15 +7,16 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
+	"github.com/ilgianlu/tagyou/routers"
 	"github.com/rs/zerolog/log"
 )
 
-func OnPublish(connections *model.Connections, p *packet.Packet) {
+func OnPublish(router routers.Router, p *packet.Packet) {
 	if conf.ACL_ON && !p.Session.FromLocalhost() && !CheckAcl(p.Topic, p.Session.PublishAcl) {
 		if p.QoS() == 1 {
-			sendAck(connections, p, packet.PUBACK_NOT_AUTHORIZED)
+			sendAck(router, p, packet.PUBACK_NOT_AUTHORIZED)
 		} else if p.QoS() == 2 {
-			sendPubrec(connections, p, packet.PUBREC_NOT_AUTHORIZED)
+			sendPubrec(router, p, packet.PUBREC_NOT_AUTHORIZED)
 		}
 		return
 	}
@@ -24,22 +25,22 @@ func OnPublish(connections *model.Connections, p *packet.Packet) {
 		log.Debug().Msgf("[PUBLISH] to retain")
 		saveRetain(p)
 	}
-	sendForward(connections, p.Topic, p)
+	router.Forward(p.Topic, p)
 	if p.QoS() == 1 {
 		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())
-		sendAck(connections, p, packet.PUBACK_SUCCESS)
+		sendAck(router, p, packet.PUBACK_SUCCESS)
 	} else if p.QoS() == 2 {
 		log.Debug().Msgf("[PUBLISH] QoS 2 return PUBREC")
-		sendPubrec(connections, p, packet.PUBREC_SUCCESS)
+		sendPubrec(router, p, packet.PUBREC_SUCCESS)
 	}
 }
 
-func sendAck(connections *model.Connections, p *packet.Packet, reasonCode uint8) {
+func sendAck(router routers.Router, p *packet.Packet, reasonCode uint8) {
 	puback := packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
-	SimpleSend(connections, p.Session.ClientId, puback.ToByteSlice())
+	router.Send(p.Session.ClientId, puback.ToByteSlice())
 }
 
-func sendPubrec(connections *model.Connections, p *packet.Packet, reasonCode uint8) {
+func sendPubrec(router routers.Router, p *packet.Packet, reasonCode uint8) {
 	p.Session.Mu.RLock()
 	clientId := p.Session.ClientId
 	protocolVersion := p.Session.ProtocolVersion
@@ -56,5 +57,5 @@ func sendPubrec(connections *model.Connections, p *packet.Packet, reasonCode uin
 	persistence.RetryRepository.SaveOne(r)
 
 	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, protocolVersion)
-	SimpleSend(connections, clientId, pubrec.ToByteSlice())
+	router.Send(clientId, pubrec.ToByteSlice())
 }
