@@ -2,7 +2,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ development, ec-broker ]
+    branches: [ main ]
 
 jobs:
 
