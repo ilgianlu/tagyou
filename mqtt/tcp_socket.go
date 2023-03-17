@@ -11,9 +11,10 @@ import (
 	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/sender"
 )
 
-func StartMQTT(port string, connections *model.Connections) {
+func StartMQTT(port string, sender sender.Sender, connections *model.Connections) {
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Error().Err(err).Msg("[MQTT] tcp listen error")
@@ -29,7 +30,7 @@ func StartMQTT(port string, connections *model.Connections) {
 	}
 }
 
-func handleTcpConnection(connections *model.Connections, conn net.Conn) {
+func handleTcpConnection(sender sender.Sender, connections *model.Connections, conn net.Conn) {
 	defer conn.Close()
 
 	events := make(chan *packet.Packet)

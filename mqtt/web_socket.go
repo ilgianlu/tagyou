@@ -11,15 +11,16 @@ import (
 	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/sender"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/zerolog/log"
 	"nhooyr.io/websocket"
 )
 
-func StartWebSocket(port string, connections *model.Connections) {
+func StartWebSocket(port string, sender sender.Sender, connections *model.Connections) {
 	r := httprouter.New()
-	r.GET("/ws", AcceptWebsocket(connections))
-	r.POST("/messages", PostMessage(connections))
+	r.GET("/ws", AcceptWebsocket(sender, connections))
+	r.POST("/messages", PostMessage(sender))
 
 	log.Info().Msgf("[WS] websocket listening on %s", port)
 	if err := http.ListenAndServe(port, r); err != nil {
@@ -27,7 +28,7 @@ func StartWebSocket(port string, connections *model.Connections) {
 	}
 }
 
-func AcceptWebsocket(connections *model.Connections) func(http.ResponseWriter, *http.Request, httprouter.Params) {
+func AcceptWebsocket(sender sender.Sender, connections *model.Connections) func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			Subprotocols: []string{"mqtt"},
@@ -39,7 +40,7 @@ func AcceptWebsocket(connections *model.Connections) func(http.ResponseWriter, *
 		}
 
 		events := make(chan *packet.Packet)
-		go event.RangeEvents(connections, events)
+		go event.RangeEvents(sender, connections, events)
 
 		session := model.RunningSession{
 			KeepAlive:      conf.DEFAULT_KEEPALIVE,
@@ -56,7 +57,7 @@ func AcceptWebsocket(connections *model.Connections) func(http.ResponseWriter, *
 	}
 }
 
-func PostMessage(connections *model.Connections) func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func PostMessage(sender sender.Sender) func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		mess := model.Message{}
 		if err := json.NewDecoder(r.Body).Decode(&mess); err != nil {
@@ -67,7 +68,7 @@ func PostMessage(connections *model.Connections) func(w http.ResponseWriter, r *
 
 		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload, mess.PayloadType))
 		msg.Topic = mess.Topic
-		event.OnPublish(connections, &msg)
+		event.OnPublish(sender, &msg)
 
 		if res, err := json.Marshal("message published"); err != nil {
 			log.Printf("error marshaling response message: %s\n", err)

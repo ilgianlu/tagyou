@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/sender"
 )
 
 func Start(mqttPort string, wsPort string) {
@@ -9,6 +10,8 @@ func Start(mqttPort string, wsPort string) {
 	connections := model.Connections{}
 	connections.Conns = make(map[string]model.TagyouConn)
 
-	go StartWebSocket(wsPort, &connections)
-	StartMQTT(mqttPort, &connections)
+	sender := sender.SimpleSender{Connections: &connections}
+
+	go StartWebSocket(wsPort, sender, &connections)
+	StartMQTT(mqttPort, sender, &connections)
 }
