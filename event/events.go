@@ -21,6 +21,11 @@ func RangeEvents(router routers.Router, session *model.RunningSession, events <-
 		switch p.Event {
 		case packet.EVENT_CONNECT:
 			log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, session.GetClientId())
+			if session.GetConnected() {
+				log.Debug().Msgf("//!! EVENT type %d double connect event, disconnecting...", p.Event)
+				clientDisconnect(router, session, p, session.GetClientId())
+				return
+			}
 			onConnect(router, session, p)
 		case packet.EVENT_SUBSCRIBED:
 			log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, session.GetClientId())
