@@ -80,24 +80,26 @@ func checkConnectionTakeOver(p *packet.Packet, session *model.RunningSession, ro
 func startSession(session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if prevSession, ok := persistence.SessionRepository.SessionExists(clientId); ok {
-		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.ProtocolVersion {
+		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.GetProtocolVersion() {
 			log.Debug().Msgf("[MQTT] (%s) Cleaning previous session: Invalid or to clean", clientId)
 			if err := persistence.SessionRepository.CleanSession(clientId); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error removing previous session", clientId)
 			}
-			if id, err := persistence.SessionRepository.PersistSession(session, true); err != nil {
+			session.SetConnected(true)
+			if id, err := persistence.SessionRepository.PersistSession(session); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 			} else {
 				session.ApplySessionId(id)
 			}
 		} else {
 			log.Debug().Msgf("%s Updating previous session from running", clientId)
-			session.ApplySessionId(prevSession.ID)
+			session.ApplySessionId(prevSession.GetId())
 			persistence.SessionRepository.Save(&prevSession)
 		}
 	} else {
 		log.Debug().Msgf("[MQTT] (%s) Starting new session from running", clientId)
-		if id, err := persistence.SessionRepository.PersistSession(session, true); err != nil {
+		session.SetConnected(true)
+		if id, err := persistence.SessionRepository.PersistSession(session); err != nil {
 			log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 		} else {
 			session.ApplySessionId(id)
