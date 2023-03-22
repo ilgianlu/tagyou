@@ -17,7 +17,7 @@ func onConnect(router routers.Router, session *model.RunningSession, p *packet.P
 			return
 		}
 	}
-	taken := checkConnectionTakeOver(p, session, router)
+	taken := checkConnectionTakeOver(session, router)
 	if taken {
 		log.Debug().Msgf("[MQTT] (%s) reconnecting", clientId)
 	}
@@ -61,12 +61,12 @@ func checkAuth(clientId string, username string, password string) (bool, string,
 	return true, auth.PublishAcl, auth.SubscribeAcl
 }
 
-func checkConnectionTakeOver(p *packet.Packet, session *model.RunningSession, router routers.Router) bool {
+func checkConnectionTakeOver(session *model.RunningSession, router routers.Router) bool {
 	session.Mu.RLock()
 	clientId := session.ClientId
 	protocolVersion := session.ProtocolVersion
 	session.Mu.RUnlock()
-	if router.DestinationExists(clientId) {
+	if !router.DestinationExists(clientId) {
 		return false
 	}
 
@@ -81,6 +81,7 @@ func startSession(session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if prevSession, ok := persistence.SessionRepository.SessionExists(clientId); ok {
 		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.GetProtocolVersion() {
+			log.Debug().Msgf("[MQTT] check session (%t) (%t) (%d != %d)", session.CleanStart(), prevSession.Expired(), session.GetProtocolVersion(), prevSession.GetProtocolVersion())
 			log.Debug().Msgf("[MQTT] (%s) Cleaning previous session: Invalid or to clean", clientId)
 			if err := persistence.SessionRepository.CleanSession(clientId); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error removing previous session", clientId)
