@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/sqlrepository"
 	"github.com/robfig/cron"
 	"gorm.io/gorm"
 )
@@ -28,7 +28,7 @@ func StartRetryCleaner(db *gorm.DB) {
 
 func cleanRetries(db *gorm.DB) {
 	expireTime := time.Now().Unix() - int64(conf.RETRY_EXPIRATION)
-	if err := db.Debug().Where("created_at < ?", expireTime).Delete(&model.Retry{}).Error; err != nil {
+	if err := db.Debug().Where("created_at < ?", expireTime).Delete(&sqlrepository.Retry{}).Error; err != nil {
 		log.Error().Err(err)
 	}
 	log.Info().Msg("[MQTT] retries cleanup done")

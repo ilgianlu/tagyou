@@ -7,6 +7,7 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/sqlrepository"
 	"github.com/robfig/cron"
 	"gorm.io/gorm"
 )
@@ -26,10 +27,10 @@ func StartSessionCleaner(db *gorm.DB) {
 }
 
 func cleanSessions(db *gorm.DB) {
-	disconnectedSessions := []model.Session{}
+	disconnectedSessions := []sqlrepository.Session{}
 	if err := db.Debug().Where("connected = 0").Find(&disconnectedSessions); err != nil {
 		for _, disconnectSession := range disconnectedSessions {
-			if disconnectSession.Expired() {
+			if model.SessionExpired(disconnectSession.LastSeen, disconnectSession.ExpiryInterval) {
 				db.Debug().Delete(&disconnectSession)
 			}
 		}

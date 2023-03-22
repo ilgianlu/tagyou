@@ -21,10 +21,10 @@ func sendWill(router routers.Router, session *model.RunningSession) {
 	}
 }
 
-func needWillSend(session *model.RunningSession) bool {
-	if session, ok := persistence.SessionRepository.SessionExists(session.ClientId); ok {
-		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", session.ClientId, session.LastConnect, session.LastConnect)
-		if session.LastConnect > session.LastConnect {
+func needWillSend(runningSession *model.RunningSession) bool {
+	if session, ok := persistence.SessionRepository.SessionExists(runningSession.ClientId); ok {
+		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", session.ClientId, session.LastConnect, runningSession.LastConnect)
+		if session.LastConnect > runningSession.LastConnect {
 			// session persisted is newer then running memory session... device reconnected!
 			// no need to send will
 			log.Debug().Msgf("[MQTT] (%s) avoid sending will! (device reconnected)", session.ClientId)

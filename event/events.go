@@ -82,10 +82,10 @@ func saveRetain(p *packet.Packet) {
 	}
 }
 
-func needDisconnection(session *model.RunningSession, p *packet.Packet) bool {
-	if session, ok := persistence.SessionRepository.SessionExists(session.ClientId); ok {
-		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", session.ClientId, session.LastConnect, session.LastConnect)
-		if session.LastConnect > session.LastConnect {
+func needDisconnection(runningSession *model.RunningSession, p *packet.Packet) bool {
+	if session, ok := persistence.SessionRepository.SessionExists(runningSession.ClientId); ok {
+		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", session.ClientId, session.LastConnect, runningSession.LastConnect)
+		if session.LastConnect > runningSession.LastConnect {
 			// session persisted is newer then running memory session... device reconnected!
 			// no need to send will
 			log.Debug().Msgf("[MQTT] (%s) avoid disconnect! (device reconnected)", session.ClientId)

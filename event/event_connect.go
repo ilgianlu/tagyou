@@ -93,7 +93,6 @@ func startSession(session *model.RunningSession) {
 		} else {
 			log.Debug().Msgf("%s Updating previous session from running", clientId)
 			session.ApplySessionId(prevSession.ID)
-			prevSession.UpdateFromRunning(session)
 			persistence.SessionRepository.Save(&prevSession)
 		}
 	} else {

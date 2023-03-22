@@ -3,16 +3,19 @@ package model
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
 )
 
 type RunningSession struct {
+	ID              uint
 	SessionID       uint
 	ClientId        string
 	ProtocolVersion uint8
 	LastSeen        int64
 	LastConnect     int64
+	Connected       bool
 	ExpiryInterval  int64
 	ConnectFlags    uint8
 	KeepAlive       int
@@ -96,4 +99,12 @@ func (s *RunningSession) ApplySessionId(sessionID uint) {
 	s.Mu.Lock()
 	s.SessionID = sessionID
 	s.Mu.Unlock()
+}
+
+func (s *RunningSession) Expired() bool {
+	return SessionExpired(s.LastSeen, s.ExpiryInterval)
+}
+
+func SessionExpired(lastSeen int64, expiryInterval int64) bool {
+	return lastSeen+expiryInterval < time.Now().Unix()
 }

@@ -29,8 +29,8 @@ type SessionSqlRepository struct {
 	Db *gorm.DB
 }
 
-func MapSession(session Session) model.Session {
-	mSession := model.Session{
+func MapSession(session Session) model.RunningSession {
+	mSession := model.RunningSession{
 		ID:              session.ID,
 		LastSeen:        session.LastSeen,
 		LastConnect:     session.LastConnect,
@@ -42,8 +42,8 @@ func MapSession(session Session) model.Session {
 	return mSession
 }
 
-func MapSessions(sessions []Session) []model.Session {
-	mSessions := []model.Session{}
+func MapSessions(sessions []Session) []model.RunningSession {
+	mSessions := []model.RunningSession{}
 	for _, s := range sessions {
 		mSessions = append(mSessions, MapSession(s))
 	}
@@ -73,12 +73,12 @@ func (sr SessionSqlRepository) CleanSession(clientId string) error {
 	return sr.Db.Delete(&sess).Error
 }
 
-func (sr SessionSqlRepository) SessionExists(clientId string) (model.Session, bool) {
+func (sr SessionSqlRepository) SessionExists(clientId string) (model.RunningSession, bool) {
 	session := Session{}
 	if err := sr.Db.Where("client_id = ?", clientId).First(&session).Error; err != nil {
-		return model.Session{}, false
+		return model.RunningSession{}, false
 	} else {
-		mSession := model.Session{
+		mSession := model.RunningSession{
 			ID:              session.ID,
 			LastSeen:        session.LastSeen,
 			LastConnect:     session.LastConnect,
@@ -98,13 +98,13 @@ func (sr SessionSqlRepository) DisconnectSession(clientId string) {
 	})
 }
 
-func (sr SessionSqlRepository) GetById(sessionId uint) (model.Session, error) {
+func (sr SessionSqlRepository) GetById(sessionId uint) (model.RunningSession, error) {
 	var session Session
 	if err := sr.Db.Where("id = ?", sessionId).First(&session).Error; err != nil {
-		return model.Session{}, err
+		return model.RunningSession{}, err
 	}
 
-	mSession := model.Session{
+	mSession := model.RunningSession{
 		ID:              session.ID,
 		LastSeen:        session.LastSeen,
 		LastConnect:     session.LastConnect,
@@ -116,21 +116,21 @@ func (sr SessionSqlRepository) GetById(sessionId uint) (model.Session, error) {
 	return mSession, nil
 }
 
-func (sr SessionSqlRepository) GetAll() []model.Session {
+func (sr SessionSqlRepository) GetAll() []model.RunningSession {
 	sessions := []Session{}
 	if err := sr.Db.Find(&sessions).Error; err != nil {
-		return []model.Session{}
+		return []model.RunningSession{}
 	}
 
 	return MapSessions(sessions)
 }
 
-func (sr SessionSqlRepository) Save(session *model.Session) {
+func (sr SessionSqlRepository) Save(session *model.RunningSession) {
 	sr.Db.Save(&session)
 }
 
 func (sr SessionSqlRepository) IsOnline(sessionId uint) bool {
-	session := model.Session{}
+	session := model.RunningSession{}
 	if err := sr.Db.Where("id = ?", sessionId).First(&session).Error; err != nil {
 		return false
 	} else {
