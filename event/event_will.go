@@ -1,32 +1,33 @@
 package event
 
 import (
+	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
 	"github.com/rs/zerolog/log"
 )
 
-func sendWill(router routers.Router, p *packet.Packet) {
-	p.Session.Mu.RLock()
-	defer p.Session.Mu.RUnlock()
-	if p.Session.WillTopic != "" {
-		needWillSend := needWillSend(p)
+func sendWill(router routers.Router, session *model.RunningSession) {
+	session.Mu.RLock()
+	defer session.Mu.RUnlock()
+	if session.WillTopic != "" {
+		needWillSend := needWillSend(session)
 		if !needWillSend {
 			return
 		}
-		willPacket := packet.Publish(p.Session.ProtocolVersion, p.Session.WillQoS(), p.Session.WillRetain(), p.Session.WillTopic, packet.NewPacketIdentifier(), p.Session.WillMessage)
-		router.Forward(p.Session.WillTopic, &willPacket)
+		willPacket := packet.Publish(session.ProtocolVersion, session.WillQoS(), session.WillRetain(), session.WillTopic, packet.NewPacketIdentifier(), session.WillMessage)
+		router.Forward(session.WillTopic, &willPacket)
 	}
 }
 
-func needWillSend(p *packet.Packet) bool {
-	if session, ok := persistence.SessionRepository.SessionExists(p.Session.ClientId); ok {
-		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", p.Session.ClientId, session.LastConnect, p.Session.LastConnect)
-		if session.LastConnect > p.Session.LastConnect {
+func needWillSend(session *model.RunningSession) bool {
+	if session, ok := persistence.SessionRepository.SessionExists(session.ClientId); ok {
+		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", session.ClientId, session.LastConnect, session.LastConnect)
+		if session.LastConnect > session.LastConnect {
 			// session persisted is newer then running memory session... device reconnected!
 			// no need to send will
-			log.Debug().Msgf("[MQTT] (%s) avoid sending will! (device reconnected)", p.Session.ClientId)
+			log.Debug().Msgf("[MQTT] (%s) avoid sending will! (device reconnected)", session.ClientId)
 			return false
 		}
 	}

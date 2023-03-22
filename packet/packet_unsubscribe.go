@@ -8,12 +8,12 @@ import (
 	"github.com/ilgianlu/tagyou/topic"
 )
 
-func (p *Packet) unsubscribeReq() int {
-	p.Session.Mu.RLock()
-	defer p.Session.Mu.RUnlock()
+func (p *Packet) unsubscribeReq(session *model.RunningSession) int {
+	session.Mu.RLock()
+	defer session.Mu.RUnlock()
 	p.Event = EVENT_UNSUBSCRIBED
 	i := 2 // 2 bytes for packet identifier
-	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
+	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Error().Msgf("err reading properties %d", err)

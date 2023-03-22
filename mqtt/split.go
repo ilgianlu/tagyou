@@ -39,8 +39,7 @@ func packetParse(session *model.RunningSession, buf []byte) (packet.Packet, erro
 		log.Error().Err(err).Msg("[MQTT] Start err")
 		return p, err
 	}
-	p.Session = session
-	parseErr := p.Parse()
+	parseErr := p.Parse(session)
 	if parseErr != 0 {
 		log.Error().Msgf("[MQTT] parse err %d", parseErr)
 		return p, fmt.Errorf("%d", parseErr)

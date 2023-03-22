@@ -8,20 +8,20 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onSubscribe(router routers.Router, p *packet.Packet) {
+func onSubscribe(router routers.Router, session *model.RunningSession, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
-		rCode := clientSubscription(router, p.Session, subscription)
+		rCode := clientSubscription(router, session, subscription)
 		reasonCodes = append(reasonCodes, rCode)
 	}
-	clientSubscribed(router, p, reasonCodes)
+	clientSubscribed(router, session, p.PacketIdentifier(), reasonCodes)
 }
 
-func clientSubscribed(router routers.Router, p *packet.Packet, reasonCodes []uint8) {
-	p.Session.Mu.RLock()
-	toSend := packet.Suback(p.PacketIdentifier(), reasonCodes, p.Session.ProtocolVersion)
-	router.Send(p.Session.ClientId, toSend.ToByteSlice())
-	p.Session.Mu.RUnlock()
+func clientSubscribed(router routers.Router, session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
+	session.Mu.RLock()
+	toSend := packet.Suback(packetIdentifier, reasonCodes, session.ProtocolVersion)
+	router.Send(session.ClientId, toSend.ToByteSlice())
+	session.Mu.RUnlock()
 }
 
 func clientSubscription(router routers.Router, session *model.RunningSession, subscription model.Subscription) uint8 {

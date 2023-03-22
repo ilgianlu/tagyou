@@ -9,10 +9,10 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func clientPubrel(router routers.Router, p *packet.Packet) {
+func clientPubrel(router routers.Router, session *model.RunningSession, p *packet.Packet) {
 	sendPubcomp := func(retry model.Retry) {
-		toSend := packet.Pubcomp(p.PacketIdentifier(), retry.ReasonCode, p.Session.ProtocolVersion)
-		router.Send(p.Session.GetClientId(), toSend.ToByteSlice())
+		toSend := packet.Pubcomp(p.PacketIdentifier(), retry.ReasonCode, session.ProtocolVersion)
+		router.Send(session.GetClientId(), toSend.ToByteSlice())
 	}
 
 	onExpectedPubrel := func(retry model.Retry) {
@@ -28,7 +28,7 @@ func clientPubrel(router routers.Router, p *packet.Packet) {
 			log.Info().Msgf("pubrel for invalid retry status %s %d %d", retry.ClientId, retry.PacketIdentifier, retry.AckStatus)
 		}
 	}
-	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifierReasonCode(p.Session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
+	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifierReasonCode(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
 	if err != nil {
 		log.Info().Msgf("pubrel for invalid retry %s %d", retry.ClientId, retry.PacketIdentifier)
 	} else {

@@ -34,7 +34,7 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 	return p
 }
 
-func (p *Packet) publishReq() int {
+func (p *Packet) publishReq(protocolVersion uint8) int {
 	p.Event = EVENT_PUBLISH
 	i := 0
 	tl := Read2BytesInt(p.remainingBytes, i)
@@ -45,7 +45,7 @@ func (p *Packet) publishReq() int {
 	if p.QoS() > 0 {
 		i = i + 2 // + 2 for packet identifier
 	}
-	if p.Session.GetProtocolVersion() >= conf.MQTT_V5 {
+	if protocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Error().Msgf("err reading properties %d", err)
