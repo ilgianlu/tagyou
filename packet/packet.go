@@ -266,6 +266,20 @@ func (p *Packet) Parse(session *model.RunningSession) int {
 	}
 }
 
+func PacketParse(session *model.RunningSession, buf []byte) (Packet, error) {
+	p, err := Start(buf)
+	if err != nil {
+		log.Error().Err(err).Msg("[MQTT] Start err")
+		return p, err
+	}
+	parseErr := p.Parse(session)
+	if parseErr != 0 {
+		log.Error().Msgf("[MQTT] parse err %d", parseErr)
+		return p, fmt.Errorf("%d", parseErr)
+	}
+	return p, nil
+}
+
 func ReadFromByteSlice(buff []byte) ([]byte, error) {
 	if len(buff) < 2 {
 		return nil, fmt.Errorf("header: not enough bytes in buffer")

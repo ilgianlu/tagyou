@@ -125,7 +125,7 @@ func handleMqtt(session *model.RunningSession, bytesFromWs <-chan []byte, events
 
 		buf = buf[len(buf):]
 
-		p, err := packetParse(session, pb)
+		p, err := packet.PacketParse(session, pb)
 		if err != nil {
 			log.Debug().Msgf("error during packet parse : %s", err.Error())
 			return

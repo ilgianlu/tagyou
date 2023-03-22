@@ -2,7 +2,6 @@ package mqtt
 
 import (
 	"bufio"
-	"fmt"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
@@ -31,18 +30,4 @@ func packetSplit(session *model.RunningSession, events chan<- *packet.Packet) fu
 		}
 		return len(pb), pb, nil
 	}
-}
-
-func packetParse(session *model.RunningSession, buf []byte) (packet.Packet, error) {
-	p, err := packet.Start(buf)
-	if err != nil {
-		log.Error().Err(err).Msg("[MQTT] Start err")
-		return p, err
-	}
-	parseErr := p.Parse(session)
-	if parseErr != 0 {
-		log.Error().Msgf("[MQTT] parse err %d", parseErr)
-		return p, fmt.Errorf("%d", parseErr)
-	}
-	return p, nil
 }

@@ -62,7 +62,7 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 		}
 
 		b := scanner.Bytes()
-		p, err := packetParse(&session, b)
+		p, err := packet.PacketParse(&session, b)
 		if err != nil {
 			return
 		}
