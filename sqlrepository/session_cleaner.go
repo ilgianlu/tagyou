@@ -26,10 +26,10 @@ func StartSessionCleaner(db *gorm.DB) {
 }
 
 func cleanSessions(db *gorm.DB) {
-	disconnectedSessions := []model.RunningSession{}
+	disconnectedSessions := []Session{}
 	if err := db.Debug().Where("connected = 0").Find(&disconnectedSessions); err != nil {
 		for _, disconnectSession := range disconnectedSessions {
-			if disconnectSession.Expired() {
+			if model.SessionExpired(disconnectSession.LastSeen, disconnectSession.ExpiryInterval) {
 				db.Debug().Delete(&disconnectSession)
 			}
 		}
