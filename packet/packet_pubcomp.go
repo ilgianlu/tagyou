@@ -20,13 +20,13 @@ func Pubcomp(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Pack
 	p.remainingLength = len(p.remainingBytes)
 	return p
 }
-func (p *Packet) pubcompReq() int {
+func (p *Packet) pubcompReq(protocolVersion uint8) int {
 	p.Event = EVENT_PUBCOMPED
 	i := 2 // expect packet identifier in first 2 bytes
 	if i < len(p.remainingBytes) {
 		p.ReasonCode = p.remainingBytes[i]
 	}
-	if p.Session.GetProtocolVersion() >= conf.MQTT_V5 {
+	if protocolVersion >= conf.MQTT_V5 {
 		_, err := p.parseProperties(i)
 		if err != 0 {
 			log.Error().Msgf("err reading properties %d", err)

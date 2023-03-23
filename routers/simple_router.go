@@ -24,7 +24,7 @@ func (s SimpleRouter) AddDestination(clientId string, conn model.TagyouConn) {
 func (s SimpleRouter) RemoveDestination(clientId string) {
 	err := s.Conns.Close(clientId)
 	if err != nil {
-		log.Debug().Err(err).Msgf("could not clone connection %s", clientId)
+		log.Debug().Err(err).Msgf("could not close connection %s", clientId)
 	}
 	s.Conns.Remove(clientId)
 }

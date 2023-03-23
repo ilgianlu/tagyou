@@ -19,7 +19,7 @@ func TestGetSessions(t *testing.T) {
 		log.Fatal().Msgf("[API] [TEST] failed to connect database %s", err)
 	}
 	p := persistence.SqlPersistence{}
-	p.InnerInit(db)
+	p.InnerInit(db, false, false)
 	// db.LogMode(true)
 	defer closeDb(db)
 	r := httptest.NewRequest(http.MethodGet, "/sessions", nil)

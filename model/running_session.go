@@ -3,16 +3,19 @@ package model
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
 )
 
 type RunningSession struct {
+	ID              uint
 	SessionID       uint
 	ClientId        string
 	ProtocolVersion uint8
 	LastSeen        int64
 	LastConnect     int64
+	Connected       bool
 	ExpiryInterval  int64
 	ConnectFlags    uint8
 	KeepAlive       int
@@ -85,6 +88,36 @@ func (s *RunningSession) GetKeepAlive() int {
 	return s.KeepAlive
 }
 
+func (s *RunningSession) GetLastSeen() int64 {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.LastSeen
+}
+
+func (s *RunningSession) GetLastConnect() int64 {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.LastConnect
+}
+
+func (s *RunningSession) GetExpiryInterval() int64 {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.ExpiryInterval
+}
+
+func (s *RunningSession) GetConnected() bool {
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
+	return s.Connected
+}
+
+func (s *RunningSession) SetConnected(connected bool) {
+	s.Mu.Lock()
+	s.Connected = connected
+	s.Mu.Unlock()
+}
+
 func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {
 	s.Mu.Lock()
 	s.PublishAcl = pubAcl
@@ -96,4 +129,16 @@ func (s *RunningSession) ApplySessionId(sessionID uint) {
 	s.Mu.Lock()
 	s.SessionID = sessionID
 	s.Mu.Unlock()
+}
+
+func (s *RunningSession) Expired() bool {
+	return SessionExpired(s.LastSeen, s.ExpiryInterval)
+}
+
+func SessionExpired(lastSeen int64, expiryInterval int64) bool {
+	return lastSeen+expiryInterval < time.Now().Unix()
+}
+
+func (s *RunningSession) GetId() uint {
+	return s.ID
 }

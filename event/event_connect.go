@@ -10,22 +10,22 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onConnect(router routers.Router, p *packet.Packet) {
-	clientId := p.Session.GetClientId()
-	if conf.FORBID_ANONYMOUS_LOGIN && !p.Session.FromLocalhost() {
-		if !doAuth(p.Session) {
+func onConnect(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+	clientId := session.GetClientId()
+	if conf.FORBID_ANONYMOUS_LOGIN && !session.FromLocalhost() {
+		if !doAuth(session) {
 			return
 		}
 	}
-	taken := checkConnectionTakeOver(p, router)
+	taken := checkConnectionTakeOver(session, router)
 	if taken {
 		log.Debug().Msgf("[MQTT] (%s) reconnecting", clientId)
 	}
-	router.AddDestination(clientId, p.Session.GetConn())
+	router.AddDestination(clientId, session.GetConn())
 
-	startSession(p.Session)
+	startSession(session)
 
-	connack := packet.Connack(false, packet.CONNECT_OK, p.Session.GetProtocolVersion())
+	connack := packet.Connack(false, packet.CONNECT_OK, session.GetProtocolVersion())
 	router.Send(clientId, connack.ToByteSlice())
 }
 
@@ -61,12 +61,12 @@ func checkAuth(clientId string, username string, password string) (bool, string,
 	return true, auth.PublishAcl, auth.SubscribeAcl
 }
 
-func checkConnectionTakeOver(p *packet.Packet, router routers.Router) bool {
-	p.Session.Mu.RLock()
-	clientId := p.Session.ClientId
-	protocolVersion := p.Session.ProtocolVersion
-	p.Session.Mu.RUnlock()
-	if router.DestinationExists(clientId) {
+func checkConnectionTakeOver(session *model.RunningSession, router routers.Router) bool {
+	session.Mu.RLock()
+	clientId := session.ClientId
+	protocolVersion := session.ProtocolVersion
+	session.Mu.RUnlock()
+	if !router.DestinationExists(clientId) {
 		return false
 	}
 
@@ -80,25 +80,27 @@ func checkConnectionTakeOver(p *packet.Packet, router routers.Router) bool {
 func startSession(session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if prevSession, ok := persistence.SessionRepository.SessionExists(clientId); ok {
-		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.ProtocolVersion {
+		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.GetProtocolVersion() {
+			log.Debug().Msgf("[MQTT] check session (%t) (%t) (%d != %d)", session.CleanStart(), prevSession.Expired(), session.GetProtocolVersion(), prevSession.GetProtocolVersion())
 			log.Debug().Msgf("[MQTT] (%s) Cleaning previous session: Invalid or to clean", clientId)
 			if err := persistence.SessionRepository.CleanSession(clientId); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error removing previous session", clientId)
 			}
-			if id, err := persistence.SessionRepository.PersistSession(session, true); err != nil {
+			session.SetConnected(true)
+			if id, err := persistence.SessionRepository.PersistSession(session); err != nil {
 				log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 			} else {
 				session.ApplySessionId(id)
 			}
 		} else {
 			log.Debug().Msgf("%s Updating previous session from running", clientId)
-			session.ApplySessionId(prevSession.ID)
-			prevSession.UpdateFromRunning(session)
+			session.ApplySessionId(prevSession.GetId())
 			persistence.SessionRepository.Save(&prevSession)
 		}
 	} else {
 		log.Debug().Msgf("[MQTT] (%s) Starting new session from running", clientId)
-		if id, err := persistence.SessionRepository.PersistSession(session, true); err != nil {
+		session.SetConnected(true)
+		if id, err := persistence.SessionRepository.PersistSession(session); err != nil {
 			log.Err(err).Msgf("[MQTT] (%s) error persisting clean session", clientId)
 		} else {
 			session.ApplySessionId(id)

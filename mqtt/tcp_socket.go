@@ -33,15 +33,15 @@ func StartMQTT(port string, router routers.Router) {
 func handleTcpConnection(router routers.Router, conn net.Conn) {
 	defer conn.Close()
 
-	events := make(chan *packet.Packet)
-	go event.RangeEvents(router, events)
-
 	session := model.RunningSession{
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
 		ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 		Conn:           conn,
 		LastConnect:    time.Now().Unix(),
 	}
+
+	events := make(chan *packet.Packet)
+	go event.RangeEvents(router, &session, events)
 
 	scanner := bufio.NewScanner(conn)
 	scanner.Split(packetSplit(&session, events))
@@ -62,7 +62,7 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 		}
 
 		b := scanner.Bytes()
-		p, err := packetParse(&session, b)
+		p, err := packet.PacketParse(&session, b)
 		if err != nil {
 			return
 		}
@@ -84,11 +84,11 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 }
 
 func willEvent(session *model.RunningSession, e chan<- *packet.Packet) {
-	p := packet.Packet{Session: session, Event: packet.EVENT_WILL_SEND}
+	p := packet.Packet{Event: packet.EVENT_WILL_SEND}
 	e <- &p
 }
 
 func disconnectClient(session *model.RunningSession, e chan<- *packet.Packet) {
-	p := packet.Packet{Session: session, Event: packet.EVENT_DISCONNECT}
+	p := packet.Packet{Event: packet.EVENT_DISCONNECT}
 	e <- &p
 }

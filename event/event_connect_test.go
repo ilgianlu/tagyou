@@ -21,7 +21,7 @@ func TestClientGoodConnection(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db)
+	persistence.InnerInit(db, false, false)
 
 	db.Exec("DELETE FROM auths")
 
@@ -48,7 +48,7 @@ func TestClientBadConnectionWrongPasswordConnection(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db)
+	persistence.InnerInit(db, false, false)
 
 	db.Exec("DELETE FROM auths")
 
@@ -74,7 +74,7 @@ func TestClientBadConnectionWrongUsernameConnection(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db)
+	persistence.InnerInit(db, false, false)
 
 	db.Exec("DELETE FROM auths")
 

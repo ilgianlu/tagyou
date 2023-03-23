@@ -10,13 +10,13 @@ import (
 	"github.com/ilgianlu/tagyou/topic"
 )
 
-func (p *Packet) subscribeReq() int {
-	p.Session.Mu.RLock()
-	defer p.Session.Mu.RUnlock()
+func (p *Packet) subscribeReq(session *model.RunningSession) int {
+	session.Mu.RLock()
+	defer session.Mu.RUnlock()
 	p.Event = EVENT_SUBSCRIBED
 	// variable header
 	i := 2 // 2 bytes for packet identifier
-	if p.Session.ProtocolVersion >= conf.MQTT_V5 {
+	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
 			log.Error().Msgf("err reading properties %d", err)
@@ -32,8 +32,8 @@ func (p *Packet) subscribeReq() int {
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
 		sub := model.Subscription{
-			SessionID: p.Session.SessionID,
-			ClientId:  p.Session.ClientId,
+			SessionID: session.SessionID,
+			ClientId:  session.ClientId,
 		}
 		if topic.SharedSubscription(s) {
 			sub.Shared = true
@@ -50,7 +50,7 @@ func (p *Packet) subscribeReq() int {
 		sub.RetainAsPublished = p.remainingBytes[i] & 0x08 >> 3
 		sub.NoLocal = p.remainingBytes[i] & 0x04 >> 2
 		sub.Qos = p.remainingBytes[i] & 0x03
-		sub.ProtocolVersion = p.Session.ProtocolVersion
+		sub.ProtocolVersion = session.ProtocolVersion
 		sub.Enabled = true
 		sub.CreatedAt = time.Now().Unix()
 		p.Subscriptions = append(p.Subscriptions, sub)

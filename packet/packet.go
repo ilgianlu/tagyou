@@ -79,7 +79,6 @@ type Packet struct {
 	willProperties Properties
 
 	// metadata
-	Session       *model.RunningSession
 	Subscriptions []model.Subscription
 	Topic         string
 	Event         int
@@ -239,32 +238,46 @@ func (p *Packet) checkHeader() bool {
 	}
 }
 
-func (p *Packet) Parse() int {
+func (p *Packet) Parse(session *model.RunningSession) int {
 	switch p.PacketType() {
 	case PACKET_TYPE_CONNECT:
-		return p.connectReq()
+		return p.connectReq(session)
 	case PACKET_TYPE_DISCONNECT:
-		return p.disconnectReq()
+		return p.disconnectReq(session.GetProtocolVersion())
 	case PACKET_TYPE_PUBLISH:
-		return p.publishReq()
+		return p.publishReq(session.GetProtocolVersion())
 	case PACKET_TYPE_PUBACK:
-		return p.pubackReq()
+		return p.pubackReq(session.GetProtocolVersion())
 	case PACKET_TYPE_PUBREC:
-		return p.pubrecReq()
+		return p.pubrecReq(session.GetProtocolVersion())
 	case PACKET_TYPE_PUBREL:
-		return p.pubrelReq()
+		return p.pubrelReq(session.GetProtocolVersion())
 	case PACKET_TYPE_PUBCOMP:
-		return p.pubcompReq()
+		return p.pubcompReq(session.GetProtocolVersion())
 	case PACKET_TYPE_SUBSCRIBE:
-		return p.subscribeReq()
+		return p.subscribeReq(session)
 	case PACKET_TYPE_UNSUBSCRIBE:
-		return p.unsubscribeReq()
+		return p.unsubscribeReq(session)
 	case PACKET_TYPE_PINGREQ:
 		return p.pingReq()
 	default:
 		log.Printf("Unknown packet type %d\n", p.PacketType())
 		return MALFORMED_PACKET
 	}
+}
+
+func PacketParse(session *model.RunningSession, buf []byte) (Packet, error) {
+	p, err := Start(buf)
+	if err != nil {
+		log.Error().Err(err).Msg("[MQTT] Start err")
+		return p, err
+	}
+	parseErr := p.Parse(session)
+	if parseErr != 0 {
+		log.Error().Msgf("[MQTT] parse err %d", parseErr)
+		return p, fmt.Errorf("%d", parseErr)
+	}
+	return p, nil
 }
 
 func ReadFromByteSlice(buff []byte) ([]byte, error) {

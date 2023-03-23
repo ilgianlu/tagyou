@@ -5,7 +5,7 @@ import (
 )
 
 type SessionRepository interface {
-	PersistSession(running *model.RunningSession, connected bool) (sessionId uint, err error)
+	PersistSession(running *model.RunningSession) (sessionId uint, err error)
 	CleanSession(clientId string) error
 	SessionExists(clientId string) (model.Session, bool)
 	DisconnectSession(clientId string)

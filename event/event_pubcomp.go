@@ -4,11 +4,10 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func clientPubcomp(p *packet.Packet) {
+func clientPubcomp(clientId string, packetIdentifier int, reasonCode uint8) {
 	onRetryFound := func(retry model.Retry) {
 		// if retry in wait for pub rec -> send pub rel
 		if retry.AckStatus == model.WAIT_FOR_PUB_COMP {
@@ -18,7 +17,7 @@ func clientPubcomp(p *packet.Packet) {
 		}
 	}
 
-	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifierReasonCode(p.Session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
+	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifierReasonCode(clientId, packetIdentifier, reasonCode)
 	if err != nil {
 		log.Info().Msgf("pubcomp for invalid retry %s %d", retry.ClientId, retry.PacketIdentifier)
 	} else {

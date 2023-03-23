@@ -23,10 +23,10 @@ func (p SqlPersistence) Init() error {
 		return err
 	}
 
-	return p.InnerInit(db)
+	return p.InnerInit(db, conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES)
 }
 
-func (p *SqlPersistence) InnerInit(db *gorm.DB) error {
+func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startRetryCleaner bool) error {
 	sqlrepository.Migrate(db)
 
 	AuthRepository = sqlrepository.AuthSqlRepository{Db: db}
@@ -35,10 +35,10 @@ func (p *SqlPersistence) InnerInit(db *gorm.DB) error {
 	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
 	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
 
-	if conf.CLEAN_EXPIRED_SESSIONS {
+	if startSessionCleaner {
 		sqlrepository.StartSessionCleaner(db)
 	}
-	if conf.CLEAN_EXPIRED_RETRIES {
+	if startRetryCleaner {
 		sqlrepository.StartRetryCleaner(db)
 	}
 	p.db = db

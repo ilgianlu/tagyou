@@ -11,12 +11,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func OnPublish(router routers.Router, p *packet.Packet) {
-	if conf.ACL_ON && !p.Session.FromLocalhost() && !CheckAcl(p.Topic, p.Session.PublishAcl) {
-		if p.QoS() == 1 {
-			sendAck(router, p, packet.PUBACK_NOT_AUTHORIZED)
-		} else if p.QoS() == 2 {
-			sendPubrec(router, p, packet.PUBREC_NOT_AUTHORIZED)
+func OnPublish(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(p.Topic, session.PublishAcl) {
+		if p.QoS() == conf.QOS1 {
+			sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_NOT_AUTHORIZED)
+		} else if p.QoS() == conf.QOS2 {
+			sendPubrec(router, session, p, packet.PUBREC_NOT_AUTHORIZED)
 		}
 		return
 	}
@@ -26,25 +26,27 @@ func OnPublish(router routers.Router, p *packet.Packet) {
 		saveRetain(p)
 	}
 	router.Forward(p.Topic, p)
-	if p.QoS() == 1 {
+	if p.QoS() == conf.QOS1 {
 		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())
-		sendAck(router, p, packet.PUBACK_SUCCESS)
-	} else if p.QoS() == 2 {
+		sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_SUCCESS)
+	} else if p.QoS() == conf.QOS2 {
 		log.Debug().Msgf("[PUBLISH] QoS 2 return PUBREC")
-		sendPubrec(router, p, packet.PUBREC_SUCCESS)
+		sendPubrec(router, session, p, packet.PUBREC_SUCCESS)
+	} else if p.QoS() == conf.QOS0 {
+		log.Debug().Msgf("[PUBLISH] QoS 0 no return")
 	}
 }
 
-func sendAck(router routers.Router, p *packet.Packet, reasonCode uint8) {
-	puback := packet.Puback(p.PacketIdentifier(), reasonCode, p.Session.ProtocolVersion)
-	router.Send(p.Session.ClientId, puback.ToByteSlice())
+func sendAck(router routers.Router, session *model.RunningSession, packetIdentifier int, reasonCode uint8) {
+	puback := packet.Puback(packetIdentifier, reasonCode, session.ProtocolVersion)
+	router.Send(session.ClientId, puback.ToByteSlice())
 }
 
-func sendPubrec(router routers.Router, p *packet.Packet, reasonCode uint8) {
-	p.Session.Mu.RLock()
-	clientId := p.Session.ClientId
-	protocolVersion := p.Session.ProtocolVersion
-	p.Session.Mu.RUnlock()
+func sendPubrec(router routers.Router, session *model.RunningSession, p *packet.Packet, reasonCode uint8) {
+	session.Mu.RLock()
+	clientId := session.ClientId
+	protocolVersion := session.ProtocolVersion
+	session.Mu.RUnlock()
 	r := model.Retry{
 		ClientId:           clientId,
 		PacketIdentifier:   p.PacketIdentifier(),
