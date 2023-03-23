@@ -26,7 +26,7 @@ func (p *Packet) subscribeReq(session *model.RunningSession) int {
 	}
 	// payload
 	j := 0
-	p.Subscriptions = make([]model.Subscription, 0)
+	p.Subscriptions = []model.Subscription{}
 	for {
 		sl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
