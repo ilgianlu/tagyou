@@ -204,6 +204,11 @@ func TestPublish(t *testing.T) {
 		remoteAddr: &net.IPAddr{IP: net.IPv4(10, 0, 0, 2)},
 	}
 	router.AddDestination("subscriber", subscriberConn)
+	subscriberSession := model.RunningSession{
+		Connected: true,
+		ClientId:  "subscriber",
+		Conn:      subscriberConn,
+	}
 	subStoredSession := sqlrepository.Session{
 		ID:              6,
 		LastSeen:        time.Now().Unix() - 2000,
@@ -239,5 +244,10 @@ func TestPublish(t *testing.T) {
 
 	if len(receivedMsgs) != 1 {
 		t.Errorf("expected 1 msg received by subscriber, received %d", len(receivedMsgs))
+	}
+
+	receivedPacket, _ := packet.PacketParse(&subscriberSession, receivedMsgs[0])
+	if receivedPacket.PacketType() != packet.PACKET_TYPE_PUBLISH {
+		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, receivedPacket.PacketType())
 	}
 }
