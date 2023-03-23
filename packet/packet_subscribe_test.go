@@ -8,7 +8,7 @@ import (
 )
 
 func TestParseSubscribe(t *testing.T) {
-	// (0x30) publish packet to topic '/topic/0/messages' payload 'published 0'
+	// (0x82) subscription of client 'client' to topic '/topic/#'
 	buf := []byte{0x82, 0x0d, 0x33, 0x41, 0x00, 0x08, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x23, 0x00}
 
 	p, _ := Start(buf)
@@ -42,5 +42,9 @@ func TestParseSubscribe(t *testing.T) {
 
 	if p.Subscriptions[0].Topic != "/topic/#" {
 		t.Errorf("expecting subscription topic %s, received %s", "/topic/#", p.Subscriptions[0].Topic)
+	}
+
+	if p.Subscriptions[0].ClientId != "client" {
+		t.Errorf("expecting subscription clientId %s, received %s", "client", p.Subscriptions[0].ClientId)
 	}
 }

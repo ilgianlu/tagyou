@@ -251,3 +251,71 @@ func TestPublish(t *testing.T) {
 		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, receivedPacket.PacketType())
 	}
 }
+
+func TestSubscribe(t *testing.T) {
+	conf.Loader()
+	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
+	if err != nil {
+		log.Fatal().Err(err).Msg("[API] failed to connect database")
+	}
+
+	persistence := persistence.SqlPersistence{}
+	persistence.InnerInit(db, false, false)
+
+	db.Exec("DELETE FROM sessions")
+	db.Exec("DELETE FROM subscriptions")
+
+	router := routers.NewSimple()
+
+	receivedMsgs = []Msg{}
+
+	// subscriber
+	subscriberConn := TagyouConnMock{
+		remoteAddr: &net.IPAddr{IP: net.IPv4(10, 0, 0, 2)},
+	}
+	router.AddDestination("client", subscriberConn)
+	subscriberSession := model.RunningSession{
+		Connected: true,
+		ClientId:  "client",
+		Conn:      subscriberConn,
+	}
+	subStoredSession := sqlrepository.Session{
+		ID:              6,
+		LastSeen:        time.Now().Unix() - 2000,
+		LastConnect:     time.Now().Unix() - 2000,
+		ExpiryInterval:  3600,
+		ClientId:        "client",
+		Connected:       true,
+		ProtocolVersion: conf.MQTT_V3_11,
+	}
+	db.Save(&subStoredSession)
+
+	// (0x82) subscription of client 'client' to topic '/topic/#'
+	buf := []byte{0x82, 0x0d, 0x33, 0x41, 0x00, 0x08, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x23, 0x00}
+
+	p, _ := packet.PacketParse(&subscriberSession, buf)
+
+	manageEvent(router, &subscriberSession, &p)
+
+	if len(receivedMsgs) != 1 {
+		t.Errorf("expected 1 msg received by subscriber, received %d", len(receivedMsgs))
+	}
+
+	receivedPacket, _ := packet.PacketParse(&subscriberSession, receivedMsgs[0])
+	if receivedPacket.PacketType() != packet.PACKET_TYPE_SUBACK {
+		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, receivedPacket.PacketType())
+	}
+
+	subscription := sqlrepository.Subscription{}
+	if err := db.Where("client_id = ?", "client").First(&subscription).Error; err != nil {
+		t.Errorf("unexpected error during find of sub %s", err)
+	}
+
+	if subscription.Topic != "/topic/#" {
+		t.Errorf("expecting subscription of %s, found %s", "/topic/#", subscription.Topic)
+	}
+
+	if subscription.ClientId != "client" {
+		t.Errorf("expecting clientId subscription of %s, found %s", "client", subscription.ClientId)
+	}
+}
