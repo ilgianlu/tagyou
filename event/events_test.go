@@ -16,11 +16,18 @@ import (
 	"gorm.io/gorm"
 )
 
+type Msg []byte
+
+type MsgQueue []Msg
+
+var receivedMsgs []Msg
+
 type TagyouConnMock struct {
 	remoteAddr net.Addr
 }
 
 func (mock TagyouConnMock) Write(b []byte) (n int, err error) {
+	receivedMsgs = append(receivedMsgs, b)
 	return len(b), nil
 }
 
@@ -100,7 +107,7 @@ func TestSuccessfullReconnect(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db)
+	persistence.InnerInit(db, false, false)
 
 	storedSession := sqlrepository.Session{
 		ID:              5,
@@ -114,6 +121,8 @@ func TestSuccessfullReconnect(t *testing.T) {
 	db.Save(&storedSession)
 
 	router := routers.NewSimple()
+
+	receivedMsgs = []Msg{}
 	mockConn := TagyouConnMock{
 		remoteAddr: &net.IPAddr{IP: net.IPv4(127, 0, 0, 1)},
 	}
@@ -136,6 +145,99 @@ func TestSuccessfullReconnect(t *testing.T) {
 	}
 
 	if !session.CleanStart() {
-		t.Errorf("expected clientX clean start, received false")
+		t.Errorf("expected mqttjs_aa23c815 clean start, received false")
+	}
+
+	if !router.DestinationExists("mqttjs_aa23c815") {
+		t.Errorf("expected mqttjs_aa23c815 to exist in router, received false")
+	}
+
+	if len(receivedMsgs) != 1 {
+		t.Errorf("expected 1 msg received in mqttjs_aa23c815, received %d", len(receivedMsgs))
+	}
+
+	if receivedMsgs[0][0] != 32 {
+		t.Errorf("expected connack, received %d", receivedMsgs[0][0])
+	}
+}
+
+func TestPublish(t *testing.T) {
+	conf.Loader()
+	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
+	if err != nil {
+		log.Fatal().Err(err).Msg("[API] failed to connect database")
+	}
+
+	persistence := persistence.SqlPersistence{}
+	persistence.InnerInit(db, false, false)
+
+	db.Exec("DELETE FROM sessions")
+	db.Exec("DELETE FROM subscriptions")
+
+	router := routers.NewSimple()
+
+	receivedMsgs = []Msg{}
+
+	// publisher
+	publisherConn := TagyouConnMock{
+		remoteAddr: &net.IPAddr{IP: net.IPv4(10, 0, 0, 1)},
+	}
+	router.AddDestination("publisher", publisherConn)
+	publisherSession := model.RunningSession{
+		Connected: true,
+		ClientId:  "publisher",
+		Conn:      publisherConn,
+	}
+	pubStoredSession := sqlrepository.Session{
+		ID:              5,
+		LastSeen:        time.Now().Unix() - 2000,
+		LastConnect:     time.Now().Unix() - 2000,
+		ExpiryInterval:  3600,
+		ClientId:        "publisher",
+		Connected:       true,
+		ProtocolVersion: conf.MQTT_V3_11,
+	}
+	db.Save(&pubStoredSession)
+
+	// subscriber
+	subscriberConn := TagyouConnMock{
+		remoteAddr: &net.IPAddr{IP: net.IPv4(10, 0, 0, 2)},
+	}
+	router.AddDestination("subscriber", subscriberConn)
+	subStoredSession := sqlrepository.Session{
+		ID:              6,
+		LastSeen:        time.Now().Unix() - 2000,
+		LastConnect:     time.Now().Unix() - 2000,
+		ExpiryInterval:  3600,
+		ClientId:        "subscriber",
+		Connected:       true,
+		ProtocolVersion: conf.MQTT_V3_11,
+	}
+	db.Save(&subStoredSession)
+
+	topic := "a-topic-to-subscribe"
+	sub := sqlrepository.Subscription{
+		Topic:     topic,
+		ClientId:  "subscriber",
+		SessionID: 6,
+	}
+	db.Save(&sub)
+
+	p := packet.Publish(4, 0, false, topic, 0, []byte("pippo"))
+	p.Event = packet.EVENT_PUBLISH
+	p.Topic = topic
+
+	manageEvent(router, &publisherSession, &p)
+
+	if !router.DestinationExists("publisher") {
+		t.Errorf("expected publisher to exist in router, received false")
+	}
+
+	if !router.DestinationExists("subscriber") {
+		t.Errorf("expected subscriber to exist in router, received false")
+	}
+
+	if len(receivedMsgs) != 1 {
+		t.Errorf("expected 1 msg received by subscriber, received %d", len(receivedMsgs))
 	}
 }

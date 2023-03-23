@@ -13,9 +13,9 @@ import (
 
 func OnPublish(router routers.Router, session *model.RunningSession, p *packet.Packet) {
 	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(p.Topic, session.PublishAcl) {
-		if p.QoS() == 1 {
+		if p.QoS() == conf.QOS1 {
 			sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_NOT_AUTHORIZED)
-		} else if p.QoS() == 2 {
+		} else if p.QoS() == conf.QOS2 {
 			sendPubrec(router, session, p, packet.PUBREC_NOT_AUTHORIZED)
 		}
 		return
@@ -26,12 +26,14 @@ func OnPublish(router routers.Router, session *model.RunningSession, p *packet.P
 		saveRetain(p)
 	}
 	router.Forward(p.Topic, p)
-	if p.QoS() == 1 {
+	if p.QoS() == conf.QOS1 {
 		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())
 		sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_SUCCESS)
-	} else if p.QoS() == 2 {
+	} else if p.QoS() == conf.QOS2 {
 		log.Debug().Msgf("[PUBLISH] QoS 2 return PUBREC")
 		sendPubrec(router, session, p, packet.PUBREC_SUCCESS)
+	} else if p.QoS() == conf.QOS0 {
+		log.Debug().Msgf("[PUBLISH] QoS 0 no return")
 	}
 }
 
