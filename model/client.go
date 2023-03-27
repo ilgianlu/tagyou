@@ -8,6 +8,7 @@ Acl
 */
 
 type Client struct {
+	ID           uint
 	ClientId     string
 	Username     string
 	Password     []byte

@@ -40,6 +40,7 @@ func MappedClients(clients []Client) []model.Client {
 
 func MappedClient(client Client) model.Client {
 	return model.Client{
+		ID:           client.ID,
 		ClientId:     client.ClientId,
 		Username:     client.Username,
 		Password:     client.Password,
@@ -53,8 +54,8 @@ func (ar ClientSqlRepository) Create(client model.Client) error {
 	return ar.Db.Create(&client).Error
 }
 
-func (ar ClientSqlRepository) DeleteByClientIdUsername(clientId string, username string) error {
-	return ar.Db.Where("client_id = ? and username = ?", clientId, username).Delete(&Client{}).Error
+func (ar ClientSqlRepository) DeleteById(id uint) error {
+	return ar.Db.Where("id = ?", id).Delete(&Client{}).Error
 }
 
 func (ar ClientSqlRepository) GetAll() []model.Client {
@@ -68,8 +69,15 @@ func (ar ClientSqlRepository) GetByClientIdUsername(clientId string, username st
 	if err := ar.Db.Where("client_id = ? and username = ?", clientId, username).First(&client).Error; err != nil {
 		return model.Client{}, err
 	}
-
 	mClient := MappedClient(client)
+	return mClient, nil
+}
 
+func (ar ClientSqlRepository) GetById(id uint) (model.Client, error) {
+	var client Client
+	if err := ar.Db.Where("id = ?", id).First(&client).Error; err != nil {
+		return model.Client{}, err
+	}
+	mClient := MappedClient(client)
 	return mClient, nil
 }

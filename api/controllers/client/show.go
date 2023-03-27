@@ -10,6 +10,8 @@ import (
 )
 
 type ShowClientDTO struct {
+	ID        uint
+	ClientId  string
 	Username  string
 	CreatedAt int64
 }
@@ -19,8 +21,14 @@ func (uc ClientController) GetClient(w http.ResponseWriter, r *http.Request, p h
 	if err != nil {
 		return
 	}
+	clientDTO := ShowClientDTO{
+		ID:        client.ID,
+		ClientId:  client.ClientId,
+		Username:  client.Username,
+		CreatedAt: client.CreatedAt,
+	}
 
-	if res, err := json.Marshal(client); err != nil {
+	if res, err := json.Marshal(clientDTO); err != nil {
 		log.Printf("error marshaling client row: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

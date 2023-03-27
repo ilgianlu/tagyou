@@ -13,7 +13,8 @@ Acl
 
 type ClientRepository interface {
 	Create(client model.Client) error
-	DeleteByClientIdUsername(clientId string, username string) error
 	GetAll() []model.Client
 	GetByClientIdUsername(clientId string, username string) (model.Client, error)
+	GetById(id uint) (model.Client, error)
+	DeleteById(id uint) error
 }
