@@ -21,4 +21,7 @@ func Migrate(db *gorm.DB) {
 	if err := db.AutoMigrate(&Subscription{}); err != nil {
 		return
 	}
+	if err := db.AutoMigrate(&User{}); err != nil {
+		return
+	}
 }
