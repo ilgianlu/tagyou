@@ -11,6 +11,7 @@ import (
 )
 
 type IndexClientDTO struct {
+	ClientId  string
 	Username  string
 	CreatedAt int64
 }
@@ -19,7 +20,7 @@ func (uc ClientController) GetClients(w http.ResponseWriter, r *http.Request, p 
 	clients := persistence.ClientRepository.GetAll()
 	clientDTOs := []IndexClientDTO{}
 	for _, u := range clients {
-		clientDTOs = append(clientDTOs, IndexClientDTO{Username: u.Username, CreatedAt: u.CreatedAt})
+		clientDTOs = append(clientDTOs, IndexClientDTO{ClientId: u.ClientId, Username: u.Username, CreatedAt: u.CreatedAt})
 	}
 	if res, err := json.Marshal(clientDTOs); err != nil {
 		log.Printf("error marshaling client rows: %s\n", err)

@@ -40,14 +40,12 @@ func MappedClients(clients []Client) []model.Client {
 
 func MappedClient(client Client) model.Client {
 	return model.Client{
-		ClientId:             client.ClientId,
-		Username:             client.Username,
-		Password:             client.Password,
-		SubscribeAcl:         client.SubscribeAcl,
-		PublishAcl:           client.PublishAcl,
-		CreatedAt:            client.CreatedAt,
-		InputPassword:        client.InputPassword,
-		InputPasswordConfirm: client.InputPasswordConfirm,
+		ClientId:     client.ClientId,
+		Username:     client.Username,
+		Password:     client.Password,
+		SubscribeAcl: client.SubscribeAcl,
+		PublishAcl:   client.PublishAcl,
+		CreatedAt:    client.CreatedAt,
 	}
 }
 

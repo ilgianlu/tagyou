@@ -23,7 +23,7 @@ type CreateClientDTO struct {
 }
 
 func (a *CreateClientDTO) Validate() bool {
-	if a.Username == "" {
+	if a.Username == "" || a.ClientId == "" {
 		return false
 	}
 	if password.ValidPassword([]byte(a.InputPassword)) {
@@ -46,6 +46,7 @@ func (uc ClientController) CreateClient(w http.ResponseWriter, r *http.Request, 
 	}
 	pass, _ := password.EncodePassword([]byte(client.InputPassword))
 	c := model.Client{
+		ClientId:     client.ClientId,
 		Username:     client.Username,
 		Password:     pass,
 		SubscribeAcl: client.SubscribeAcl,

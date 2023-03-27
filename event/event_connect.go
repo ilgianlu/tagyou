@@ -6,6 +6,7 @@ import (
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
 )
@@ -33,9 +34,9 @@ func doAuth(session *model.RunningSession) bool {
 	session.Mu.RLock()
 	clientId := session.ClientId
 	username := session.Username
-	password := session.Password
+	sessionPassword := session.Password
 	session.Mu.RUnlock()
-	ok, pubAcl, subAcl := checkAuth(clientId, username, password)
+	ok, pubAcl, subAcl := checkAuth(clientId, username, sessionPassword)
 	if !ok {
 		log.Debug().Msg("[MQTT] wrong connect credentials")
 		return false
@@ -45,14 +46,14 @@ func doAuth(session *model.RunningSession) bool {
 	return true
 }
 
-func checkAuth(clientId string, username string, password string) (bool, string, string) {
+func checkAuth(clientId string, username string, sessionPassword string) (bool, string, string) {
 	client, err := persistence.ClientRepository.GetByClientIdUsername(clientId, username)
 	if err != nil {
 		log.Debug().Msg("[MQTT] could not find user")
 		return false, "", ""
 	}
 
-	if err := client.CheckPassword(password); err != nil {
+	if err := password.CheckPassword(client.Password, []byte(sessionPassword)); err != nil {
 		log.Debug().Msg("[MQTT] wrong password")
 		return false, "", ""
 	}

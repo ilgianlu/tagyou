@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/sqlrepository"
 	"gorm.io/driver/sqlite"
@@ -25,9 +26,8 @@ func TestClientGoodConnection(t *testing.T) {
 
 	db.Exec("DELETE FROM auths")
 
-	client1 := model.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]"}
-	client1.SetPassword("password")
-	rClient1 := sqlrepository.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: client1.Password}
+	pwd, _ := password.EncodePassword([]byte("password"))
+	rClient1 := sqlrepository.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: pwd}
 	db.Create(&rClient1)
 
 	session := model.RunningSession{ClientId: "client-1", Username: "user1", Password: "password"}
@@ -52,8 +52,8 @@ func TestClientBadConnectionWrongPasswordConnection(t *testing.T) {
 
 	db.Exec("DELETE FROM auths")
 
-	client1 := model.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]"}
-	client1.SetPassword("password")
+	pwd, _ := password.EncodePassword([]byte("password"))
+	client1 := model.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: pwd}
 	rClient1 := sqlrepository.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: client1.Password}
 	db.Create(&rClient1)
 
@@ -78,8 +78,9 @@ func TestClientBadConnectionWrongUsernameConnection(t *testing.T) {
 
 	db.Exec("DELETE FROM auths")
 
-	client1 := model.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]"}
-	client1.SetPassword("password")
+	pwd, _ := password.EncodePassword([]byte("password"))
+	client1 := model.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: pwd}
+
 	rClient1 := sqlrepository.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: client1.Password}
 	db.Create(&rClient1)
 
