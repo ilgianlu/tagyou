@@ -22,6 +22,7 @@ func New() *UserController {
 func (uc UserController) RegisterRoutes(r *httprouter.Router) {
 	r.GET(resourceName, uc.GetUsers)
 	r.POST(resourceName, uc.CreateUser)
+	r.DELETE(resourceName+"/:id", uc.DeleteUser)
 }
 
 func (uc UserController) getOne(w http.ResponseWriter, r *http.Request, p httprouter.Params) (model.User, error) {

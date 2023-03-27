@@ -23,7 +23,7 @@ func (uc ClientController) RegisterRoutes(r *httprouter.Router) {
 	r.GET(resourceName, uc.GetClients)
 	r.GET(resourceName+"/:id", uc.GetClient)
 	r.POST(resourceName, uc.CreateClient)
-	r.DELETE(resourceName+"/:id", uc.RemoveClient)
+	r.DELETE(resourceName+"/:id", uc.DeleteClient)
 }
 
 func (uc ClientController) getOne(w http.ResponseWriter, r *http.Request, p httprouter.Params) (model.Client, error) {

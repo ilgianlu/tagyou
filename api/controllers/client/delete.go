@@ -9,7 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func (uc ClientController) RemoveClient(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (uc ClientController) DeleteClient(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	auth, err := uc.getOne(w, r, p)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
