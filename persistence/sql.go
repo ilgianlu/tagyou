@@ -33,7 +33,7 @@ func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startR
 	SessionRepository = sqlrepository.SessionSqlRepository{Db: db}
 	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
 	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
-	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
+	UserRepository = sqlrepository.UserSqlRepository{Db: db}
 
 	if startSessionCleaner {
 		sqlrepository.StartSessionCleaner(db)

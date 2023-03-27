@@ -10,6 +10,7 @@ var (
 	SubscriptionRepository repository.SubscriptionRepository
 	RetainRepository       repository.RetainRepository
 	RetryRepository        repository.RetryRepository
+	UserRepository         repository.UserRepository
 )
 
 type Persistence interface {

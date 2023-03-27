@@ -71,16 +71,7 @@ func (ar ClientSqlRepository) GetByClientIdUsername(clientId string, username st
 		return model.Client{}, err
 	}
 
-	mClient := model.Client{
-		ClientId:             client.ClientId,
-		Username:             client.Username,
-		Password:             client.Password,
-		SubscribeAcl:         client.SubscribeAcl,
-		PublishAcl:           client.PublishAcl,
-		CreatedAt:            client.CreatedAt,
-		InputPassword:        client.InputPassword,
-		InputPasswordConfirm: client.InputPasswordConfirm,
-	}
+	mClient := MappedClient(client)
 
 	return mClient, nil
 }
