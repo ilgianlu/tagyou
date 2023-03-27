@@ -10,9 +10,19 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+type IndexUserDTO struct {
+	ID        uint
+	Username  string
+	CreatedAt int64
+}
+
 func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	users := persistence.UserRepository.GetAll()
-	if res, err := json.Marshal(users); err != nil {
+	usersDTO := []IndexUserDTO{}
+	for _, u := range users {
+		usersDTO = append(usersDTO, IndexUserDTO{ID: u.ID, Username: u.Username, CreatedAt: u.CreatedAt})
+	}
+	if res, err := json.Marshal(usersDTO); err != nil {
 		log.Printf("error marshaling auth rows: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

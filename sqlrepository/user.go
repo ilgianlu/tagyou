@@ -6,7 +6,8 @@ import (
 )
 
 type User struct {
-	Username  string `gorm:"primaryKey"`
+	ID        uint   `gorm:"primaryKey"`
+	Username  string `gorm:"uniqueIndex:username_user_idx"`
 	Password  []byte
 	CreatedAt int64
 }
@@ -27,6 +28,7 @@ func MappedUsers(clients []User) []model.User {
 
 func MappedUser(user User) model.User {
 	return model.User{
+		ID:        user.ID,
 		Username:  user.Username,
 		Password:  user.Password,
 		CreatedAt: user.CreatedAt,
@@ -39,13 +41,21 @@ func (ar UserSqlRepository) GetAll() []model.User {
 	return MappedUsers(users)
 }
 
-func (ar UserSqlRepository) GetByUsername(username string) (model.User, error) {
+func (ar UserSqlRepository) GetById(id uint) (model.User, error) {
 	var user User
-	if err := ar.Db.Where("username = ?", username).First(&user).Error; err != nil {
+	if err := ar.Db.Where("id = ?", id).First(&user).Error; err != nil {
 		return model.User{}, err
 	}
 
 	mClient := MappedUser(user)
 
 	return mClient, nil
+}
+
+func (ar UserSqlRepository) Create(user model.User) error {
+	return ar.Db.Create(&user).Error
+}
+
+func (ar UserSqlRepository) DeleteById(id uint) error {
+	return ar.Db.Where("id = ?", id).Delete(&User{}).Error
 }

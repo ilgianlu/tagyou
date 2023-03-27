@@ -6,5 +6,7 @@ import (
 
 type UserRepository interface {
 	GetAll() []model.User
-	GetByUsername(username string) (model.User, error)
+	GetById(id uint) (model.User, error)
+	Create(user model.User) error
+	DeleteById(id uint) error
 }

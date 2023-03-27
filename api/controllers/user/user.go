@@ -1,6 +1,12 @@
 package user
 
 import (
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -15,7 +21,23 @@ func New() *UserController {
 
 func (uc UserController) RegisterRoutes(r *httprouter.Router) {
 	r.GET(resourceName, uc.GetUsers)
-	// r.GET(resourceName+"/:id", uc.GetClient)
-	// r.POST(resourceName, uc.CreateClient)
-	// r.DELETE(resourceName+"/:id", uc.RemoveClient)
+	r.POST(resourceName, uc.CreateUser)
+}
+
+func (uc UserController) getOne(w http.ResponseWriter, r *http.Request, p httprouter.Params) (model.User, error) {
+	id := p.ByName("id")
+
+	idNum, err := strconv.Atoi(id)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return model.User{}, fmt.Errorf("invalid user id")
+	}
+
+	user, err := persistence.UserRepository.GetById(uint(idNum))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return user, fmt.Errorf("error getting user row: %s", err)
+	}
+
+	return user, nil
 }

@@ -17,7 +17,7 @@ Acl
 type Client struct {
 	ClientId             string
 	Username             string
-	Password             []byte `json:"-"`
+	Password             []byte
 	SubscribeAcl         string
 	PublishAcl           string
 	CreatedAt            int64

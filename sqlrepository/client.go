@@ -56,7 +56,7 @@ func (ar ClientSqlRepository) Create(client model.Client) error {
 }
 
 func (ar ClientSqlRepository) DeleteByClientIdUsername(clientId string, username string) error {
-	return ar.Db.Where("client_id = ? and username = ?", clientId, username).Delete(&model.Client{}).Error
+	return ar.Db.Where("client_id = ? and username = ?", clientId, username).Delete(&Client{}).Error
 }
 
 func (ar ClientSqlRepository) GetAll() []model.Client {

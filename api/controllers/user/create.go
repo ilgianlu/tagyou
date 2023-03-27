@@ -1,4 +1,4 @@
-package client
+package user
 
 import (
 	"encoding/json"
@@ -13,16 +13,13 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-type CreateClientDTO struct {
-	ClientId             string
+type CreateUserDTO struct {
 	Username             string
-	SubscribeAcl         string
-	PublishAcl           string
 	InputPassword        string
 	InputPasswordConfirm string
 }
 
-func (a *CreateClientDTO) Validate() bool {
+func (a *CreateUserDTO) Validate() bool {
 	if a.Username == "" {
 		return false
 	}
@@ -32,28 +29,25 @@ func (a *CreateClientDTO) Validate() bool {
 	return true
 }
 
-func (uc ClientController) CreateClient(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	client := CreateClientDTO{}
-	if err := json.NewDecoder(r.Body).Decode(&client); err != nil {
+func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	user := CreateUserDTO{}
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Error().Err(err).Msg("error decoding json input")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if !client.Validate() {
+	if !user.Validate() {
 		log.Error().Msg("data passed is invalid")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	pass, _ := password.EncodePassword([]byte(client.InputPassword))
-	c := model.Client{
-		Username:     client.Username,
-		Password:     pass,
-		SubscribeAcl: client.SubscribeAcl,
-		PublishAcl:   client.PublishAcl,
-		CreatedAt:    time.Now().Unix(),
+	pass, _ := password.EncodePassword([]byte(user.InputPassword))
+	u := model.User{
+		Username:  user.Username,
+		Password:  pass,
+		CreatedAt: time.Now().Unix(),
 	}
-
-	if err := persistence.ClientRepository.Create(c); err != nil {
+	if err := persistence.UserRepository.Create(u); err != nil {
 		log.Error().Err(err).Msg("error saving new client")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
