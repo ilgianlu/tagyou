@@ -11,9 +11,9 @@ Acl
 
 */
 
-type AuthRepository interface {
-	Create(auth model.Auth) error
+type ClientRepository interface {
+	Create(client model.Client) error
 	DeleteByClientIdUsername(clientId string, username string) error
-	GetAll() []model.Auth
-	GetByClientIdUsername(clientId string, username string) (model.Auth, error)
+	GetAll() []model.Client
+	GetByClientIdUsername(clientId string, username string) (model.Client, error)
 }

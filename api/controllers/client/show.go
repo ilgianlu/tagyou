@@ -1,21 +1,22 @@
-package auth
+package client
 
 import (
 	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/julienschmidt/httprouter"
 )
 
-func (uc AuthController) GetAuth(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	auth, err := uc.getOne(w, r, p)
+func (uc ClientController) GetClient(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	client, err := uc.getOne(w, r, p)
 	if err != nil {
 		return
 	}
 
-	if res, err := json.Marshal(auth); err != nil {
-		log.Printf("error marshaling auth row: %s\n", err)
+	if res, err := json.Marshal(client); err != nil {
+		log.Printf("error marshaling client row: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {

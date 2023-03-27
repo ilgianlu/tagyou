@@ -14,7 +14,7 @@ Acl
 
 */
 
-type Auth struct {
+type Client struct {
 	ClientId             string
 	Username             string
 	Password             []byte `json:"-"`
@@ -25,7 +25,7 @@ type Auth struct {
 	InputPasswordConfirm string
 }
 
-func (a *Auth) Validate() bool {
+func (a *Client) Validate() bool {
 	if a.ClientId == "" {
 		return false
 	}
@@ -35,18 +35,18 @@ func (a *Auth) Validate() bool {
 	return true
 }
 
-func (a *Auth) ValidPassword() bool {
+func (a *Client) ValidPassword() bool {
 	if len(a.InputPassword) > conf.PASSWORD_MIN_LENGTH && a.InputPassword == a.InputPasswordConfirm {
 		return true
 	}
 	return false
 }
 
-func (a *Auth) CheckPassword(password string) error {
+func (a *Client) CheckPassword(password string) error {
 	return bcrypt.CompareHashAndPassword(a.Password, []byte(password))
 }
 
-func (a *Auth) SetPassword(password string) error {
+func (a *Client) SetPassword(password string) error {
 	pwd, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
 		log.Err(err).Msg("Error encrypting password")

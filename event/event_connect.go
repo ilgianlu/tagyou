@@ -46,19 +46,18 @@ func doAuth(session *model.RunningSession) bool {
 }
 
 func checkAuth(clientId string, username string, password string) (bool, string, string) {
-	auth, err := persistence.AuthRepository.GetByClientIdUsername(clientId, username)
+	client, err := persistence.ClientRepository.GetByClientIdUsername(clientId, username)
 	if err != nil {
 		log.Debug().Msg("[MQTT] could not find user")
 		return false, "", ""
 	}
 
-	mAuth := model.Auth(auth)
-	if err := mAuth.CheckPassword(password); err != nil {
+	if err := client.CheckPassword(password); err != nil {
 		log.Debug().Msg("[MQTT] wrong password")
 		return false, "", ""
 	}
 
-	return true, auth.PublishAcl, auth.SubscribeAcl
+	return true, client.PublishAcl, client.SubscribeAcl
 }
 
 func checkConnectionTakeOver(session *model.RunningSession, router routers.Router) bool {

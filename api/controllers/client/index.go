@@ -1,4 +1,4 @@
-package auth
+package client
 
 import (
 	"encoding/json"
@@ -10,9 +10,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func (uc AuthController) GetAuths(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	auths := persistence.AuthRepository.GetAll()
-	if res, err := json.Marshal(auths); err != nil {
+func (uc ClientController) GetClients(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	clients := persistence.ClientRepository.GetAll()
+	if res, err := json.Marshal(clients); err != nil {
 		log.Printf("error marshaling auth rows: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

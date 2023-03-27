@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	AuthRepository         repository.AuthRepository
+	ClientRepository       repository.ClientRepository
 	SessionRepository      repository.SessionRepository
 	SubscriptionRepository repository.SubscriptionRepository
 	RetainRepository       repository.RetainRepository

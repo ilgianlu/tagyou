@@ -29,7 +29,7 @@ func (p SqlPersistence) Init() error {
 func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startRetryCleaner bool) error {
 	sqlrepository.Migrate(db)
 
-	AuthRepository = sqlrepository.AuthSqlRepository{Db: db}
+	ClientRepository = sqlrepository.ClientSqlRepository{Db: db}
 	SessionRepository = sqlrepository.SessionSqlRepository{Db: db}
 	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
 	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
