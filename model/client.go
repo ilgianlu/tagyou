@@ -1,10 +1,9 @@
 package model
 
 /**
-Acl
+Client connecting to mqtt server (i.e. device)
 
-[{"pattern": "/topic/1"}, {"pattern": "/topic/2"}]
-
+Acl [{"pattern": "/topic/1"}, {"pattern": "/topic/2"}]
 */
 
 type Client struct {
