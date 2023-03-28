@@ -46,9 +46,16 @@ func (ar UserSqlRepository) GetById(id uint) (model.User, error) {
 	if err := ar.Db.Where("id = ?", id).First(&user).Error; err != nil {
 		return model.User{}, err
 	}
-
 	mClient := MappedUser(user)
+	return mClient, nil
+}
 
+func (ar UserSqlRepository) GetByUsername(username string) (model.User, error) {
+	var user User
+	if err := ar.Db.Where("username = ?", username).First(&user).Error; err != nil {
+		return model.User{}, err
+	}
+	mClient := MappedUser(user)
 	return mClient, nil
 }
 

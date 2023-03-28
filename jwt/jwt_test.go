@@ -9,7 +9,7 @@ import (
 
 func TestCreateVerify(t *testing.T) {
 	key := []byte("fantastic key")
-	tokenString, err := CreateToken(key, "tagyou.at", 1010, 48)
+	tokenString, err := CreateToken(key, "tagyou.at", 48, 1010)
 
 	if err != nil {
 		t.Errorf("unexpected token creation error %s", err)

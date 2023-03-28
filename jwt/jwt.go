@@ -7,7 +7,7 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-func CreateToken(signingKey []byte, issuer string, userId int64, hoursDuration int) (string, error) {
+func CreateToken(signingKey []byte, issuer string, hoursDuration int, userId uint) (string, error) {
 
 	claims := TagyouClaims{
 		userId,
