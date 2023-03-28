@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
@@ -20,9 +21,9 @@ func New() *UserController {
 }
 
 func (uc UserController) RegisterRoutes(r *httprouter.Router) {
-	r.GET(resourceName, uc.GetUsers)
-	r.POST(resourceName, uc.CreateUser)
-	r.DELETE(resourceName+"/:id", uc.DeleteUser)
+	r.GET(resourceName, middlewares.Authenticated(uc.GetUsers))
+	r.POST(resourceName, middlewares.Authenticated(uc.CreateUser))
+	r.DELETE(resourceName+"/:id", middlewares.Authenticated(uc.DeleteUser))
 }
 
 func (uc UserController) getOne(w http.ResponseWriter, r *http.Request, p httprouter.Params) (model.User, error) {
