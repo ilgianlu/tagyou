@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
@@ -20,7 +21,7 @@ import (
 func StartWebSocket(port string, router routers.Router) {
 	r := httprouter.New()
 	r.GET("/ws", AcceptWebsocket(router))
-	r.POST("/messages", PostMessage(router))
+	r.POST("/messages", middlewares.Authenticated(PostMessage(router)))
 
 	log.Info().Msgf("[WS] websocket listening on %s", port)
 	if err := http.ListenAndServe(port, r); err != nil {

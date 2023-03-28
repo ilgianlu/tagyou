@@ -36,20 +36,8 @@ func (sr SessionSqlRepository) CleanSession(clientId string) error {
 
 func (sr SessionSqlRepository) SessionExists(clientId string) (model.Session, bool) {
 	session := Session{}
-	if err := sr.Db.Where("client_id = ?", clientId).First(&session).Error; err != nil {
-		return &session, false
-	} else {
-		mSession := Session{
-			ID:              session.ID,
-			LastSeen:        session.LastSeen,
-			LastConnect:     session.LastConnect,
-			ExpiryInterval:  session.ExpiryInterval,
-			ClientId:        session.ClientId,
-			Connected:       session.Connected,
-			ProtocolVersion: session.ProtocolVersion,
-		}
-		return &mSession, true
-	}
+	err := sr.Db.Where("client_id = ?", clientId).First(&session).Error
+	return &session, err == nil
 }
 
 func (sr SessionSqlRepository) DisconnectSession(clientId string) {
@@ -65,16 +53,7 @@ func (sr SessionSqlRepository) GetById(sessionId uint) (model.Session, error) {
 		return &session, err
 	}
 
-	mSession := Session{
-		ID:              session.ID,
-		LastSeen:        session.LastSeen,
-		LastConnect:     session.LastConnect,
-		ExpiryInterval:  session.ExpiryInterval,
-		ClientId:        session.ClientId,
-		Connected:       session.Connected,
-		ProtocolVersion: session.ProtocolVersion,
-	}
-	return &mSession, nil
+	return &session, nil
 }
 
 func (sr SessionSqlRepository) GetAll() []model.Session {

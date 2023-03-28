@@ -5,11 +5,12 @@ import (
 )
 
 var (
-	AuthRepository         repository.AuthRepository
+	ClientRepository       repository.ClientRepository
 	SessionRepository      repository.SessionRepository
 	SubscriptionRepository repository.SubscriptionRepository
 	RetainRepository       repository.RetainRepository
 	RetryRepository        repository.RetryRepository
+	UserRepository         repository.UserRepository
 )
 
 type Persistence interface {

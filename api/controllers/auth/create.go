@@ -6,37 +6,55 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/jwt"
+	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
 )
 
-func (uc AuthController) CreateAuth(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	auth := model.Auth{}
-	if err := json.NewDecoder(r.Body).Decode(&auth); err != nil {
+type CreateTokenDTO struct {
+	Username      string
+	InputPassword string
+}
+
+type CreateTokenResponse struct {
+	Token string `json:"token"`
+}
+
+func (uc AuthController) CreateToken(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	user := CreateTokenDTO{}
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Error().Err(err).Msg("error decoding json input")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if !auth.Validate() || !auth.ValidPassword() {
-		log.Error().Msg("data passed is invalid")
+
+	usr, err := persistence.UserRepository.GetByUsername(user.Username)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if err := auth.SetPassword(auth.InputPassword); err != nil {
-		log.Error().Err(err).Msg("error encoding password")
+
+	if err := password.CheckPassword(usr.Password, []byte(user.InputPassword)); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	token, err := jwt.CreateToken(
+		conf.API_TOKEN_SIGNING_KEY,
+		conf.API_TOKEN_ISSUER,
+		conf.API_TOKEN_HOURS_DURATION,
+		usr.ID,
+	)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if err := persistence.AuthRepository.Create(auth); err != nil {
-		log.Error().Err(err).Msg("error saving new auth")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	auth.InputPassword = ""
-	auth.InputPasswordConfirm = ""
-	if res, err := json.Marshal(auth); err != nil {
-		log.Error().Err(err).Msg("error marshaling new auth")
+	response := CreateTokenResponse{Token: token}
+
+	if res, err := json.Marshal(response); err != nil {
+		log.Printf("error marshaling token response: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
@@ -47,6 +65,6 @@ func (uc AuthController) CreateAuth(w http.ResponseWriter, r *http.Request, p ht
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		log.Debug().Msgf("Wrote %d bytes json result\n", numBytes)
+		log.Printf("Wrote %d bytes json result\n", numBytes)
 	}
 }

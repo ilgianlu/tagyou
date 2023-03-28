@@ -53,4 +53,27 @@ func Loader() {
 			RETRY_EXPIRATION = dk
 		}
 	}
+
+	s = os.Getenv("API_TOKEN_SIGNING_KEY")
+	if s != "" {
+		API_TOKEN_SIGNING_KEY = []byte(s)
+	}
+
+	s = os.Getenv("API_TOKEN_ISSUER")
+	if s != "" {
+		API_TOKEN_ISSUER = s
+	}
+
+	s = os.Getenv("API_TOKEN_HOURS_DURATION")
+	if s != "" {
+		dk, err := strconv.Atoi(s)
+		if err != nil {
+			API_TOKEN_HOURS_DURATION = dk
+		}
+	}
+
+	s = os.Getenv("INIT_ADMIN_PASSWORD")
+	if s != "" {
+		INIT_ADMIN_PASSWORD = []byte(s)
+	}
 }

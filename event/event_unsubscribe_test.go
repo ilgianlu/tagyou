@@ -21,7 +21,7 @@ func TestClientUnsubscription(t *testing.T) {
 	}
 
 	p := persistence.SqlPersistence{}
-	p.InnerInit(db, false, false)
+	p.InnerInit(db, false, false, []byte(""))
 
 	db.Exec("DELETE FROM sessions")
 	db.Exec("DELETE FROM subscriptions")

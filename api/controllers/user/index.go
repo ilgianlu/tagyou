@@ -1,4 +1,4 @@
-package auth
+package user
 
 import (
 	"encoding/json"
@@ -10,9 +10,19 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func (uc AuthController) GetAuths(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	auths := persistence.AuthRepository.GetAll()
-	if res, err := json.Marshal(auths); err != nil {
+type IndexUserDTO struct {
+	ID        uint
+	Username  string
+	CreatedAt int64
+}
+
+func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	users := persistence.UserRepository.GetAll()
+	usersDTO := []IndexUserDTO{}
+	for _, u := range users {
+		usersDTO = append(usersDTO, IndexUserDTO{ID: u.ID, Username: u.Username, CreatedAt: u.CreatedAt})
+	}
+	if res, err := json.Marshal(usersDTO); err != nil {
 		log.Printf("error marshaling auth rows: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

@@ -1,6 +1,7 @@
 package subscription
 
 import (
+	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -14,5 +15,5 @@ func New() *SubscriptionController {
 }
 
 func (sc SubscriptionController) RegisterRoutes(r *httprouter.Router) {
-	r.GET(resourceName, sc.GetSubscriptions)
+	r.GET(resourceName, middlewares.Authenticated(sc.GetSubscriptions))
 }

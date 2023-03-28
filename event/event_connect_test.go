@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/sqlrepository"
 	"gorm.io/driver/sqlite"
@@ -21,14 +22,13 @@ func TestClientGoodConnection(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db, false, false)
+	persistence.InnerInit(db, false, false, []byte(""))
 
 	db.Exec("DELETE FROM auths")
 
-	auth1 := model.Auth{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]"}
-	auth1.SetPassword("password")
-	rAuth1 := sqlrepository.Auth{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: auth1.Password}
-	db.Create(&rAuth1)
+	pwd, _ := password.EncodePassword([]byte("password"))
+	rClient1 := sqlrepository.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: pwd}
+	db.Create(&rClient1)
 
 	session := model.RunningSession{ClientId: "client-1", Username: "user1", Password: "password"}
 
@@ -48,14 +48,14 @@ func TestClientBadConnectionWrongPasswordConnection(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db, false, false)
+	persistence.InnerInit(db, false, false, []byte(""))
 
 	db.Exec("DELETE FROM auths")
 
-	auth1 := model.Auth{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]"}
-	auth1.SetPassword("password")
-	rAuth1 := sqlrepository.Auth{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: auth1.Password}
-	db.Create(&rAuth1)
+	pwd, _ := password.EncodePassword([]byte("password"))
+	client1 := model.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: pwd}
+	rClient1 := sqlrepository.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: client1.Password}
+	db.Create(&rClient1)
 
 	session := model.RunningSession{ClientId: "client-1", Username: "user1", Password: "wrong"}
 
@@ -74,14 +74,15 @@ func TestClientBadConnectionWrongUsernameConnection(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db, false, false)
+	persistence.InnerInit(db, false, false, []byte(""))
 
 	db.Exec("DELETE FROM auths")
 
-	auth1 := model.Auth{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]"}
-	auth1.SetPassword("password")
-	rAuth1 := sqlrepository.Auth{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: auth1.Password}
-	db.Create(&rAuth1)
+	pwd, _ := password.EncodePassword([]byte("password"))
+	client1 := model.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: pwd}
+
+	rClient1 := sqlrepository.Client{ClientId: "client-1", Username: "user1", SubscribeAcl: "[]", PublishAcl: "[]", Password: client1.Password}
+	db.Create(&rClient1)
 
 	session := model.RunningSession{ClientId: "client-1", Username: "wrong", Password: "password"}
 

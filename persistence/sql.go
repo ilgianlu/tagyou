@@ -23,18 +23,21 @@ func (p SqlPersistence) Init() error {
 		return err
 	}
 
-	return p.InnerInit(db, conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES)
+	return p.InnerInit(db, conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
 }
 
-func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startRetryCleaner bool) error {
+func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startRetryCleaner bool, newAdminPassword []byte) error {
 	sqlrepository.Migrate(db)
 
-	AuthRepository = sqlrepository.AuthSqlRepository{Db: db}
+	ClientRepository = sqlrepository.ClientSqlRepository{Db: db}
 	SessionRepository = sqlrepository.SessionSqlRepository{Db: db}
 	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
 	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
-	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
+	UserRepository = sqlrepository.UserSqlRepository{Db: db}
 
+	if len(newAdminPassword) > 0 {
+		sqlrepository.AdminPasswordReset(db, newAdminPassword)
+	}
 	if startSessionCleaner {
 		sqlrepository.StartSessionCleaner(db)
 	}

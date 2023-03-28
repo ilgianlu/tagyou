@@ -1,6 +1,7 @@
 package session
 
 import (
+	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -14,5 +15,5 @@ func New() *SessionController {
 }
 
 func (sc SessionController) RegisterRoutes(r *httprouter.Router) {
-	r.GET(resourceName, sc.GetSessions)
+	r.GET(resourceName, middlewares.Authenticated(sc.GetSessions))
 }

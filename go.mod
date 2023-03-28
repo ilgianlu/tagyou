@@ -3,6 +3,7 @@ module github.com/ilgianlu/tagyou
 go 1.20
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1
 	github.com/joho/godotenv v1.5.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/robfig/cron v1.2.0
