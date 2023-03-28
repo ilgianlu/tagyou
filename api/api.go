@@ -5,6 +5,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	AuthController "github.com/ilgianlu/tagyou/api/controllers/auth"
 	ClientController "github.com/ilgianlu/tagyou/api/controllers/client"
 	SessionController "github.com/ilgianlu/tagyou/api/controllers/session"
 	SubscriptionController "github.com/ilgianlu/tagyou/api/controllers/subscription"
@@ -14,6 +15,8 @@ import (
 
 func StartApi(httpPort string) {
 	r := httprouter.New()
+	ac := AuthController.New()
+	ac.RegisterRoutes(r)
 	uc := ClientController.New()
 	uc.RegisterRoutes(r)
 	sc := SessionController.New()
