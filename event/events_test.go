@@ -107,7 +107,7 @@ func TestSuccessfullReconnect(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db, false, false)
+	persistence.InnerInit(db, false, false, []byte(""))
 
 	storedSession := sqlrepository.Session{
 		ID:              5,
@@ -169,7 +169,7 @@ func TestPublish(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db, false, false)
+	persistence.InnerInit(db, false, false, []byte(""))
 
 	db.Exec("DELETE FROM sessions")
 	db.Exec("DELETE FROM subscriptions")
@@ -260,7 +260,7 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db, false, false)
+	persistence.InnerInit(db, false, false, []byte(""))
 
 	db.Exec("DELETE FROM sessions")
 	db.Exec("DELETE FROM subscriptions")

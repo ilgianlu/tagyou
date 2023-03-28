@@ -71,4 +71,9 @@ func Loader() {
 			API_TOKEN_HOURS_DURATION = dk
 		}
 	}
+
+	s = os.Getenv("INIT_ADMIN_PASSWORD")
+	if s != "" {
+		INIT_ADMIN_PASSWORD = []byte(s)
+	}
 }
