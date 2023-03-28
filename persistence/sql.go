@@ -48,15 +48,6 @@ func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startR
 	return nil
 }
 
-func (p SqlPersistence) Close() {
-	sql, err := p.db.DB()
-	if err != nil {
-		log.Error().Err(err).Msg("could not close DB")
-		return
-	}
-	sql.Close()
-}
-
 func openDb() (*gorm.DB, error) {
 	logLevel := logger.Silent
 	if os.Getenv("DEBUG") != "" {
