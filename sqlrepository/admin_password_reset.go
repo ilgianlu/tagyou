@@ -10,10 +10,10 @@ import (
 )
 
 func AdminPasswordReset(db *gorm.DB, newPassword []byte) {
-	log.Info().Msg("[ADMIN] reset admin password")
+	log.Debug().Msg("[ADMIN] create admin?")
 	admin := User{}
-	if err := db.Debug().Where("username = ?", "admin").First(&admin).Error; err == nil {
-		log.Error().Err(err)
+	if err := db.Where("username = ?", "admin").First(&admin).Error; err == nil {
+		log.Debug().Err(err).Msg("[ADMIN] admin already present")
 		return
 	}
 	pwd, err := password.EncodePassword(newPassword)
@@ -24,4 +24,5 @@ func AdminPasswordReset(db *gorm.DB, newPassword []byte) {
 	admin.Password = pwd
 	admin.CreatedAt = time.Now().Unix()
 	db.Save(&admin)
+	log.Info().Msg("[ADMIN] admin user created")
 }
