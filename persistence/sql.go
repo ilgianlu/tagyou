@@ -34,6 +34,7 @@ func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startR
 	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
 	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
 	UserRepository = sqlrepository.UserSqlRepository{Db: db}
+	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
 
 	if len(newAdminPassword) > 0 {
 		sqlrepository.AdminPasswordReset(db, newAdminPassword)
