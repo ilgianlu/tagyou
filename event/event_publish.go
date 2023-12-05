@@ -56,7 +56,7 @@ func sendPubrec(router routers.Router, session *model.RunningSession, p *packet.
 		AckStatus:          model.WAIT_FOR_PUB_REL,
 		CreatedAt:          time.Now().Unix(),
 	}
-	persistence.RetryRepository.SaveOne(r)
+	persistence.RetryRepository.InsertOne(r)
 
 	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, protocolVersion)
 	router.Send(clientId, pubrec.ToByteSlice())

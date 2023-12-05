@@ -16,10 +16,15 @@ type Retry struct {
 	AckStatus          uint8
 	CreatedAt          int64
 	SessionID          uint
+	ReasonCode         uint8
 }
 
 type RetrySqlRepository struct {
 	Db *gorm.DB
+}
+
+func (r RetrySqlRepository) InsertOne(retry model.Retry) error {
+	return r.Db.Create(&retry).Error
 }
 
 func (r RetrySqlRepository) SaveOne(retry model.Retry) error {
