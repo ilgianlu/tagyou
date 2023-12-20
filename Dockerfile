@@ -9,7 +9,8 @@ COPY ./ .
 RUN go mod tidy
 ENV CGO_ENABLED=1
 ENV GOOS=linux
-ENV GOARCH=amd64
+ARG GOARCH
+ENV GOARCH=${GOARCH:-amd64}
 
 RUN go test ./...
 
