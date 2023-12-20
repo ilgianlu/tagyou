@@ -53,14 +53,14 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-
     - name: Build and push Docker images
       uses: docker/build-push-action@v3
       with:
-        context: . --build-arg GOARCH=arm64v8
+        context: .
         platforms: linux/arm64
         file: ./Dockerfile
         push: true
+        build-args: GOARCH=arm64v8
         tags: |
           ilgianlu/tagyou:arm
           ilgianlu/tagyou:arm-latest
