@@ -60,7 +60,7 @@ jobs:
         platforms: linux/arm64
         file: ./Dockerfile
         push: true
-        build-args: GOARCH=arm64v8
+        build-args: GOARCH=arm64
         tags: |
           ilgianlu/tagyou:arm
           ilgianlu/tagyou:arm-latest
