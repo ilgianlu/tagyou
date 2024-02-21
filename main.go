@@ -1,19 +1,20 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
+	dotenv "github.com/joho/godotenv"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/api"
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/log"
 	"github.com/ilgianlu/tagyou/mqtt"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
-	dotenv "github.com/joho/godotenv"
 )
 
 func main() {
@@ -22,8 +23,8 @@ func main() {
 
 	err := loadEnv()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Could not load env")
-		return
+		slog.Error("Could not load env", "err", err)
+		panic(1)
 	}
 	conf.Loader()
 
@@ -32,6 +33,8 @@ func main() {
 	if os.Getenv("DEBUG") != "" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
+
+	log.Init()
 
 	p := persistence.SqlPersistence{}
 	p.Init()
