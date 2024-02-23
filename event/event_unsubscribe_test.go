@@ -4,8 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/sqlrepository"
@@ -17,7 +15,7 @@ func TestClientUnsubscription(t *testing.T) {
 	os.Setenv("DEBUG", "1")
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	p := persistence.SqlPersistence{}

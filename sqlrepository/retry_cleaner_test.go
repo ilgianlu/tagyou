@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/rs/zerolog/log"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -15,7 +14,7 @@ import (
 func TestRetryCleaner(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	Migrate(db)

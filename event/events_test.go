@@ -11,7 +11,6 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
 	"github.com/ilgianlu/tagyou/sqlrepository"
-	"github.com/rs/zerolog/log"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -103,7 +102,7 @@ func TestSuccessfullConnect(t *testing.T) {
 func TestSuccessfullReconnect(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	persistence := persistence.SqlPersistence{}
@@ -165,7 +164,7 @@ func TestPublish(t *testing.T) {
 	conf.Loader()
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	persistence := persistence.SqlPersistence{}
@@ -256,7 +255,7 @@ func TestSubscribe(t *testing.T) {
 	conf.Loader()
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	persistence := persistence.SqlPersistence{}

@@ -1,7 +1,7 @@
 package event
 
 import (
-	"github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
@@ -13,13 +13,13 @@ func clientPubcomp(clientId string, packetIdentifier int, reasonCode uint8) {
 		if retry.AckStatus == model.WAIT_FOR_PUB_COMP {
 			persistence.RetryRepository.Delete(retry)
 		} else {
-			log.Info().Msgf("pubcomp for invalid retry status %s %d %d", retry.ClientId, retry.PacketIdentifier, retry.AckStatus)
+			slog.Info("pubcomp for invalid retry status", "client-id", retry.ClientId, "packet-identifier", retry.PacketIdentifier, "ack-status", retry.AckStatus)
 		}
 	}
 
 	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifierReasonCode(clientId, packetIdentifier, reasonCode)
 	if err != nil {
-		log.Info().Msgf("pubcomp for invalid retry %s %d", retry.ClientId, retry.PacketIdentifier)
+		slog.Info("pubcomp for invalid retry", "client-id", retry.ClientId, "packet-identifier", retry.PacketIdentifier)
 	} else {
 		onRetryFound(retry)
 	}
