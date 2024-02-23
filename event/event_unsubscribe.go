@@ -1,7 +1,7 @@
 package event
 
 import (
-	"github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
@@ -26,8 +26,8 @@ func clientUnsubscribed(router routers.Router, session *model.RunningSession, pa
 
 func clientUnsubscription(clientId string, unsub model.Subscription) uint8 {
 	if sub, err := persistence.SubscriptionRepository.FindToUnsubscribe(unsub.ShareName, unsub.Topic, clientId); err != nil {
-		log.Info().Msgf("no subscription to unsubscribe %s %s", unsub.Topic, clientId)
-		log.Error().Err(err).Msg("error unsubscribing")
+		slog.Info("no subscription to unsubscribe", "topic", unsub.Topic, "client-id", clientId)
+		slog.Error("error unsubscribing", "err", err)
 		return conf.UNSUB_NO_SUB_EXISTED
 	} else {
 		persistence.SubscriptionRepository.DeleteByClientIdTopicShareName(clientId, sub.Topic, sub.ShareName)
