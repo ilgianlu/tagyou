@@ -1,7 +1,6 @@
 package packet
 
 import (
-	"log"
 	"testing"
 )
 
@@ -84,7 +83,6 @@ func TestStartVeryLongPacket(t *testing.T) {
 		t.Errorf("expected packet type publish %d got %d", PACKET_TYPE_PUBLISH, p.PacketType())
 	}
 	if p.remainingLength != 2090 {
-		log.Println(p)
 		t.Errorf("expected packet remaining length %d got %d", 2090, p.remainingLength)
 	}
 }

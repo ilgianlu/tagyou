@@ -4,8 +4,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/topic"
@@ -44,7 +42,7 @@ func (p *Packet) subscribeReq(session *model.RunningSession) int {
 		}
 		i = i + sl
 		if p.remainingBytes[i]&0x12 != 0 {
-			log.Debug().Msg("ignore this subscription & stop")
+			slog.Debug("ignore this subscription & stop")
 			break
 		}
 		sub.RetainHandling = p.remainingBytes[i] & 0x30 >> 4
