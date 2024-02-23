@@ -2,9 +2,8 @@ package user
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
@@ -23,7 +22,7 @@ func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, p http
 		usersDTO = append(usersDTO, IndexUserDTO{ID: u.ID, Username: u.Username, CreatedAt: u.CreatedAt})
 	}
 	if res, err := json.Marshal(usersDTO); err != nil {
-		log.Printf("error marshaling auth rows: %s\n", err)
+		slog.Error("error marshaling auth rows", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
@@ -34,6 +33,6 @@ func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, p http
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Wrote %d bytes json result\n", numBytes)
+		slog.Info("Wrote json result", "num-bytes", numBytes)
 	}
 }

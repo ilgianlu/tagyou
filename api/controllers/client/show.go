@@ -2,9 +2,8 @@ package client
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -29,7 +28,7 @@ func (uc ClientController) GetClient(w http.ResponseWriter, r *http.Request, p h
 	}
 
 	if res, err := json.Marshal(clientDTO); err != nil {
-		log.Printf("error marshaling client row: %s\n", err)
+		slog.Error("error marshaling client row", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
@@ -40,6 +39,6 @@ func (uc ClientController) GetClient(w http.ResponseWriter, r *http.Request, p h
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Wrote %d bytes json result\n", numBytes)
+		slog.Info("Wrote json result", "num-bytes", numBytes)
 	}
 }

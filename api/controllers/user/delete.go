@@ -1,10 +1,10 @@
 package user
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/rs/zerolog/log"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -16,7 +16,7 @@ func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p ht
 		return
 	}
 	if err := persistence.UserRepository.DeleteById(user.ID); err != nil {
-		log.Printf("error deleting user: %s\n", err)
+		slog.Error("error deleting user", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

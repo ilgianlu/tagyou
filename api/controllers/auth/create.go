@@ -2,9 +2,8 @@ package auth
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/jwt"
@@ -25,7 +24,7 @@ type CreateTokenResponse struct {
 func (uc AuthController) CreateToken(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	user := CreateTokenDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		log.Error().Err(err).Msg("error decoding json input")
+		slog.Error("error decoding json input", "err", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -54,7 +53,7 @@ func (uc AuthController) CreateToken(w http.ResponseWriter, r *http.Request, p h
 	response := CreateTokenResponse{Token: token}
 
 	if res, err := json.Marshal(response); err != nil {
-		log.Printf("error marshaling token response: %s\n", err)
+		slog.Error("error marshaling token response", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
@@ -65,6 +64,6 @@ func (uc AuthController) CreateToken(w http.ResponseWriter, r *http.Request, p h
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Wrote %d bytes json result\n", numBytes)
+		slog.Info("Wrote json result", "num-bytes", numBytes)
 	}
 }

@@ -2,9 +2,8 @@ package session
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
@@ -13,7 +12,7 @@ import (
 func (sc SessionController) GetSessions(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	sessions := persistence.SessionRepository.GetAll()
 	if res, err := json.Marshal(sessions); err != nil {
-		log.Printf("error marshaling session rows: %s\n", err)
+		slog.Error("error marshaling session rows", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
@@ -24,6 +23,6 @@ func (sc SessionController) GetSessions(w http.ResponseWriter, r *http.Request, 
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Wrote %d bytes json result\n", numBytes)
+		slog.Info("Wrote json result", "num-bytes", numBytes)
 	}
 }

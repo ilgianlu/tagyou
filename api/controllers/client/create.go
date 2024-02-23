@@ -2,10 +2,9 @@ package client
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/password"
@@ -35,12 +34,12 @@ func (a *CreateClientDTO) Validate() bool {
 func (uc ClientController) CreateClient(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	client := CreateClientDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&client); err != nil {
-		log.Error().Err(err).Msg("error decoding json input")
+		slog.Error("error decoding json input", "err", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if !client.Validate() {
-		log.Error().Msg("data passed is invalid")
+		slog.Warn("data passed is invalid")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -55,7 +54,7 @@ func (uc ClientController) CreateClient(w http.ResponseWriter, r *http.Request, 
 	}
 
 	if err := persistence.ClientRepository.Create(c); err != nil {
-		log.Error().Err(err).Msg("error saving new client")
+		slog.Error("error saving new client", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
