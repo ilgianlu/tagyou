@@ -1,6 +1,7 @@
 package packet
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -19,7 +20,7 @@ func (p *Packet) subscribeReq(session *model.RunningSession) int {
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
-			log.Error().Msgf("err reading properties %d", err)
+			slog.Error("err reading properties", "err", err)
 			return err
 		}
 		i = i + pl

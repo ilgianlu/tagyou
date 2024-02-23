@@ -1,7 +1,7 @@
 package packet
 
 import (
-	"github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
@@ -15,26 +15,26 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 	i := 0
 	pl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
-	log.Debug().Msgf("%d bytes, protocolName %s\n", pl, string(p.remainingBytes[i:i+pl]))
+	slog.Debug("protocolName", "bytes-read", pl, "protocol-name", string(p.remainingBytes[i:i+pl]))
 	i = i + pl
 	v := p.remainingBytes[i]
-	log.Debug().Msgf("protocolVersion %d", v)
+	slog.Debug("protocolVersion", "protocol-version", v)
 	session.ProtocolVersion = v
 	i++
 	if int(v) < conf.MINIMUM_SUPPORTED_PROTOCOL {
-		log.Error().Msgf("unsupported protocol version err %d", v)
+		slog.Error("unsupported protocol version", "protocol-version", v)
 		return UNSUPPORTED_PROTOCOL_VERSION
 	}
 	session.ConnectFlags = p.remainingBytes[i]
 	i++
 	ka := p.remainingBytes[i : i+2]
 	session.KeepAlive = Read2BytesInt(ka, 0)
-	log.Debug().Msgf("keepAlive %d", Read2BytesInt(ka, 0))
+	slog.Debug("keepAlive", "keep-alive", Read2BytesInt(ka, 0))
 	i = i + 2
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
-			log.Error().Msgf("err reading properties %d", err)
+			slog.Error("err reading properties", "err", err)
 			return err
 		}
 		i = i + pl
@@ -51,7 +51,7 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 		if session.ProtocolVersion >= conf.MQTT_V5 {
 			pl, err := p.parseWillProperties(i)
 			if err != 0 {
-				log.Error().Msgf("err reading properties %d", err)
+				slog.Error("err reading properties", "err", err)
 				return err
 			}
 			i = i + pl
@@ -65,7 +65,7 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 		wml := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		session.WillMessage = p.remainingBytes[i : i+wml]
-		log.Debug().Msgf("will topic %s with message %s", session.WillTopic, session.WillMessage[:20])
+		slog.Debug("will topic with message", "will-topic", session.WillTopic, "will-message", session.WillMessage[:20])
 		i = i + wml
 	}
 	if session.HaveUser() {
@@ -78,7 +78,7 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 		pwdl := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		session.Password = string(p.remainingBytes[i : i+pwdl])
-		log.Debug().Msgf("username \"%s\"\nlogging with password \"%s\"\n", session.Username, session.Password)
+		slog.Debug("user logging in", "username", session.Username)
 	}
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		session.ExpiryInterval = p.SessionExpiryInterval()
