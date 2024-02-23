@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	dotenv "github.com/joho/godotenv"
-	"github.com/rs/zerolog"
 
 	"github.com/ilgianlu/tagyou/api"
 	"github.com/ilgianlu/tagyou/conf"
@@ -27,12 +26,6 @@ func main() {
 		panic(1)
 	}
 	conf.Loader()
-
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if os.Getenv("DEBUG") != "" {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
 
 	log.Init()
 

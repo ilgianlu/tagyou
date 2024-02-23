@@ -1,28 +1,28 @@
 package sqlrepository
 
 import (
+	"log/slog"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/password"
 	"gorm.io/gorm"
 )
 
 func AdminPasswordReset(db *gorm.DB, newPassword []byte) {
-	log.Debug().Msg("[ADMIN] create admin?")
+	slog.Debug("[ADMIN] create admin?")
 	admin := User{}
 	if err := db.Where("username = ?", "admin").First(&admin).Error; err == nil {
-		log.Debug().Err(err).Msg("[ADMIN] admin already present")
+		slog.Debug("[ADMIN] admin already present", "err", err)
 		return
 	}
 	pwd, err := password.EncodePassword(newPassword)
 	if err != nil {
-		log.Fatal().Msg("could not encode new password for admin")
+		slog.Error("could not encode new password for admin")
+		return
 	}
 	admin.Username = "admin"
 	admin.Password = pwd
 	admin.CreatedAt = time.Now().Unix()
 	db.Save(&admin)
-	log.Info().Msg("[ADMIN] admin user created")
+	slog.Info("[ADMIN] admin user created")
 }

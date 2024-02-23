@@ -2,9 +2,8 @@ package sqlrepository
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
@@ -13,13 +12,13 @@ import (
 )
 
 func StartRetryCleaner(db *gorm.DB) {
-	log.Info().Msg("[MQTT] start expired retries cleaner")
+	slog.Info("[MQTT] start expired retries cleaner")
 	cleanRetries(db)
 	c := cron.New()
 	_ = c.AddFunc(
 		fmt.Sprintf("@every %dm", conf.CLEAN_EXPIRED_RETRIES_INTERVAL),
 		func() {
-			log.Info().Msg("[MQTT] clean expired retries")
+			slog.Info("[MQTT] clean expired retries")
 			cleanRetries(db)
 		},
 	)
@@ -29,7 +28,7 @@ func StartRetryCleaner(db *gorm.DB) {
 func cleanRetries(db *gorm.DB) {
 	expireTime := time.Now().Unix() - int64(conf.RETRY_EXPIRATION)
 	if err := db.Debug().Where("created_at < ?", expireTime).Delete(&model.Retry{}).Error; err != nil {
-		log.Error().Err(err)
+		slog.Error("", "err", err)
 	}
-	log.Info().Msg("[MQTT] retries cleanup done")
+	slog.Info("[MQTT] retries cleanup done")
 }

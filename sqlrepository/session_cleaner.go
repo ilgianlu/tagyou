@@ -2,8 +2,7 @@ package sqlrepository
 
 import (
 	"fmt"
-
-	"github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
@@ -12,13 +11,13 @@ import (
 )
 
 func StartSessionCleaner(db *gorm.DB) {
-	log.Info().Msg("[MQTT] start expired sessions cleaner")
+	slog.Info("[MQTT] start expired sessions cleaner")
 	cleanSessions(db)
 	c := cron.New()
 	_ = c.AddFunc(
 		fmt.Sprintf("@every %dm", conf.CLEAN_EXPIRED_SESSIONS_INTERVAL),
 		func() {
-			log.Info().Msg("[MQTT] clean expired sessions")
+			slog.Info("[MQTT] clean expired sessions")
 			cleanSessions(db)
 		},
 	)
@@ -34,5 +33,5 @@ func cleanSessions(db *gorm.DB) {
 			}
 		}
 	}
-	log.Info().Msg("[MQTT] expired sessions cleanup done")
+	slog.Info("[MQTT] expired sessions cleanup done")
 }

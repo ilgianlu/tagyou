@@ -49,7 +49,6 @@ func TestExplode(t *testing.T) {
 
 	for _, value := range tests {
 		res := Explode(value.data)
-		// log.Println(value.data, "==>", res, "==", value.result)
 		if !arrEq(res, value.result) {
 			t.Error("expected", value.data, "to explode into", value.result, "received", res)
 		}
@@ -99,7 +98,6 @@ func TestExplodeFull(t *testing.T) {
 
 	for _, value := range tests {
 		res := explodeFull(value.data)
-		// log.Println(value.data, "==>", res, "==", value.result)
 		if !arrEq(res, value.result) {
 			t.Error("expected", value.data, "to explode into", value.result, "received", res)
 		}
@@ -121,7 +119,6 @@ func TestExplodeSingleLevel(t *testing.T) {
 
 	for _, value := range tests {
 		res := explodeSingleLevel(value.data)
-		// log.Println(value.data, "==>", res, "==", value.result)
 		if !arrArrEq(res, value.result) {
 			t.Error("expected", value.data, "to explode into", value.result, "received", res)
 		}
