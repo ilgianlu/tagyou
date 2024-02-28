@@ -8,7 +8,7 @@ import (
 )
 
 type WebsocketConnection struct {
-	Conn websocket.Conn
+	Conn *websocket.Conn
 }
 
 func (c WebsocketConnection) Write(b []byte) (n int, e error) {

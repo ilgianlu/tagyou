@@ -43,7 +43,7 @@ func AcceptWebsocket(router routers.Router) func(http.ResponseWriter, *http.Requ
 		session := model.RunningSession{
 			KeepAlive:      conf.DEFAULT_KEEPALIVE,
 			ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
-			Conn:           model.WebsocketConnection{Conn: *c},
+			Conn:           model.WebsocketConnection{Conn: c},
 			LastConnect:    time.Now().Unix(),
 		}
 
@@ -53,7 +53,7 @@ func AcceptWebsocket(router routers.Router) func(http.ResponseWriter, *http.Requ
 		bytesFromWs := make(chan []byte)
 		defer close(bytesFromWs)
 
-		go readFromWs(r, c, bytesFromWs)
+		go readFromWs(c, bytesFromWs)
 		handleMqtt(&session, bytesFromWs, events)
 	}
 }
@@ -69,7 +69,7 @@ func PostMessage(router routers.Router) func(w http.ResponseWriter, r *http.Requ
 
 		session := model.RunningSession{ClientId: "PostMessage"}
 
-		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload, mess.PayloadType))
+		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload))
 		msg.Topic = mess.Topic
 		event.OnPublish(router, &session, &msg)
 
@@ -90,11 +90,11 @@ func PostMessage(router routers.Router) func(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func payloadFromPayloadType(payload string, payloadType byte) []byte {
+func payloadFromPayloadType(payload string) []byte {
 	return []byte(payload)
 }
 
-func readFromWs(r *http.Request, c *websocket.Conn, bytesFromWs chan<- []byte) {
+func readFromWs(c *websocket.Conn, bytesFromWs chan<- []byte) {
 	for {
 		msgType, msg, err := c.Read(context.Background())
 		if err != nil {
