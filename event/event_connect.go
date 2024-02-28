@@ -11,7 +11,7 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onConnect(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+func onConnect(router routers.Router, session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !session.FromLocalhost() {
 		if !doAuth(session) {

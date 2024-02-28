@@ -27,10 +27,10 @@ func manageEvent(router routers.Router, session *model.RunningSession, p *packet
 		slog.Debug("//!! EVENT client connect", "event-type", p.Event, "client-id", session.GetClientId())
 		if session.GetConnected() {
 			slog.Debug("//!! EVENT double connect event, disconnecting...", "event-type", p.Event)
-			clientDisconnect(router, session, p, session.GetClientId())
+			clientDisconnect(router, session, session.GetClientId())
 			return
 		}
-		onConnect(router, session, p)
+		onConnect(router, session)
 	case packet.EVENT_SUBSCRIBED:
 		slog.Debug("//!! EVENT client subscribed", "event-type", p.Event, "client-id", session.GetClientId())
 		onSubscribe(router, session, p)
@@ -54,28 +54,28 @@ func manageEvent(router routers.Router, session *model.RunningSession, p *packet
 		clientPubcomp(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
 	case packet.EVENT_PING:
 		slog.Debug("//!! EVENT client ping", "event-type", p.Event, "client-id", session.GetClientId())
-		onPing(router, session, p)
+		onPing(router, session)
 	case packet.EVENT_DISCONNECT:
 		slog.Debug("//!! EVENT client disconnect", "event-type", p.Event, "client-id", session.GetClientId())
-		clientDisconnect(router, session, p, session.GetClientId())
+		clientDisconnect(router, session, session.GetClientId())
 	case packet.EVENT_WILL_SEND:
 		slog.Debug("//!! EVENT sending will message", "event-type", p.Event, "client-id", session.GetClientId())
 		sendWill(router, session)
 	case packet.EVENT_PACKET_ERR:
 		slog.Debug("//!! EVENT packet error", "event-type", p.Event, "client-id", session.GetClientId())
-		clientDisconnect(router, session, p, session.GetClientId())
+		clientDisconnect(router, session, session.GetClientId())
 	}
 }
 
-func onPing(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+func onPing(router routers.Router, session *model.RunningSession) {
 	toSend := packet.PingResp()
 	router.Send(session.GetClientId(), toSend.ToByteSlice())
 }
 
-func clientDisconnect(router routers.Router, session *model.RunningSession, p *packet.Packet, clientId string) {
+func clientDisconnect(router routers.Router, session *model.RunningSession, clientId string) {
 	session.SetConnected(false)
 	if router.DestinationExists(clientId) {
-		needDisconnection := needDisconnection(session, p)
+		needDisconnection := needDisconnection(session)
 		if !needDisconnection {
 			return
 		}
@@ -95,7 +95,7 @@ func saveRetain(p *packet.Packet) {
 	}
 }
 
-func needDisconnection(runningSession *model.RunningSession, p *packet.Packet) bool {
+func needDisconnection(runningSession *model.RunningSession) bool {
 	if session, ok := persistence.SessionRepository.SessionExists(runningSession.ClientId); ok {
 		if session.GetLastConnect() > runningSession.LastConnect {
 			// session persisted is newer then running memory session... device reconnected!

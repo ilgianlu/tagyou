@@ -100,8 +100,8 @@ func onSocketUpButSilent(session *model.RunningSession, events chan<- *packet.Pa
 	slog.Debug("[MQTT] keepalive not respected!", "keep-alive", session.KeepAlive*2)
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] will due to keepalive not respected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
-		willEvent(session, events)
-		disconnectClient(session, events)
+		willEvent(events)
+		disconnectClient(events)
 		return true
 	}
 	return false
@@ -111,19 +111,19 @@ func onSocketDownClosed(session *model.RunningSession, events chan<- *packet.Pac
 	slog.Debug("[MQTT] socket down closed!")
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] will due to socket down!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
-		willEvent(session, events)
-		disconnectClient(session, events)
+		willEvent(events)
+		disconnectClient(events)
 		return true
 	}
 	return false
 }
 
-func willEvent(session *model.RunningSession, e chan<- *packet.Packet) {
+func willEvent(e chan<- *packet.Packet) {
 	p := packet.Packet{Event: packet.EVENT_WILL_SEND}
 	e <- &p
 }
 
-func disconnectClient(session *model.RunningSession, e chan<- *packet.Packet) {
+func disconnectClient(e chan<- *packet.Packet) {
 	p := packet.Packet{Event: packet.EVENT_DISCONNECT}
 	e <- &p
 }
