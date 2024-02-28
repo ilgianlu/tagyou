@@ -1,9 +1,8 @@
 package event
 
 import (
+	"log/slog"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
@@ -19,51 +18,51 @@ func RangeEvents(router routers.Router, session *model.RunningSession, events <-
 
 func manageEvent(router routers.Router, session *model.RunningSession, p *packet.Packet) {
 	if !session.GetConnected() && p.Event != packet.EVENT_CONNECT {
-		log.Debug().Msgf("//!! EVENT type %d event before connect, disconnecting...", p.Event)
+		slog.Debug("//!! EVENT event before connect, disconnecting...", "event-type", p.Event)
 		session.Conn.Close()
 		return
 	}
 	switch p.Event {
 	case packet.EVENT_CONNECT:
-		log.Debug().Msgf("//!! EVENT type %d client connect %s", p.Event, session.GetClientId())
+		slog.Debug("//!! EVENT client connect", "event-type", p.Event, "client-id", session.GetClientId())
 		if session.GetConnected() {
-			log.Debug().Msgf("//!! EVENT type %d double connect event, disconnecting...", p.Event)
+			slog.Debug("//!! EVENT double connect event, disconnecting...", "event-type", p.Event)
 			clientDisconnect(router, session, p, session.GetClientId())
 			return
 		}
 		onConnect(router, session, p)
 	case packet.EVENT_SUBSCRIBED:
-		log.Debug().Msgf("//!! EVENT type %d client subscribed %s", p.Event, session.GetClientId())
+		slog.Debug("//!! EVENT client subscribed", "event-type", p.Event, "client-id", session.GetClientId())
 		onSubscribe(router, session, p)
 	case packet.EVENT_UNSUBSCRIBED:
-		log.Debug().Msgf("//!! EVENT type %d client unsubscribed %s", p.Event, session.GetClientId())
+		slog.Debug("//!! EVENT client unsubscribed", "event-type", p.Event, "client-id", session.GetClientId())
 		onUnsubscribe(router, session, p)
 	case packet.EVENT_PUBLISH:
-		log.Debug().Msgf("//!! EVENT type %d client published to %s %s QoS %d", p.Event, p.Topic, session.GetClientId(), p.QoS())
+		slog.Debug("//!! EVENT client published", "event-type", p.Event, "topic", p.Topic, "client-id", session.GetClientId(), "qos", p.QoS())
 		OnPublish(router, session, p)
 	case packet.EVENT_PUBACKED:
-		log.Debug().Msgf("//!! EVENT type %d client acked message %d %s", p.Event, p.PacketIdentifier(), session.GetClientId())
+		slog.Debug("//!! EVENT client acked message", "event-type", p.Event, "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
 		clientPuback(session, p)
 	case packet.EVENT_PUBRECED:
-		log.Debug().Msgf("//!! EVENT type %d pub received message %d %s", p.Event, p.PacketIdentifier(), session.GetClientId())
+		slog.Debug("//!! EVENT pub received message", "event-type", p.Event, "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
 		clientPubrec(router, session, p)
 	case packet.EVENT_PUBRELED:
-		log.Debug().Msgf("//!! EVENT type %d pub releases message %d %s", p.Event, p.PacketIdentifier(), session.GetClientId())
+		slog.Debug("//!! EVENT pub releases message", "event-type", p.Event, "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
 		clientPubrel(router, session, p)
 	case packet.EVENT_PUBCOMPED:
-		log.Debug().Msgf("//!! EVENT type %d pub complete message %d %s", p.Event, p.PacketIdentifier(), session.GetClientId())
+		slog.Debug("//!! EVENT pub complete message", "event-type", p.Event, "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
 		clientPubcomp(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
 	case packet.EVENT_PING:
-		log.Debug().Msgf("//!! EVENT type %d client ping %s", p.Event, session.GetClientId())
+		slog.Debug("//!! EVENT client ping", "event-type", p.Event, "client-id", session.GetClientId())
 		onPing(router, session, p)
 	case packet.EVENT_DISCONNECT:
-		log.Debug().Msgf("//!! EVENT type %d client disconnect %s", p.Event, session.GetClientId())
+		slog.Debug("//!! EVENT client disconnect", "event-type", p.Event, "client-id", session.GetClientId())
 		clientDisconnect(router, session, p, session.GetClientId())
 	case packet.EVENT_WILL_SEND:
-		log.Debug().Msgf("//!! EVENT type %d sending will message %s", p.Event, session.GetClientId())
+		slog.Debug("//!! EVENT sending will message", "event-type", p.Event, "client-id", session.GetClientId())
 		sendWill(router, session)
 	case packet.EVENT_PACKET_ERR:
-		log.Debug().Msgf("//!! EVENT type %d packet error %s", p.Event, session.GetClientId())
+		slog.Debug("//!! EVENT packet error", "event-type", p.Event, "client-id", session.GetClientId())
 		clientDisconnect(router, session, p, session.GetClientId())
 	}
 }
@@ -98,11 +97,10 @@ func saveRetain(p *packet.Packet) {
 
 func needDisconnection(runningSession *model.RunningSession, p *packet.Packet) bool {
 	if session, ok := persistence.SessionRepository.SessionExists(runningSession.ClientId); ok {
-		log.Debug().Msgf("[MQTT] (%s) Persisted session LastConnect %d running session %d", session.GetClientId(), session.GetLastConnect(), runningSession.LastConnect)
 		if session.GetLastConnect() > runningSession.LastConnect {
 			// session persisted is newer then running memory session... device reconnected!
 			// no need to send will
-			log.Debug().Msgf("[MQTT] (%s) avoid disconnect! (device reconnected)", session.GetClientId())
+			slog.Debug("[MQTT] avoid disconnect! (client reconnected)", "client-id", session.GetClientId())
 			return false
 		}
 	}

@@ -2,8 +2,7 @@ package event
 
 import (
 	"encoding/json"
-
-	"github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/ilgianlu/tagyou/topic"
 )
@@ -18,7 +17,7 @@ func CheckAcl(t string, aclsAsString string) bool {
 	}
 	acls, err := readAcls(aclsAsString)
 	if err != nil {
-		log.Err(err).Msg("error checking subscribe acls")
+		slog.Error("error checking subscribe acls", "err", err)
 		return false
 	}
 	for _, acl := range acls {

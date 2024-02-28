@@ -1,6 +1,7 @@
 package event
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -8,7 +9,6 @@ import (
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
-	"github.com/rs/zerolog/log"
 )
 
 func OnPublish(router routers.Router, session *model.RunningSession, p *packet.Packet) {
@@ -22,18 +22,18 @@ func OnPublish(router routers.Router, session *model.RunningSession, p *packet.P
 	}
 
 	if p.Retain() {
-		log.Debug().Msgf("[PUBLISH] to retain")
+		slog.Debug("[PUBLISH] to retain")
 		saveRetain(p)
 	}
 	router.Forward(p.Topic, p)
 	if p.QoS() == conf.QOS1 {
-		log.Debug().Msgf("[PUBLISH] QoS 1 return ACK %d", p.PacketIdentifier())
+		slog.Debug("[PUBLISH] QoS 1 return ACK", "packet-identifier", p.PacketIdentifier())
 		sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_SUCCESS)
 	} else if p.QoS() == conf.QOS2 {
-		log.Debug().Msgf("[PUBLISH] QoS 2 return PUBREC")
+		slog.Debug("[PUBLISH] QoS 2 return PUBREC")
 		sendPubrec(router, session, p, packet.PUBREC_SUCCESS)
 	} else if p.QoS() == conf.QOS0 {
-		log.Debug().Msgf("[PUBLISH] QoS 0 no return")
+		slog.Debug("[PUBLISH] QoS 0 no return")
 	}
 }
 

@@ -2,9 +2,8 @@ package subscription
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/julienschmidt/httprouter"
@@ -13,7 +12,7 @@ import (
 func (sc SubscriptionController) GetSubscriptions(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	subscriptions := persistence.SubscriptionRepository.GetAll()
 	if res, err := json.Marshal(subscriptions); err != nil {
-		log.Printf("error marshaling subscriptions rows: %s\n", err)
+		slog.Error("error marshaling subscriptions rows", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
@@ -24,6 +23,6 @@ func (sc SubscriptionController) GetSubscriptions(w http.ResponseWriter, r *http
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Wrote %d bytes json result\n", numBytes)
+		slog.Info("Wrote json result", "num-bytes", numBytes)
 	}
 }

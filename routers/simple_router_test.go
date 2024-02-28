@@ -4,8 +4,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/sqlrepository"
@@ -31,7 +29,7 @@ func TestPickDest(t *testing.T) {
 func TestGroupSubscribers(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	p := persistence.SqlPersistence{}

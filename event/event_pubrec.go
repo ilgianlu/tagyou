@@ -1,7 +1,7 @@
 package event
 
 import (
-	"github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
@@ -27,13 +27,13 @@ func clientPubrec(router routers.Router, session *model.RunningSession, p *packe
 		if retry.AckStatus == model.WAIT_FOR_PUB_REC {
 			onExpectedPubrec(retry)
 		} else {
-			log.Info().Msgf("pubrec for invalid retry status %s %d %d", retry.ClientId, retry.PacketIdentifier, retry.AckStatus)
+			slog.Info("pubrec for invalid retry status", "client-id", retry.ClientId, "packet-identifier", retry.PacketIdentifier, "ack-status", retry.AckStatus)
 		}
 	}
 
 	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifierReasonCode(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
 	if err != nil {
-		log.Info().Msgf("pubrec for invalid retry %s %d", retry.ClientId, retry.PacketIdentifier)
+		slog.Info("pubrec for invalid retry", "client-id", retry.ClientId, "packet-identifier", retry.PacketIdentifier)
 	} else {
 		onRetryFound(retry)
 	}

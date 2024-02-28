@@ -6,7 +6,6 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/rs/zerolog"
 )
 
 func TestConnectSuccess(t *testing.T) {
@@ -69,7 +68,6 @@ func BenchmarkStartPublish(b *testing.B) {
 }
 
 func BenchmarkParseConnect(b *testing.B) {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	buffer := []byte{16, 59, 0, 4, 77, 81, 84, 84, 4, 6, 0, 60, 0, 15, 109, 113, 116, 116, 106, 115, 95, 53, 51, 48, 48, 102, 100, 54, 51, 0, 8, 108, 97, 115, 116, 119, 105, 108, 108, 0, 20, 97, 32, 118, 101, 114, 121, 32, 115, 104, 111, 114, 116, 32, 109, 101, 115, 115, 97, 103, 101}
 	p, _ := Start(buffer)
 

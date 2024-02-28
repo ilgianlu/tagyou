@@ -1,8 +1,9 @@
 package sqlrepository
 
 import (
+	"log/slog"
+
 	"github.com/ilgianlu/tagyou/model"
-	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -42,7 +43,7 @@ func (s SubscriptionSqlRepository) FindToUnsubscribe(shareName string, topic str
 func (s SubscriptionSqlRepository) FindSubscriptions(topics []string, shared bool) []model.Subscription {
 	subs := []model.Subscription{}
 	if err := s.Db.Where("topic IN (?)", topics).Where("shared = ?", shared).Find(&subs).Error; err != nil {
-		log.Error().Err(err).Msg("could not query for subscriptions")
+		slog.Error("could not query for subscriptions", "err", err)
 	}
 	return subs
 }
@@ -50,7 +51,7 @@ func (s SubscriptionSqlRepository) FindSubscriptions(topics []string, shared boo
 func (s SubscriptionSqlRepository) FindOrderedSubscriptions(topics []string, shared bool, orderField string) []model.Subscription {
 	subs := []model.Subscription{}
 	if err := s.Db.Where("topic IN (?)", topics).Where("shared = ?", shared).Order(orderField).Find(&subs).Error; err != nil {
-		log.Error().Err(err).Msg("could not query for subscriptions")
+		slog.Error("could not query for subscriptions", "err", err)
 	}
 	return subs
 }
@@ -62,7 +63,7 @@ func (s SubscriptionSqlRepository) DeleteByClientIdTopicShareName(clientId strin
 func (s SubscriptionSqlRepository) GetAll() []model.Subscription {
 	subs := []model.Subscription{}
 	if err := s.Db.Find(&subs).Error; err != nil {
-		log.Error().Err(err).Msg("could not query for subscriptions")
+		slog.Error("could not query for subscriptions", "err", err)
 	}
 	return subs
 }

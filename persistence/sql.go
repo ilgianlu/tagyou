@@ -1,12 +1,13 @@
 package persistence
 
 import (
+	"log"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/sqlrepository"
-	"github.com/rs/zerolog/log"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -19,7 +20,7 @@ type SqlPersistence struct {
 func (p SqlPersistence) Init() error {
 	db, err := openDb()
 	if err != nil {
-		log.Error().Err(err).Msg("could not open DB")
+		slog.Error("could not open DB", "err", err)
 		return err
 	}
 
@@ -54,14 +55,17 @@ func openDb() (*gorm.DB, error) {
 	if os.Getenv("DEBUG") != "" {
 		logLevel = logger.Info
 	}
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // using log until can be subst with slog
+		logger.Config{
+			SlowThreshold:             time.Second, // Slow SQL threshold
+			LogLevel:                  logLevel,    // Log level
+			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
+			ParameterizedQueries:      true,        // Don't include params in the SQL log
+			Colorful:                  false,       // Disable color
+		},
+	)
 	return gorm.Open(sqlite.Open(conf.DB_PATH+conf.DB_NAME), &gorm.Config{
-		Logger: logger.New(
-			&log.Logger,
-			logger.Config{
-				SlowThreshold: 200 * time.Millisecond,
-				LogLevel:      logLevel,
-				Colorful:      true,
-			},
-		),
+		Logger: newLogger,
 	})
 }

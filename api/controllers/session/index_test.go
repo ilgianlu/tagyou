@@ -1,12 +1,12 @@
 package session
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/rs/zerolog/log"
 
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/driver/sqlite"
@@ -16,7 +16,7 @@ import (
 func TestGetSessions(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("sqlite3.test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Msgf("[API] [TEST] failed to connect database %s", err)
+		t.Errorf("[API] [TEST] failed to connect database %s", err)
 	}
 	p := persistence.SqlPersistence{}
 	p.InnerInit(db, false, false, []byte(""))
@@ -35,7 +35,7 @@ func TestGetSessions(t *testing.T) {
 func closeDb(db *gorm.DB) {
 	sql, err := db.DB()
 	if err != nil {
-		log.Err(err).Msg("could not close DB")
+		slog.Info("could not close DB")
 		return
 	}
 	sql.Close()

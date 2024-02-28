@@ -2,10 +2,9 @@ package mqtt
 
 import (
 	"bufio"
+	"log/slog"
 	"net"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/event"
@@ -17,14 +16,14 @@ import (
 func StartMQTT(port string, router routers.Router) {
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Error().Err(err).Msg("[MQTT] tcp listen error")
+		slog.Error("[MQTT] tcp listen error", "err", err)
 		return
 	}
-	log.Info().Msgf("[MQTT] mqtt listening on %s", port)
+	slog.Info("[MQTT] mqtt listening on", "tcp-port", port)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Error().Err(err).Msg("[MQTT] tcp accept error")
+			slog.Error("[MQTT] tcp accept error", "err", err)
 		}
 		go handleTcpConnection(router, conn)
 	}
@@ -65,10 +64,10 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 		keepAlive := session.KeepAlive
 		session.Mu.RUnlock()
 
-		log.Debug().Msgf("[MQTT] session %s setting read deadline of %d seconds", clientId, keepAlive*2)
+		slog.Debug("[MQTT] session setting read deadline of seconds", "client-id", clientId, "keep-alive", keepAlive*2)
 		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(keepAlive*2) * time.Second))
 		if derr != nil {
-			log.Error().Err(derr).Msg("[MQTT] cannot set read deadline")
+			slog.Error("[MQTT] cannot set read deadline", "err", derr)
 			defer conn.Close()
 		}
 
@@ -90,7 +89,7 @@ func packetSplit(session *model.RunningSession, events chan<- *packet.Packet) fu
 			if !atEOF {
 				return 0, nil, nil
 			}
-			log.Debug().Msgf("[MQTT] error reading bytes - session: %s : %s", session.GetClientId(), err.Error())
+			slog.Debug("[MQTT] error reading bytes - session", "client-id", session.GetClientId(), err, err.Error())
 			return 0, pb, bufio.ErrFinalToken
 		}
 		return len(pb), pb, nil
@@ -98,9 +97,9 @@ func packetSplit(session *model.RunningSession, events chan<- *packet.Packet) fu
 }
 
 func onSocketUpButSilent(session *model.RunningSession, events chan<- *packet.Packet) bool {
-	log.Debug().Msgf("[MQTT] keepalive of %d seconds not respected!", session.KeepAlive*2)
+	slog.Debug("[MQTT] keepalive not respected!", "keep-alive", session.KeepAlive*2)
 	if session.GetClientId() != "" {
-		log.Debug().Msgf("[MQTT] (%s:%d) will due to keepalive not respected!", session.GetClientId(), session.LastConnect)
+		slog.Debug("[MQTT] will due to keepalive not respected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
 		willEvent(session, events)
 		disconnectClient(session, events)
 		return true
@@ -109,9 +108,9 @@ func onSocketUpButSilent(session *model.RunningSession, events chan<- *packet.Pa
 }
 
 func onSocketDownClosed(session *model.RunningSession, events chan<- *packet.Packet) bool {
-	log.Debug().Msgf("[MQTT] socket down closed!")
+	slog.Debug("[MQTT] socket down closed!")
 	if session.GetClientId() != "" {
-		log.Debug().Msgf("[MQTT] (%s:%d) will due to socket down!", session.GetClientId(), session.LastConnect)
+		slog.Debug("[MQTT] will due to socket down!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
 		willEvent(session, events)
 		disconnectClient(session, events)
 		return true

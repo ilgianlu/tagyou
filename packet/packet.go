@@ -2,8 +2,7 @@ package packet
 
 import (
 	"fmt"
-
-	"github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/ilgianlu/tagyou/model"
 )
@@ -261,7 +260,7 @@ func (p *Packet) Parse(session *model.RunningSession) int {
 	case PACKET_TYPE_PINGREQ:
 		return p.pingReq()
 	default:
-		log.Printf("Unknown packet type %d\n", p.PacketType())
+		slog.Warn("[MQTT] Unknown packet type", "packet-type", p.PacketType())
 		return MALFORMED_PACKET
 	}
 }
@@ -269,12 +268,12 @@ func (p *Packet) Parse(session *model.RunningSession) int {
 func PacketParse(session *model.RunningSession, buf []byte) (Packet, error) {
 	p, err := Start(buf)
 	if err != nil {
-		log.Error().Err(err).Msg("[MQTT] Start err")
+		slog.Error("[MQTT] Start err", "err", err)
 		return p, err
 	}
 	parseErr := p.Parse(session)
 	if parseErr != 0 {
-		log.Error().Msgf("[MQTT] parse err %d", parseErr)
+		slog.Error("[MQTT] parse err", "parse-err", parseErr)
 		return p, fmt.Errorf("%d", parseErr)
 	}
 	return p, nil
@@ -287,7 +286,7 @@ func ReadFromByteSlice(buff []byte) ([]byte, error) {
 	i := 1
 	rl, k, err := ReadVarInt(buff[i:])
 	if err != nil {
-		log.Err(err).Msg("header: malformed remainingLength format")
+		slog.Error("header: malformed remainingLength format", "err", err)
 		return nil, err
 	}
 	i = i + k

@@ -4,8 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
@@ -18,7 +16,7 @@ func TestClientGoodConnection(t *testing.T) {
 	os.Setenv("DEBUG", "1")
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	persistence := persistence.SqlPersistence{}
@@ -44,7 +42,7 @@ func TestClientBadConnectionWrongPasswordConnection(t *testing.T) {
 	os.Setenv("DEBUG", "1")
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	persistence := persistence.SqlPersistence{}
@@ -70,7 +68,7 @@ func TestClientBadConnectionWrongUsernameConnection(t *testing.T) {
 	os.Setenv("DEBUG", "1")
 	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("[API] failed to connect database")
+		t.Errorf("[API] failed to connect database")
 	}
 
 	persistence := persistence.SqlPersistence{}
