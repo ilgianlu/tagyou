@@ -1,4 +1,4 @@
--- name: CreateRetry :exec
+-- name: CreateRetry :one
 INSERT INTO retries (
   client_id,
   application_message,
@@ -14,6 +14,9 @@ INSERT INTO retries (
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 RETURNING *;
+
+-- name: GetAllRetries :many
+SELECT * FROM retries;
 
 -- name: UpdateRetryAckStatus :exec
 UPDATE retries
@@ -32,4 +35,9 @@ WHERE client_id = ? AND packet_identifier = ? and reason_code = ?;
 -- name: DeleteRetryById :exec
 DELETE FROM retries
 WHERE id = ?
+RETURNING *;
+
+-- name: DeleteRetriesOlder :exec
+DELETE FROM retries
+WHERE created_at < ?
 RETURNING *;

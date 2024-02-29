@@ -14,7 +14,7 @@ CREATE TABLE retries (
   application_message blob,
   packet_identifier integer,
   qos integer,
-  dup numeric,
+  dup integer,
   retries integer,
   ack_status integer,
   created_at integer,
@@ -36,7 +36,7 @@ CREATE TABLE sessions (
   last_connect integer,
   expiry_interval integer,
   client_id text,
-  connected numeric,
+  connected integer,
   protocol_version integer
 );
 CREATE UNIQUE INDEX client_unique_session_idx ON sessions(client_id);
@@ -49,10 +49,10 @@ CREATE TABLE subscriptions (
   no_local integer,
   qos integer,
   protocol_version integer,
-  enabled numeric,
+  enabled integer,
   created_at integer,
   session_id integer,
-  shared numeric DEFAULT false,
+  shared integer DEFAULT false,
   share_name text,
   CONSTRAINT fk_sessions_subscriptions FOREIGN KEY (session_id) REFERENCES sessions(id)
 );

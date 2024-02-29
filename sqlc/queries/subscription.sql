@@ -26,7 +26,7 @@ LIMIT 1;
 SELECT * FROM subscriptions
 WHERE topic IN (?) AND shared = ?;
 
--- name: DeleteByClientIdTopicShareName :exec
+-- name: DeleteSubscriptionByClientIdTopicShareName :exec
 DELETE FROM subscriptions
 WHERE share_name = ? AND topic = ? AND client_id = ?
 RETURNING *;

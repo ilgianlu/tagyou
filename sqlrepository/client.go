@@ -1,8 +1,11 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
+
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
 /**
@@ -12,23 +15,11 @@ Acl
 
 */
 
-type Client struct {
-	ID                   uint   `gorm:"primaryKey"`
-	ClientId             string `gorm:"index:client_cred_idx,unique"`
-	Username             string `gorm:"index:client_cred_idx,unique"`
-	Password             []byte
-	SubscribeAcl         string
-	PublishAcl           string
-	CreatedAt            int64
-	InputPassword        string `gorm:"-" json:",omitempty"`
-	InputPasswordConfirm string `gorm:"-" json:",omitempty"`
-}
-
 type ClientSqlRepository struct {
-	Db *gorm.DB
+	Db *dbaccess.Queries
 }
 
-func MappedClients(clients []Client) []model.Client {
+func MappedClients(clients []dbaccess.Client) []model.Client {
 	mClients := []model.Client{}
 
 	for _, client := range clients {
@@ -38,35 +29,48 @@ func MappedClients(clients []Client) []model.Client {
 	return mClients
 }
 
-func MappedClient(client Client) model.Client {
+func MappedClient(client dbaccess.Client) model.Client {
 	return model.Client{
-		ID:           client.ID,
-		ClientId:     client.ClientId,
-		Username:     client.Username,
+		ID:           uint(client.ID),
+		ClientId:     client.ClientID.String,
+		Username:     client.Username.String,
 		Password:     client.Password,
-		SubscribeAcl: client.SubscribeAcl,
-		PublishAcl:   client.PublishAcl,
-		CreatedAt:    client.CreatedAt,
+		SubscribeAcl: client.SubscribeAcl.String,
+		PublishAcl:   client.PublishAcl.String,
+		CreatedAt:    client.CreatedAt.Int64,
 	}
 }
 
 func (ar ClientSqlRepository) Create(client model.Client) error {
-	return ar.Db.Create(&client).Error
+	createClientParams := dbaccess.CreateClientParams{
+		ClientID:     sql.NullString{Valid: true, String: client.ClientId},
+		Username:     sql.NullString{Valid: true, String: client.Username},
+		Password:     client.Password,
+		SubscribeAcl: sql.NullString{Valid: true, String: client.SubscribeAcl},
+		PublishAcl:   sql.NullString{Valid: true, String: client.PublishAcl},
+	}
+	return ar.Db.CreateClient(context.Background(), createClientParams)
 }
 
 func (ar ClientSqlRepository) DeleteById(id uint) error {
-	return ar.Db.Where("id = ?", id).Delete(&Client{}).Error
+	return ar.Db.DeleteClientById(context.Background(), int64(id))
 }
 
 func (ar ClientSqlRepository) GetAll() []model.Client {
-	clients := []Client{}
-	ar.Db.Find(&clients)
+	clients, err := ar.Db.GetAllClients(context.Background())
+	if err != nil {
+		return []model.Client{}
+	}
 	return MappedClients(clients)
 }
 
 func (ar ClientSqlRepository) GetByClientIdUsername(clientId string, username string) (model.Client, error) {
-	var client Client
-	if err := ar.Db.Where("client_id = ? and username = ?", clientId, username).First(&client).Error; err != nil {
+	params := dbaccess.GetClientByClientIdUsernameParams{
+		ClientID: sql.NullString{String: clientId, Valid: true},
+		Username: sql.NullString{String: username, Valid: true},
+	}
+	client, err := ar.Db.GetClientByClientIdUsername(context.Background(), params)
+	if err != nil {
 		return model.Client{}, err
 	}
 	mClient := MappedClient(client)
@@ -74,8 +78,8 @@ func (ar ClientSqlRepository) GetByClientIdUsername(clientId string, username st
 }
 
 func (ar ClientSqlRepository) GetById(id uint) (model.Client, error) {
-	var client Client
-	if err := ar.Db.Where("id = ?", id).First(&client).Error; err != nil {
+	client, err := ar.Db.GetClientById(context.Background(), int64(id))
+	if err != nil {
 		return model.Client{}, err
 	}
 	mClient := MappedClient(client)

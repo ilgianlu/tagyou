@@ -1,29 +1,38 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
+	"time"
+
 	"github.com/ilgianlu/tagyou/model"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 	"github.com/ilgianlu/tagyou/topic"
-	"gorm.io/gorm"
 )
 
-type Retain struct {
-	Topic              string `gorm:"primaryKey"`
-	ApplicationMessage []byte
-	CreatedAt          int64
+type RetainSqlRepository struct {
+	Db *dbaccess.Queries
 }
 
-type RetainSqlRepository struct {
-	Db *gorm.DB
+func mapped(ret dbaccess.Retain) model.Retain {
+	return model.Retain{
+		ClientID:           ret.ClientID.String,
+		Topic:              ret.Topic.String,
+		ApplicationMessage: ret.ApplicationMessage,
+		CreatedAt:          ret.CreatedAt.Int64,
+	}
 }
 
 func (r RetainSqlRepository) FindRetains(subscribedTopic string) []model.Retain {
-	var allRetains []model.Retain
-	r.Db.Find(&allRetains)
+	allRetains, err := r.Db.GetAllRetains(context.Background())
+	if err != nil {
+		return []model.Retain{}
+	}
 
 	retains := []model.Retain{}
 	for _, ret := range allRetains {
-		if topic.Match(ret.Topic, subscribedTopic) {
-			retains = append(retains, ret)
+		if topic.Match(ret.Topic.String, subscribedTopic) {
+			retains = append(retains, mapped(ret))
 		}
 	}
 
@@ -31,9 +40,19 @@ func (r RetainSqlRepository) FindRetains(subscribedTopic string) []model.Retain 
 }
 
 func (r RetainSqlRepository) Create(retain model.Retain) error {
-	return r.Db.Create(&retain).Error
+	params := dbaccess.CreateRetainParams{
+		ClientID:           sql.NullString{String: retain.ClientID, Valid: true},
+		Topic:              sql.NullString{String: retain.Topic, Valid: true},
+		ApplicationMessage: retain.ApplicationMessage,
+		CreatedAt:          sql.NullInt64{Int64: time.Now().Unix(), Valid: true},
+	}
+	return r.Db.CreateRetain(context.Background(), params)
 }
 
 func (r RetainSqlRepository) Delete(retain model.Retain) error {
-	return r.Db.Where("topic = ?", retain.Topic).Delete(&retain).Error
+	params := dbaccess.DeleteRetainByClientIdTopicParams{
+		ClientID: sql.NullString{String: retain.ClientID, Valid: true},
+		Topic:    sql.NullString{String: retain.Topic, Valid: true},
+	}
+	return r.Db.DeleteRetainByClientIdTopic(context.Background(), params)
 }

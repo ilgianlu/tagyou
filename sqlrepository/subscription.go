@@ -4,7 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
 type Subscription struct {
@@ -24,7 +24,7 @@ type Subscription struct {
 }
 
 type SubscriptionSqlRepository struct {
-	Db *gorm.DB
+	Db *dbaccess.Queries
 }
 
 func (s SubscriptionSqlRepository) CreateOne(sub model.Subscription) error {

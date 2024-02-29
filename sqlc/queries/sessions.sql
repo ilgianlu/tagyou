@@ -1,4 +1,4 @@
--- name: CreateSession :exec
+-- name: CreateSession :one
 INSERT INTO sessions (
   last_seen,
   last_connect,

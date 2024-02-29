@@ -23,7 +23,7 @@ func OnPublish(router routers.Router, session *model.RunningSession, p *packet.P
 
 	if p.Retain() {
 		slog.Debug("[PUBLISH] to retain")
-		saveRetain(p)
+		saveRetain(session, p)
 	}
 	router.Forward(p.Topic, p)
 	if p.QoS() == conf.QOS1 {

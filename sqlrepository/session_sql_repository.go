@@ -4,11 +4,11 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
 type SessionSqlRepository struct {
-	Db *gorm.DB
+	Db *dbaccess.Queries
 }
 
 func (sr SessionSqlRepository) PersistSession(running *model.RunningSession) (sessionId uint, err error) {

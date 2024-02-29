@@ -1,62 +1,64 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestRetryCleaner(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
+	dbConn, err := sql.Open("", conf.DB_PATH+conf.DB_NAME)
 	if err != nil {
-		t.Errorf("[API] failed to connect database")
+		t.Errorf("cannot connect to db")
 	}
 
-	Migrate(db)
+	db := dbaccess.New(dbConn)
 
-	db.Exec("DELETE FROM sessions")
-	db.Exec("DELETE FROM retries")
+	dbConn.Exec("DELETE FROM sessions")
+	dbConn.Exec("DELETE FROM retries")
 
-	s1 := Session{ClientId: "sessionOne"}
-	if err := db.Create(&s1).Error; err != nil {
+	s1 := dbaccess.CreateSessionParams{ClientID: sql.NullString{String: "sessionOne"}}
+	insertedSession, err := db.CreateSession(context.Background(), s1)
+	if err != nil {
 		t.Errorf("session create should not throw err: %s", err)
 	}
 
-	sId := s1.ID
+	sId := insertedSession.ID
 
-	un := Retry{
-		ClientId:           "uno",
+	un := dbaccess.CreateRetryParams{
+		ClientID:           sql.NullString{String: "uno", Valid: true},
 		ApplicationMessage: []byte{1, 2, 3},
-		PacketIdentifier:   50,
-		Qos:                1,
-		Dup:                false,
-		Retries:            3,
-		AckStatus:          0,
-		CreatedAt:          time.Now().Unix() - 30,
-		SessionID:          sId,
+		PacketIdentifier:   sql.NullInt64{Int64: 50, Valid: true},
+		Qos:                sql.NullInt64{Int64: 1, Valid: true},
+		Dup:                sql.NullInt64{Int64: 0, Valid: true},
+		Retries:            sql.NullInt64{Int64: 3, Valid: true},
+		AckStatus:          sql.NullInt64{Int64: 0, Valid: true},
+		CreatedAt:          sql.NullInt64{Int64: time.Now().Unix() - 30, Valid: true},
+		SessionID:          sql.NullInt64{Int64: sId, Valid: true},
 	}
-	db.Create(&un)
+	db.CreateRetry(context.Background(), un)
 
-	du := Retry{
-		ClientId:           "due",
-		ApplicationMessage: []byte{4, 5, 6},
-		PacketIdentifier:   51,
-		Qos:                1,
-		Dup:                false,
-		Retries:            3,
-		AckStatus:          0,
-		CreatedAt:          time.Now().Unix() - 90,
-		SessionID:          sId,
+	du := dbaccess.CreateRetryParams{
+		ClientID:           sql.NullString{String: "due", Valid: true},
+		ApplicationMessage: []byte{1, 2, 3},
+		PacketIdentifier:   sql.NullInt64{Int64: 50, Valid: true},
+		Qos:                sql.NullInt64{Int64: 1, Valid: true},
+		Dup:                sql.NullInt64{Int64: 0, Valid: true},
+		Retries:            sql.NullInt64{Int64: 3, Valid: true},
+		AckStatus:          sql.NullInt64{Int64: 0, Valid: true},
+		CreatedAt:          sql.NullInt64{Int64: time.Now().Unix() - 30, Valid: true},
+		SessionID:          sql.NullInt64{Int64: sId, Valid: true},
 	}
-	db.Create(&du)
+	db.CreateRetry(context.Background(), du)
 
-	before := []Retry{}
-	db.Find(&before)
+	before, err := db.GetAllRetries(context.Background())
 
 	fmt.Println(before)
 
@@ -66,8 +68,7 @@ func TestRetryCleaner(t *testing.T) {
 
 	cleanRetries(db)
 
-	after := []Retry{}
-	db.Find(&after)
+	after, err := db.GetAllRetries(context.Background())
 
 	if len(after) != 1 {
 		t.Errorf("expected 1 retry (expiration %d secs), found: %d", conf.RETRY_EXPIRATION, len(after))

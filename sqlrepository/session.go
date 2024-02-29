@@ -1,8 +1,9 @@
 package sqlrepository
 
 import (
+	"database/sql"
+
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
 )
 
 type Session struct {
@@ -17,7 +18,7 @@ type Session struct {
 	Retries         []Retry        `json:"-"`
 }
 
-func (s *Session) BeforeDelete(tx *gorm.DB) (err error) {
+func (s *Session) BeforeDelete(tx *sql.DB) (err error) {
 	tx.Where("session_id = ?", s.ID).Delete(&Subscription{})
 	tx.Where("session_id = ?", s.ID).Delete(&Retry{})
 	return nil

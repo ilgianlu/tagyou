@@ -2,7 +2,7 @@ package sqlrepository
 
 import (
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
 type User struct {
@@ -13,7 +13,7 @@ type User struct {
 }
 
 type UserSqlRepository struct {
-	Db *gorm.DB
+	Db *dbaccess.Queries
 }
 
 func MappedUsers(clients []User) []model.User {

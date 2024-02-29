@@ -1,30 +1,36 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
+
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
-type Retry struct {
-	ID                 uint   `gorm:"primaryKey"`
-	ClientId           string `gorm:"uniqueIndex:client_identifier_idx"`
-	ApplicationMessage []byte
-	PacketIdentifier   int `gorm:"uniqueIndex:client_identifier_idx"`
-	Qos                uint8
-	Dup                bool
-	Retries            uint8
-	AckStatus          uint8
-	CreatedAt          int64
-	SessionID          uint
-	ReasonCode         uint8
-}
-
 type RetrySqlRepository struct {
-	Db *gorm.DB
+	Db *dbaccess.Queries
 }
 
 func (r RetrySqlRepository) InsertOne(retry model.Retry) error {
-	return r.Db.Create(&retry).Error
+	dupl := int64(0)
+	if retry.Dup {
+		dupl = 1
+	}
+	params := dbaccess.CreateRetryParams{
+		ClientID:           sql.NullString{String: retry.ClientId, Valid: true},
+		ApplicationMessage: retry.ApplicationMessage,
+		PacketIdentifier:   sql.NullInt64{Int64: int64(retry.PacketIdentifier), Valid: true},
+		Qos:                sql.NullInt64{Int64: int64(retry.Qos), Valid: true},
+		Dup:                sql.NullInt64{Int64: dupl, Valid: true},
+		Retries:            sql.NullInt64{Int64: int64(retry.Retries), Valid: true},
+		AckStatus:          sql.NullInt64{Int64: int64(retry.AckStatus), Valid: true},
+		CreatedAt:          sql.NullInt64{Int64: retry.CreatedAt, Valid: true},
+		SessionID:          sql.NullInt64{Int64: int64(retry.SessionID), Valid: true},
+		ReasonCode:         sql.NullInt64{Int64: int64(retry.ReasonCode), Valid: true},
+	}
+	_, err := r.Db.CreateRetry(context.Background(), params)
+	return err
 }
 
 func (r RetrySqlRepository) SaveOne(retry model.Retry) error {
