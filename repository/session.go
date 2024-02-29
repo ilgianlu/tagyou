@@ -5,12 +5,11 @@ import (
 )
 
 type SessionRepository interface {
-	PersistSession(running *model.RunningSession) (sessionId uint, err error)
+	PersistSession(running *model.RunningSession) (sessionId int64, err error)
 	CleanSession(clientId string) error
 	SessionExists(clientId string) (model.Session, bool)
 	DisconnectSession(clientId string)
 	GetById(sessionId uint) (model.Session, error)
 	GetAll() []model.Session
-	Save(*model.Session)
 	IsOnline(sessionId uint) bool
 }

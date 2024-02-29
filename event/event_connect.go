@@ -95,7 +95,6 @@ func startSession(session *model.RunningSession) {
 		} else {
 			slog.Debug("Updating previous session from running", "client-id", clientId)
 			session.ApplySessionId(prevSession.GetId())
-			persistence.SessionRepository.Save(&prevSession)
 		}
 	} else {
 		slog.Debug("[MQTT] Starting new session from running", "client-id", clientId)

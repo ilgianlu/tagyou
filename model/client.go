@@ -7,7 +7,7 @@ Acl [{"pattern": "/topic/1"}, {"pattern": "/topic/2"}]
 */
 
 type Client struct {
-	ID           uint
+	ID           int64
 	ClientId     string
 	Username     string
 	Password     []byte

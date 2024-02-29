@@ -1,7 +1,7 @@
 package model
 
 type Session interface {
-	GetId() uint
+	GetId() int64
 	GetClientId() string
 	GetProtocolVersion() uint8
 	Expired() bool

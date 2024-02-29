@@ -31,7 +31,7 @@ func MappedClients(clients []dbaccess.Client) []model.Client {
 
 func MappedClient(client dbaccess.Client) model.Client {
 	return model.Client{
-		ID:           uint(client.ID),
+		ID:           client.ID,
 		ClientId:     client.ClientID.String,
 		Username:     client.Username.String,
 		Password:     client.Password,

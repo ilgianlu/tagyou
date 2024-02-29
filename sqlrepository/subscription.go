@@ -1,35 +1,32 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
 	"log/slog"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
-type Subscription struct {
-	ID                uint   `gorm:"primary_key"`
-	ClientId          string `gorm:"uniqueIndex:sub_pars_idx"`
-	Topic             string `gorm:"uniqueIndex:sub_pars_idx"`
-	RetainHandling    uint8
-	RetainAsPublished uint8
-	NoLocal           uint8
-	Qos               uint8
-	ProtocolVersion   uint8
-	Enabled           bool
-	CreatedAt         int64
-	SessionID         uint
-	Shared            bool   `gorm:"default:false"`
-	ShareName         string `gorm:"uniqueIndex:sub_pars_idx"`
-}
-
 type SubscriptionSqlRepository struct {
 	Db *dbaccess.Queries
 }
 
 func (s SubscriptionSqlRepository) CreateOne(sub model.Subscription) error {
-	err := s.Db.Create(&sub).Error
-	return err
+	return s.Db.CreateSubscription(context.Background(), dbaccess.CreateSubscriptionParams{
+		ClientID:          sql.NullString{String: sub.ClientId},
+		Topic:             sql.NullString{String: sub.Topic},
+		RetainHandling:    sql.NullInt64{Int64: int64(sub.RetainHandling)},
+		RetainAsPublished: sql.NullInt64{Int64: int64(sub.RetainAsPublished)},
+		NoLocal:           sql.NullInt64{Int64: int64(sub.Qos)},
+		ProtocolVersion:   sql.NullInt64{Int64: int64(sub.ProtocolVersion)},
+		Enabled:           sql.NullInt64{Int64: sub.Enabled},
+		CreatedAt:         sql.NullInt64{Int64: sub.CreatedAt},
+		SessionID:         sql.NullInt64{Int64: int64(sub.SessionID)},
+		Shared:            sql.NullInt64{Int64: sub.Shared},
+		ShareName:         sql.NullString{String: sub.ShareName},
+	})
 }
 
 func (s SubscriptionSqlRepository) FindToUnsubscribe(shareName string, topic string, clientId string) (model.Subscription, error) {

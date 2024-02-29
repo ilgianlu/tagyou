@@ -118,7 +118,7 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packe
 			AckStatus:          model.WAIT_FOR_PUB_ACK,
 			CreatedAt:          time.Now().Unix(),
 		}
-		persistence.RetryRepository.SaveOne(r)
+		persistence.RetryRepository.InsertOne(r)
 		s.Send(r.ClientId, p.ToByteSlice())
 	} else if qos == 2 {
 		// prepare publish packet qos 2 (if sub permit) new packet identifier
@@ -132,7 +132,7 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packe
 			AckStatus:          model.WAIT_FOR_PUB_REL,
 			CreatedAt:          time.Now().Unix(),
 		}
-		persistence.RetryRepository.SaveOne(r)
+		persistence.RetryRepository.InsertOne(r)
 		s.Send(r.ClientId, p.ToByteSlice())
 	}
 }

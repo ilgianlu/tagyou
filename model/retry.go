@@ -15,6 +15,7 @@ const WAIT_FOR_PUB_REL = 20
 const WAIT_FOR_PUB_COMP = 21
 
 type Retry struct {
+	ID                 int64
 	ClientId           string
 	ApplicationMessage []byte
 	PacketIdentifier   int

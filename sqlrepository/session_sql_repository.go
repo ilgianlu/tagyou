@@ -1,6 +1,8 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
 	"time"
 
 	"github.com/ilgianlu/tagyou/model"
@@ -11,69 +13,93 @@ type SessionSqlRepository struct {
 	Db *dbaccess.Queries
 }
 
-func (sr SessionSqlRepository) PersistSession(running *model.RunningSession) (sessionId uint, err error) {
+func mapSession(session dbaccess.Session) model.Session {
+	connectd := false
+	if session.Connected.Int64 == 1 {
+		connectd = true
+	}
+	return Session{
+		ID:              session.ID,
+		LastSeen:        session.LastSeen.Int64,
+		LastConnect:     session.LastConnect.Int64,
+		ExpiryInterval:  session.ExpiryInterval.Int64,
+		ClientId:        session.ClientID.String,
+		Connected:       connectd,
+		ProtocolVersion: uint8(session.ProtocolVersion.Int64),
+	}
+}
+
+func mappingSessions(sessions []dbaccess.Session) []model.Session {
+	sesss := []model.Session{}
+	for _, sess := range sessions {
+		sesss = append(sesss, mapSession(sess))
+	}
+	return sesss
+}
+
+func (sr SessionSqlRepository) PersistSession(running *model.RunningSession) (sessionId int64, err error) {
 	running.Mu.RLock()
 	defer running.Mu.RUnlock()
-	sess := Session{
-		LastSeen:        running.LastSeen,
-		LastConnect:     running.LastConnect,
-		ExpiryInterval:  running.ExpiryInterval,
-		ClientId:        running.ClientId,
-		Connected:       running.Connected,
-		ProtocolVersion: running.ProtocolVersion,
+	var connectd int64 = 0
+	if running.Connected {
+		connectd = 1
 	}
-	saveErr := sr.Db.Save(&sess).Error
-	return sess.ID, saveErr
+	sess := dbaccess.CreateSessionParams{
+		LastSeen:        sql.NullInt64{Int64: running.LastSeen, Valid: true},
+		LastConnect:     sql.NullInt64{Int64: running.LastConnect, Valid: true},
+		ExpiryInterval:  sql.NullInt64{Int64: running.ExpiryInterval, Valid: true},
+		ClientID:        sql.NullString{String: running.ClientId, Valid: true},
+		Connected:       sql.NullInt64{Int64: connectd, Valid: true},
+		ProtocolVersion: sql.NullInt64{Int64: int64(running.ProtocolVersion), Valid: true},
+	}
+	newSess, err := sr.Db.CreateSession(context.Background(), sess)
+	return newSess.ID, err
 }
 
 func (sr SessionSqlRepository) CleanSession(clientId string) error {
-	sess := Session{}
-	if err := sr.Db.Where("client_id = ?", clientId).First(&sess).Error; err != nil {
+	_, err := sr.Db.GetSessionByClientId(context.Background(), sql.NullString{String: clientId, Valid: true})
+	if err != nil {
 		return err
 	}
-	return sr.Db.Delete(&sess).Error
+	return sr.Db.DeleteSessionByClientId(context.Background(), sql.NullString{String: clientId, Valid: true})
 }
 
 func (sr SessionSqlRepository) SessionExists(clientId string) (model.Session, bool) {
-	session := Session{}
-	err := sr.Db.Where("client_id = ?", clientId).First(&session).Error
-	return &session, err == nil
+	session, err := sr.Db.GetSessionByClientId(context.Background(), sql.NullString{String: clientId, Valid: true})
+	return mapSession(session), err == nil
 }
 
 func (sr SessionSqlRepository) DisconnectSession(clientId string) {
-	sr.Db.Model(&Session{}).Where("client_id = ?", clientId).Updates(map[string]interface{}{
-		"Connected": false,
-		"LastSeen":  time.Now().Unix(),
+	sr.Db.DisconnectSessionByClientId(context.Background(), dbaccess.DisconnectSessionByClientIdParams{
+		ClientID: sql.NullString{String: clientId},
+		LastSeen: sql.NullInt64{Int64: time.Now().Unix()},
 	})
 }
 
-func (sr SessionSqlRepository) GetById(sessionId uint) (model.Session, error) {
-	var session Session
-	if err := sr.Db.Where("id = ?", sessionId).First(&session).Error; err != nil {
-		return &session, err
+func (sr SessionSqlRepository) GetById(sessionId int64) (model.Session, error) {
+	session, err := sr.Db.GetSessionById(context.Background(), sessionId)
+	if err != nil {
+		return mapSession(session), err
 	}
 
-	return &session, nil
+	return mapSession(session), nil
 }
 
 func (sr SessionSqlRepository) GetAll() []model.Session {
-	sessions := []model.Session{}
-	if err := sr.Db.Find(&sessions).Error; err != nil {
-		return sessions
+	sessions, err := sr.Db.GetAllSessions(context.Background())
+
+	if err != nil {
+		return []model.Session{}
 	}
 
-	return sessions
+	return mappingSessions(sessions)
 }
 
-func (sr SessionSqlRepository) Save(session *model.Session) {
-	sr.Db.Save(&session)
-}
-
-func (sr SessionSqlRepository) IsOnline(sessionId uint) bool {
-	session := model.RunningSession{}
-	if err := sr.Db.Where("id = ?", sessionId).First(&session).Error; err != nil {
+func (sr SessionSqlRepository) IsOnline(sessionId int64) bool {
+	session, err := sr.Db.GetSessionById(context.Background(), sessionId)
+	if err != nil {
 		return false
 	} else {
-		return session.Connected
+		return session.Connected.Int64 == 1
 	}
 }

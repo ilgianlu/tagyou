@@ -18,8 +18,7 @@ func clientPubrec(router routers.Router, session *model.RunningSession, p *packe
 	onExpectedPubrec := func(retry model.Retry) {
 		sendPubrel(retry)
 		// change retry state to wait for pubcomp
-		retry.AckStatus = model.WAIT_FOR_PUB_COMP
-		persistence.RetryRepository.SaveOne(retry)
+		persistence.RetryRepository.UpdateAckStatus(retry.ID, model.WAIT_FOR_PUB_COMP)
 	}
 
 	onRetryFound := func(retry model.Retry) {
