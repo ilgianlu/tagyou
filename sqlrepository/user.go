@@ -52,7 +52,7 @@ func (ar UserSqlRepository) GetById(id int64) (model.User, error) {
 }
 
 func (ar UserSqlRepository) GetByUsername(username string) (model.User, error) {
-	user, err := ar.Db.GetUserByUsername(context.Background(), sql.NullString{String: username})
+	user, err := ar.Db.GetUserByUsername(context.Background(), sql.NullString{String: username, Valid: true})
 	if err != nil {
 		return model.User{}, err
 	}
@@ -62,9 +62,9 @@ func (ar UserSqlRepository) GetByUsername(username string) (model.User, error) {
 
 func (ar UserSqlRepository) Create(user model.User) error {
 	return ar.Db.CreateUser(context.Background(), dbaccess.CreateUserParams{
-		Username:  sql.NullString{String: user.Username},
+		Username:  sql.NullString{String: user.Username, Valid: true},
 		Password:  user.Password,
-		CreatedAt: sql.NullInt64{Int64: time.Now().Unix()},
+		CreatedAt: sql.NullInt64{Int64: time.Now().Unix(), Valid: true},
 	})
 }
 

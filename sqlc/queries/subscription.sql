@@ -1,4 +1,4 @@
--- name: CreateSubscription :exec
+-- name: CreateSubscription :one
 INSERT INTO subscriptions (
   client_id,
   topic,

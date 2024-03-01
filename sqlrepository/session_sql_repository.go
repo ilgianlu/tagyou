@@ -91,7 +91,7 @@ func (sr SessionSqlRepository) SessionExists(clientId string) (model.Session, bo
 
 func (sr SessionSqlRepository) DisconnectSession(clientId string) {
 	sr.Db.DisconnectSessionByClientId(context.Background(), dbaccess.DisconnectSessionByClientIdParams{
-		ClientID: sql.NullString{String: clientId},
+		ClientID: sql.NullString{String: clientId, Valid: true},
 		LastSeen: sql.NullInt64{Int64: time.Now().Unix()},
 	})
 }

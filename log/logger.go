@@ -20,5 +20,6 @@ func Init() {
 			&loggerOptions,
 		),
 	)
+	slog.SetLogLoggerLevel(minLevel)
 	slog.SetDefault(logger)
 }

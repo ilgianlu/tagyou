@@ -24,7 +24,7 @@ func TestRetryCleaner(t *testing.T) {
 	dbConn.Exec("DELETE FROM sessions")
 	dbConn.Exec("DELETE FROM retries")
 
-	s1 := dbaccess.CreateSessionParams{ClientID: sql.NullString{String: "sessionOne"}}
+	s1 := dbaccess.CreateSessionParams{ClientID: sql.NullString{String: "sessionOne", Valid: true}}
 	insertedSession, err := db.CreateSession(context.Background(), s1)
 	if err != nil {
 		t.Errorf("session create should not throw err: %s", err)

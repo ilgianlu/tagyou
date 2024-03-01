@@ -43,11 +43,11 @@ func MappedClient(client dbaccess.Client) model.Client {
 
 func (ar ClientSqlRepository) Create(client model.Client) error {
 	createClientParams := dbaccess.CreateClientParams{
-		ClientID:     sql.NullString{Valid: true, String: client.ClientId},
-		Username:     sql.NullString{Valid: true, String: client.Username},
+		ClientID:     sql.NullString{String: client.ClientId, Valid: true},
+		Username:     sql.NullString{String: client.Username, Valid: true},
 		Password:     client.Password,
-		SubscribeAcl: sql.NullString{Valid: true, String: client.SubscribeAcl},
-		PublishAcl:   sql.NullString{Valid: true, String: client.PublishAcl},
+		SubscribeAcl: sql.NullString{String: client.SubscribeAcl, Valid: true},
+		PublishAcl:   sql.NullString{String: client.PublishAcl, Valid: true},
 	}
 	return ar.Db.CreateClient(context.Background(), createClientParams)
 }
