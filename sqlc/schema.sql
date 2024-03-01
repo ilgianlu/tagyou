@@ -54,7 +54,7 @@ CREATE TABLE subscriptions (
   session_id integer,
   shared integer DEFAULT false,
   share_name text,
-  CONSTRAINT fk_sessions_subscriptions FOREIGN KEY (session_id) REFERENCES sessions(id)
+  CONSTRAINT fk_sessions_subscriptions FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX sub_pars_idx ON subscriptions(client_id,topic,share_name);
 CREATE TABLE users (

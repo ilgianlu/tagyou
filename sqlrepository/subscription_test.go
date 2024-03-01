@@ -1,35 +1,40 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
+	"os"
 	"testing"
 
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestCreate(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
+	os.Remove("test.db")
+
+	dbConn, err := sql.Open("sqlite3", "test.db")
 	if err != nil {
 		t.Errorf("[API] failed to connect database")
 	}
 
-	Migrate(db)
+	dbConn.ExecContext(context.Background(), sqlc.DBSchema)
 
-	db.Exec("DELETE FROM sessions")
-	db.Exec("DELETE FROM subscriptions")
+	db := dbaccess.New(dbConn)
 
-	un := Subscription{ClientId: "uno", Topic: "uno"}
-	if err := db.Create(&un).Error; err != nil {
+	un := dbaccess.CreateSubscriptionParams{ClientID: sql.NullString{String: "uno", Valid: true}, Topic: sql.NullString{String: "uno", Valid: true}}
+	if _, err := db.CreateSubscription(context.Background(), un); err != nil {
 		t.Errorf("subscription create should not throw err: %s", err)
 	}
 
-	unBis := Subscription{ClientId: "uno", Topic: "uno"}
-	if err := db.Create(&unBis).Error; err == nil {
+	if _, err := db.CreateSubscription(context.Background(), un); err != nil {
 		t.Error("subscription (duplicate client id and topic) create should throw err!")
 	}
 
-	du := Subscription{ClientId: "due", Topic: "uno"}
-	if err := db.Create(&du).Error; err != nil {
+	du := dbaccess.CreateSubscriptionParams{ClientID: sql.NullString{String: "due", Valid: true}, Topic: sql.NullString{String: "uno", Valid: true}}
+	if _, err := db.CreateSubscription(context.Background(), du); err != nil {
 		t.Errorf("subscription create should not throw err: %s", err)
 	}
 }

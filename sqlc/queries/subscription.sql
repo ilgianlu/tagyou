@@ -38,3 +38,7 @@ RETURNING *;
 
 -- name: GetAllSubscriptions :many
 SELECT * FROM subscriptions;
+
+-- name: GetSubscriptionsBySessionId :many
+SELECT * FROM subscriptions
+WHERE session_id = ?;

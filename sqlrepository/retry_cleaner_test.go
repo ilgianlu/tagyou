@@ -3,26 +3,28 @@ package sqlrepository
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/sqlc"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestRetryCleaner(t *testing.T) {
-	dbConn, err := sql.Open("", conf.DB_PATH+conf.DB_NAME)
+	os.Remove("test.db")
+
+	dbConn, err := sql.Open("sqlite3", "test.db")
 	if err != nil {
-		t.Errorf("cannot connect to db")
+		t.Errorf("failed to connect database")
 	}
 
-	db := dbaccess.New(dbConn)
+	dbConn.ExecContext(context.Background(), sqlc.DBSchema)
 
-	dbConn.Exec("DELETE FROM sessions")
-	dbConn.Exec("DELETE FROM retries")
+	db := dbaccess.New(dbConn)
 
 	s1 := dbaccess.CreateSessionParams{ClientID: sql.NullString{String: "sessionOne", Valid: true}}
 	insertedSession, err := db.CreateSession(context.Background(), s1)
@@ -40,7 +42,7 @@ func TestRetryCleaner(t *testing.T) {
 		Dup:                sql.NullInt64{Int64: 0, Valid: true},
 		Retries:            sql.NullInt64{Int64: 3, Valid: true},
 		AckStatus:          sql.NullInt64{Int64: 0, Valid: true},
-		CreatedAt:          sql.NullInt64{Int64: time.Now().Unix() - 30, Valid: true},
+		CreatedAt:          sql.NullInt64{Int64: time.Now().Unix() - 10, Valid: true},
 		SessionID:          sql.NullInt64{Int64: sId, Valid: true},
 	}
 	db.CreateRetry(context.Background(), un)
@@ -53,14 +55,12 @@ func TestRetryCleaner(t *testing.T) {
 		Dup:                sql.NullInt64{Int64: 0, Valid: true},
 		Retries:            sql.NullInt64{Int64: 3, Valid: true},
 		AckStatus:          sql.NullInt64{Int64: 0, Valid: true},
-		CreatedAt:          sql.NullInt64{Int64: time.Now().Unix() - 30, Valid: true},
+		CreatedAt:          sql.NullInt64{Int64: time.Now().Unix() - 300, Valid: true},
 		SessionID:          sql.NullInt64{Int64: sId, Valid: true},
 	}
 	db.CreateRetry(context.Background(), du)
 
-	before, err := db.GetAllRetries(context.Background())
-
-	fmt.Println(before)
+	before, _ := db.GetAllRetries(context.Background())
 
 	if len(before) != 2 {
 		t.Errorf("expected 2 retry, found: %d", len(before))
@@ -68,7 +68,7 @@ func TestRetryCleaner(t *testing.T) {
 
 	cleanRetries(db)
 
-	after, err := db.GetAllRetries(context.Background())
+	after, _ := db.GetAllRetries(context.Background())
 
 	if len(after) != 1 {
 		t.Errorf("expected 1 retry (expiration %d secs), found: %d", conf.RETRY_EXPIRATION, len(after))
