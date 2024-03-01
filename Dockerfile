@@ -12,6 +12,10 @@ ENV GOOS=linux
 ARG GOARCH
 ENV GOARCH=${GOARCH:-amd64}
 
+RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+
+RUN cd sqlc && sqlc generate
+
 RUN go test ./...
 
 RUN go build -a -ldflags="-w -s" -o tagyou
