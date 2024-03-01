@@ -35,7 +35,7 @@ func (uc UserController) getOne(w http.ResponseWriter, r *http.Request, p httpro
 		return model.User{}, fmt.Errorf("invalid user id")
 	}
 
-	user, err := persistence.UserRepository.GetById(uint(idNum))
+	user, err := persistence.UserRepository.GetById(int64(idNum))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return user, fmt.Errorf("error getting user row: %s", err)

@@ -10,7 +10,7 @@ import (
 )
 
 type IndexUserDTO struct {
-	ID        uint
+	ID        int64
 	Username  string
 	CreatedAt int64
 }

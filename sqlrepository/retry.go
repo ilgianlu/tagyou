@@ -53,7 +53,7 @@ func (r RetrySqlRepository) InsertOne(retry model.Retry) error {
 	return err
 }
 
-func (r RetrySqlRepository) UpdateAckStatus(id uint, ackStatus uint) error {
+func (r RetrySqlRepository) UpdateAckStatus(id int64, ackStatus uint) error {
 	return r.Db.UpdateRetryAckStatus(context.Background(), dbaccess.UpdateRetryAckStatusParams{
 		AckStatus: sql.NullInt64{Int64: int64(ackStatus), Valid: true},
 		ID:        int64(id),

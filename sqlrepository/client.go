@@ -52,7 +52,7 @@ func (ar ClientSqlRepository) Create(client model.Client) error {
 	return ar.Db.CreateClient(context.Background(), createClientParams)
 }
 
-func (ar ClientSqlRepository) DeleteById(id uint) error {
+func (ar ClientSqlRepository) DeleteById(id int64) error {
 	return ar.Db.DeleteClientById(context.Background(), int64(id))
 }
 
@@ -77,7 +77,7 @@ func (ar ClientSqlRepository) GetByClientIdUsername(clientId string, username st
 	return mClient, nil
 }
 
-func (ar ClientSqlRepository) GetById(id uint) (model.Client, error) {
+func (ar ClientSqlRepository) GetById(id int64) (model.Client, error) {
 	client, err := ar.Db.GetClientById(context.Background(), int64(id))
 	if err != nil {
 		return model.Client{}, err

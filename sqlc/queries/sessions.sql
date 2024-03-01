@@ -11,6 +11,17 @@ INSERT INTO sessions (
 )
 RETURNING *;
 
+-- name: UpdateSession :one
+UPDATE sessions
+SET last_seen = ?,
+    last_connect = ?,
+    expiry_interval = ?,
+    client_id = ?,
+    connected = ?,
+    protocol_version = ?
+WHERE id = ?
+RETURNING *;
+
 -- name: GetSessionById :one
 SELECT * FROM sessions
 WHERE id = ?

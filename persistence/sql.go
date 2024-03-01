@@ -1,10 +1,13 @@
 package persistence
 
 import (
+	"context"
 	"database/sql"
+	_ "embed"
 	"log/slog"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/sqlc"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 	"github.com/ilgianlu/tagyou/sqlrepository"
 
@@ -19,6 +22,12 @@ func (p SqlPersistence) Init() error {
 	if err != nil {
 		slog.Error("could not open DB", "err", err)
 		return err
+	}
+
+	if conf.INIT_DB {
+		if _, err := dbConn.ExecContext(context.Background(), sqlc.DBSchema); err != nil {
+			return err
+		}
 	}
 
 	db := dbaccess.New(dbConn)
@@ -47,7 +56,7 @@ func (p *SqlPersistence) InnerInit(db *dbaccess.Queries, startSessionCleaner boo
 }
 
 func openDb() (*sql.DB, error) {
-	db, err := sql.Open("", conf.DB_PATH+conf.DB_NAME)
+	db, err := sql.Open("sqlite3", conf.DB_PATH+conf.DB_NAME)
 	if err != nil {
 		return db, err
 	}

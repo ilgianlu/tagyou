@@ -37,7 +37,7 @@ func mappingSessions(sessions []dbaccess.Session) []model.Session {
 	return sesss
 }
 
-func (sr SessionSqlRepository) PersistSession(running *model.RunningSession) (sessionId int64, err error) {
+func (sr SessionSqlRepository) PersistSession(running *model.RunningSession) (int64, error) {
 	running.Mu.RLock()
 	defer running.Mu.RUnlock()
 	var connectd int64 = 0
@@ -53,6 +53,26 @@ func (sr SessionSqlRepository) PersistSession(running *model.RunningSession) (se
 		ProtocolVersion: sql.NullInt64{Int64: int64(running.ProtocolVersion), Valid: true},
 	}
 	newSess, err := sr.Db.CreateSession(context.Background(), sess)
+	return newSess.ID, err
+}
+
+func (sr SessionSqlRepository) UpdateSession(sessionId int64, running *model.RunningSession) (int64, error) {
+	running.Mu.RLock()
+	defer running.Mu.RUnlock()
+	var connectd int64 = 0
+	if running.Connected {
+		connectd = 1
+	}
+	sess := dbaccess.UpdateSessionParams{
+		ID:              sessionId,
+		LastSeen:        sql.NullInt64{Int64: running.LastSeen, Valid: true},
+		LastConnect:     sql.NullInt64{Int64: running.LastConnect, Valid: true},
+		ExpiryInterval:  sql.NullInt64{Int64: running.ExpiryInterval, Valid: true},
+		ClientID:        sql.NullString{String: running.ClientId, Valid: true},
+		Connected:       sql.NullInt64{Int64: connectd, Valid: true},
+		ProtocolVersion: sql.NullInt64{Int64: int64(running.ProtocolVersion), Valid: true},
+	}
+	newSess, err := sr.Db.UpdateSession(context.Background(), sess)
 	return newSess.ID, err
 }
 
