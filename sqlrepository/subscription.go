@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
-	"strings"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
@@ -80,13 +79,16 @@ func (s SubscriptionSqlRepository) FindToUnsubscribe(shareName string, topic str
 }
 
 func (s SubscriptionSqlRepository) FindSubscriptions(topics []string, shared bool) []model.Subscription {
-	tpcs := sql.NullString{String: strings.Join(topics, ","), Valid: true}
+	nullTpcs := []sql.NullString{}
+	for _, tpc := range topics {
+		nullTpcs = append(nullTpcs, sql.NullString{String: tpc, Valid: true})
+	}
 	shrd := sql.NullInt64{Int64: 0, Valid: true}
 	if shared {
 		shrd = sql.NullInt64{Int64: 1, Valid: true}
 	}
 	subs, err := s.Db.GetSubscriptions(context.Background(), dbaccess.GetSubscriptionsParams{
-		Topic:  tpcs,
+		Topics: nullTpcs,
 		Shared: shrd,
 	})
 	if err != nil {
@@ -97,13 +99,16 @@ func (s SubscriptionSqlRepository) FindSubscriptions(topics []string, shared boo
 }
 
 func (s SubscriptionSqlRepository) FindOrderedSubscriptions(topics []string, shared bool) []model.Subscription {
-	tpcs := sql.NullString{String: strings.Join(topics, ","), Valid: true}
+	nullTpcs := []sql.NullString{}
+	for _, tpc := range topics {
+		nullTpcs = append(nullTpcs, sql.NullString{String: tpc, Valid: true})
+	}
 	shrd := sql.NullInt64{Int64: 0, Valid: true}
 	if shared {
 		shrd = sql.NullInt64{Int64: 1, Valid: true}
 	}
 	subs, err := s.Db.GetSubscriptionsOrdered(context.Background(), dbaccess.GetSubscriptionsOrderedParams{
-		Topic:  tpcs,
+		Topics: nullTpcs,
 		Shared: shrd,
 	})
 	if err != nil {

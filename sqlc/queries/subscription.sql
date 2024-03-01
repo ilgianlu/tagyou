@@ -24,11 +24,11 @@ LIMIT 1;
 
 -- name: GetSubscriptions :many
 SELECT * FROM subscriptions
-WHERE topic IN (?) AND shared = ?;
+WHERE topic IN (sqlc.slice(topics)) AND shared = ?;
 
 -- name: GetSubscriptionsOrdered :many
 SELECT * FROM subscriptions
-WHERE topic IN (?) AND shared = ?
+WHERE topic IN (sqlc.slice(topics)) AND shared = ?
 ORDER BY share_name;
 
 -- name: DeleteSubscriptionByClientIdTopicShareName :exec
