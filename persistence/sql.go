@@ -60,5 +60,6 @@ func openDb() (*sql.DB, error) {
 	if err != nil {
 		return db, err
 	}
+	db.ExecContext(context.Background(), "PRAGMA foreign_keys = ON;")
 	return db, nil
 }
