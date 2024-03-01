@@ -8,12 +8,14 @@ import (
 
 	"github.com/ilgianlu/tagyou/sqlc"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestSessionDelete(t *testing.T) {
-	os.Remove("test.db")
+	os.Remove("test.db3")
 
-	dbConn, err := sql.Open("sqlite3", "test.db")
+	dbConn, err := sql.Open("sqlite3", "test.db3")
 	if err != nil {
 		t.Errorf("[API] failed to connect database")
 	}

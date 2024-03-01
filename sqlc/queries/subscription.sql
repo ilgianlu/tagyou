@@ -17,9 +17,21 @@ INSERT INTO subscriptions (
 )
 RETURNING *;
 
--- name: GetSubscriptionToUnsubscribe :one
+-- name: GetAllSubscriptions :many
+SELECT * FROM subscriptions;
+
+-- name: GetSubscriptionsBySessionId :many
 SELECT * FROM subscriptions
-WHERE share_name = ? AND topic = ? AND client_id = ?
+WHERE session_id = ?;
+
+-- name: GetSharedSubscriptionByNameTopicClientId :one
+SELECT * FROM subscriptions
+WHERE shared = 1 AND share_name = ? AND topic = ? AND client_id = ?
+LIMIT 1;
+
+-- name: GetSubscriptionByTopicClientId :one
+SELECT * FROM subscriptions
+WHERE shared = 0 AND topic = ? AND client_id = ?
 LIMIT 1;
 
 -- name: GetSubscriptions :many
@@ -36,9 +48,3 @@ DELETE FROM subscriptions
 WHERE share_name = ? AND topic = ? AND client_id = ?
 RETURNING *;
 
--- name: GetAllSubscriptions :many
-SELECT * FROM subscriptions;
-
--- name: GetSubscriptionsBySessionId :many
-SELECT * FROM subscriptions
-WHERE session_id = ?;

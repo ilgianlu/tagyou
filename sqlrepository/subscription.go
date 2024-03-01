@@ -70,12 +70,20 @@ func (s SubscriptionSqlRepository) CreateOne(sub model.Subscription) error {
 }
 
 func (s SubscriptionSqlRepository) FindToUnsubscribe(shareName string, topic string, clientId string) (model.Subscription, error) {
-	sub, err := s.Db.GetSubscriptionToUnsubscribe(context.Background(), dbaccess.GetSubscriptionToUnsubscribeParams{
-		ShareName: sql.NullString{String: shareName, Valid: true},
-		Topic:     sql.NullString{String: topic, Valid: true},
-		ClientID:  sql.NullString{String: clientId, Valid: true},
-	})
-	return mappingSubscription(sub), err
+	if shareName == "" {
+		sub, err := s.Db.GetSubscriptionByTopicClientId(context.Background(), dbaccess.GetSubscriptionByTopicClientIdParams{
+			Topic:    sql.NullString{String: topic, Valid: true},
+			ClientID: sql.NullString{String: clientId, Valid: true},
+		})
+		return mappingSubscription(sub), err
+	} else {
+		sub, err := s.Db.GetSharedSubscriptionByNameTopicClientId(context.Background(), dbaccess.GetSharedSubscriptionByNameTopicClientIdParams{
+			ShareName: sql.NullString{String: shareName, Valid: true},
+			Topic:     sql.NullString{String: topic, Valid: true},
+			ClientID:  sql.NullString{String: clientId, Valid: true},
+		})
+		return mappingSubscription(sub), err
+	}
 }
 
 func (s SubscriptionSqlRepository) FindSubscriptions(topics []string, shared bool) []model.Subscription {
