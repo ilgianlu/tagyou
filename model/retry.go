@@ -24,7 +24,7 @@ type Retry struct {
 	Retries            uint8
 	AckStatus          uint8
 	CreatedAt          int64
-	SessionID          uint
+	SessionID          int64
 	ReasonCode         uint8
 }
 

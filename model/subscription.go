@@ -10,7 +10,7 @@ type Subscription struct {
 	ProtocolVersion   uint8
 	Enabled           bool
 	CreatedAt         int64
-	SessionID         uint
+	SessionID         int64
 	Shared            bool
 	ShareName         string
 }

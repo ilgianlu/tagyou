@@ -11,5 +11,5 @@ type SessionRepository interface {
 	DisconnectSession(clientId string)
 	GetById(sessionId uint) (model.Session, error)
 	GetAll() []model.Session
-	IsOnline(sessionId uint) bool
+	IsOnline(sessionId int64) bool
 }

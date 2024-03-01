@@ -68,7 +68,7 @@ func (s SimpleRouter) sendSubscribers(topic string, destSubs []string, p *packet
 }
 
 func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
-	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true, "share_name")
+	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true)
 	grouped := groupSubscribers(subs)
 	for _, group := range grouped {
 		dest := pickDest(group, 1)

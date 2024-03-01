@@ -12,7 +12,7 @@ type RetrySqlRepository struct {
 	Db *dbaccess.Queries
 }
 
-func mapping(retry dbaccess.Retry) model.Retry {
+func mappingRetry(retry dbaccess.Retry) model.Retry {
 	dupl := false
 	if retry.Dup.Int64 == 1 {
 		dupl = true
@@ -27,7 +27,7 @@ func mapping(retry dbaccess.Retry) model.Retry {
 		Retries:            uint8(retry.Retries.Int64),
 		AckStatus:          uint8(retry.AckStatus.Int64),
 		CreatedAt:          retry.CreatedAt.Int64,
-		SessionID:          uint(retry.SessionID.Int64),
+		SessionID:          retry.SessionID.Int64,
 		ReasonCode:         uint8(retry.ReasonCode.Int64),
 	}
 }
@@ -73,7 +73,7 @@ func (r RetrySqlRepository) FirstByClientIdPacketIdentifier(clientId string, pac
 	if err != nil {
 		return model.Retry{}, err
 	}
-	return mapping(retry), nil
+	return mappingRetry(retry), nil
 }
 
 func (r RetrySqlRepository) FirstByClientIdPacketIdentifierReasonCode(clientId string, packetIdentifier int, reasonCode uint8) (model.Retry, error) {
@@ -86,5 +86,5 @@ func (r RetrySqlRepository) FirstByClientIdPacketIdentifierReasonCode(clientId s
 	if err != nil {
 		return model.Retry{}, err
 	}
-	return mapping(retry), err
+	return mappingRetry(retry), err
 }

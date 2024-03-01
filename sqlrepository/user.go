@@ -1,22 +1,20 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
+	"log/slog"
+	"time"
+
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
-
-type User struct {
-	ID        uint   `gorm:"primaryKey"`
-	Username  string `gorm:"uniqueIndex:username_user_idx"`
-	Password  []byte
-	CreatedAt int64
-}
 
 type UserSqlRepository struct {
 	Db *dbaccess.Queries
 }
 
-func MappedUsers(clients []User) []model.User {
+func MappedUsers(clients []dbaccess.User) []model.User {
 	mUsers := []model.User{}
 
 	for _, client := range clients {
@@ -26,24 +24,27 @@ func MappedUsers(clients []User) []model.User {
 	return mUsers
 }
 
-func MappedUser(user User) model.User {
+func MappedUser(user dbaccess.User) model.User {
 	return model.User{
 		ID:        user.ID,
-		Username:  user.Username,
+		Username:  user.Username.String,
 		Password:  user.Password,
-		CreatedAt: user.CreatedAt,
+		CreatedAt: user.CreatedAt.Int64,
 	}
 }
 
 func (ar UserSqlRepository) GetAll() []model.User {
-	users := []User{}
-	ar.Db.Find(&users)
+	users, err := ar.Db.GetAllUsers(context.Background())
+	if err != nil {
+		slog.Error("could not query for users", "err", err)
+		return []model.User{}
+	}
 	return MappedUsers(users)
 }
 
-func (ar UserSqlRepository) GetById(id uint) (model.User, error) {
-	var user User
-	if err := ar.Db.Where("id = ?", id).First(&user).Error; err != nil {
+func (ar UserSqlRepository) GetById(id int64) (model.User, error) {
+	user, err := ar.Db.GetUserById(context.Background(), id)
+	if err != nil {
 		return model.User{}, err
 	}
 	mClient := MappedUser(user)
@@ -51,8 +52,8 @@ func (ar UserSqlRepository) GetById(id uint) (model.User, error) {
 }
 
 func (ar UserSqlRepository) GetByUsername(username string) (model.User, error) {
-	var user User
-	if err := ar.Db.Where("username = ?", username).First(&user).Error; err != nil {
+	user, err := ar.Db.GetUserByUsername(context.Background(), sql.NullString{String: username})
+	if err != nil {
 		return model.User{}, err
 	}
 	mClient := MappedUser(user)
@@ -60,9 +61,13 @@ func (ar UserSqlRepository) GetByUsername(username string) (model.User, error) {
 }
 
 func (ar UserSqlRepository) Create(user model.User) error {
-	return ar.Db.Create(&user).Error
+	return ar.Db.CreateUser(context.Background(), dbaccess.CreateUserParams{
+		Username:  sql.NullString{String: user.Username},
+		Password:  user.Password,
+		CreatedAt: sql.NullInt64{Int64: time.Now().Unix()},
+	})
 }
 
-func (ar UserSqlRepository) DeleteById(id uint) error {
-	return ar.Db.Where("id = ?", id).Delete(&User{}).Error
+func (ar UserSqlRepository) DeleteById(id int64) error {
+	return ar.Db.DeleteUserById(context.Background(), id)
 }

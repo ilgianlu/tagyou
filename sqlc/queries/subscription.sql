@@ -26,6 +26,11 @@ LIMIT 1;
 SELECT * FROM subscriptions
 WHERE topic IN (?) AND shared = ?;
 
+-- name: GetSubscriptionsOrdered :many
+SELECT * FROM subscriptions
+WHERE topic IN (?) AND shared = ?
+ORDER BY share_name;
+
 -- name: DeleteSubscriptionByClientIdTopicShareName :exec
 DELETE FROM subscriptions
 WHERE share_name = ? AND topic = ? AND client_id = ?
