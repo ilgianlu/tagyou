@@ -1,69 +1,144 @@
 package sqlrepository
 
 import (
+	"context"
+	"database/sql"
 	"log/slog"
 
 	"github.com/ilgianlu/tagyou/model"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
-type Subscription struct {
-	ID                uint   `gorm:"primary_key"`
-	ClientId          string `gorm:"uniqueIndex:sub_pars_idx"`
-	Topic             string `gorm:"uniqueIndex:sub_pars_idx"`
-	RetainHandling    uint8
-	RetainAsPublished uint8
-	NoLocal           uint8
-	Qos               uint8
-	ProtocolVersion   uint8
-	Enabled           bool
-	CreatedAt         int64
-	SessionID         uint
-	Shared            bool   `gorm:"default:false"`
-	ShareName         string `gorm:"uniqueIndex:sub_pars_idx"`
+type SubscriptionSqlRepository struct {
+	Db *dbaccess.Queries
 }
 
-type SubscriptionSqlRepository struct {
-	Db *gorm.DB
+func mappingSubscription(sub dbaccess.Subscription) model.Subscription {
+	return model.Subscription{
+		ClientId:          sub.ClientID.String,
+		Topic:             sub.Topic.String,
+		RetainHandling:    uint8(sub.RetainHandling.Int64),
+		RetainAsPublished: uint8(sub.RetainAsPublished.Int64),
+		NoLocal:           uint8(sub.Qos.Int64),
+		ProtocolVersion:   uint8(sub.ProtocolVersion.Int64),
+		Enabled:           sub.Enabled.Int64 == 1,
+		CreatedAt:         sub.CreatedAt.Int64,
+		SessionID:         sub.SessionID.Int64,
+		Shared:            sub.Shared.Int64 == 1,
+		ShareName:         sub.ShareName.String,
+	}
+}
+
+func mappingSubscriptions(subscriptions []dbaccess.Subscription) []model.Subscription {
+	subs := []model.Subscription{}
+	for _, sub := range subscriptions {
+		subs = append(subs, mappingSubscription(sub))
+	}
+	return subs
 }
 
 func (s SubscriptionSqlRepository) CreateOne(sub model.Subscription) error {
-	err := s.Db.Create(&sub).Error
-	return err
+	enbld := 0
+	if sub.Enabled {
+		enbld = 1
+	}
+
+	shrd := 0
+	if sub.Shared {
+		shrd = 1
+	}
+
+	_, err := s.Db.CreateSubscription(context.Background(), dbaccess.CreateSubscriptionParams{
+		ClientID:          sql.NullString{String: sub.ClientId, Valid: true},
+		Topic:             sql.NullString{String: sub.Topic, Valid: true},
+		RetainHandling:    sql.NullInt64{Int64: int64(sub.RetainHandling), Valid: true},
+		RetainAsPublished: sql.NullInt64{Int64: int64(sub.RetainAsPublished), Valid: true},
+		NoLocal:           sql.NullInt64{Int64: int64(sub.Qos), Valid: true},
+		ProtocolVersion:   sql.NullInt64{Int64: int64(sub.ProtocolVersion), Valid: true},
+		Enabled:           sql.NullInt64{Int64: int64(enbld), Valid: true},
+		CreatedAt:         sql.NullInt64{Int64: sub.CreatedAt, Valid: true},
+		SessionID:         sql.NullInt64{Int64: int64(sub.SessionID), Valid: true},
+		Shared:            sql.NullInt64{Int64: int64(shrd), Valid: true},
+		ShareName:         sql.NullString{String: sub.ShareName, Valid: true},
+	})
+
+	if err != nil {
+		slog.Error("could not create subscription", "err", err)
+		return err
+	}
+	return nil
 }
 
 func (s SubscriptionSqlRepository) FindToUnsubscribe(shareName string, topic string, clientId string) (model.Subscription, error) {
-	var sub model.Subscription
-	if err := s.Db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).First(&sub).Error; err != nil {
-		return sub, err
+	if shareName == "" {
+		sub, err := s.Db.GetSubscriptionByTopicClientId(context.Background(), dbaccess.GetSubscriptionByTopicClientIdParams{
+			Topic:    sql.NullString{String: topic, Valid: true},
+			ClientID: sql.NullString{String: clientId, Valid: true},
+		})
+		return mappingSubscription(sub), err
+	} else {
+		sub, err := s.Db.GetSharedSubscriptionByNameTopicClientId(context.Background(), dbaccess.GetSharedSubscriptionByNameTopicClientIdParams{
+			ShareName: sql.NullString{String: shareName, Valid: true},
+			Topic:     sql.NullString{String: topic, Valid: true},
+			ClientID:  sql.NullString{String: clientId, Valid: true},
+		})
+		return mappingSubscription(sub), err
 	}
-	return sub, nil
 }
 
 func (s SubscriptionSqlRepository) FindSubscriptions(topics []string, shared bool) []model.Subscription {
-	subs := []model.Subscription{}
-	if err := s.Db.Where("topic IN (?)", topics).Where("shared = ?", shared).Find(&subs).Error; err != nil {
-		slog.Error("could not query for subscriptions", "err", err)
+	nullTpcs := []sql.NullString{}
+	for _, tpc := range topics {
+		nullTpcs = append(nullTpcs, sql.NullString{String: tpc, Valid: true})
 	}
-	return subs
+	shrd := sql.NullInt64{Int64: 0, Valid: true}
+	if shared {
+		shrd = sql.NullInt64{Int64: 1, Valid: true}
+	}
+	subs, err := s.Db.GetSubscriptions(context.Background(), dbaccess.GetSubscriptionsParams{
+		Topics: nullTpcs,
+		Shared: shrd,
+	})
+	if err != nil {
+		slog.Error("could not query for subscriptions", "err", err)
+		return []model.Subscription{}
+	}
+	return mappingSubscriptions(subs)
 }
 
-func (s SubscriptionSqlRepository) FindOrderedSubscriptions(topics []string, shared bool, orderField string) []model.Subscription {
-	subs := []model.Subscription{}
-	if err := s.Db.Where("topic IN (?)", topics).Where("shared = ?", shared).Order(orderField).Find(&subs).Error; err != nil {
-		slog.Error("could not query for subscriptions", "err", err)
+func (s SubscriptionSqlRepository) FindOrderedSubscriptions(topics []string, shared bool) []model.Subscription {
+	nullTpcs := []sql.NullString{}
+	for _, tpc := range topics {
+		nullTpcs = append(nullTpcs, sql.NullString{String: tpc, Valid: true})
 	}
-	return subs
+	shrd := sql.NullInt64{Int64: 0, Valid: true}
+	if shared {
+		shrd = sql.NullInt64{Int64: 1, Valid: true}
+	}
+	subs, err := s.Db.GetSubscriptionsOrdered(context.Background(), dbaccess.GetSubscriptionsOrderedParams{
+		Topics: nullTpcs,
+		Shared: shrd,
+	})
+	if err != nil {
+		slog.Error("could not query for subscriptions", "err", err)
+		return []model.Subscription{}
+	}
+	return mappingSubscriptions(subs)
 }
 
 func (s SubscriptionSqlRepository) DeleteByClientIdTopicShareName(clientId string, topic string, shareName string) error {
-	return s.Db.Where("share_name = ? and topic = ? and client_id = ?", shareName, topic, clientId).Delete(&Subscription{}).Error
+	return s.Db.DeleteSubscriptionByClientIdTopicShareName(context.Background(), dbaccess.DeleteSubscriptionByClientIdTopicShareNameParams{
+		Topic:     sql.NullString{String: topic, Valid: true},
+		ClientID:  sql.NullString{String: clientId, Valid: true},
+		ShareName: sql.NullString{String: shareName, Valid: true},
+	})
 }
 
 func (s SubscriptionSqlRepository) GetAll() []model.Subscription {
-	subs := []model.Subscription{}
-	if err := s.Db.Find(&subs).Error; err != nil {
+	subs, err := s.Db.GetAllSubscriptions(context.Background())
+	if err != nil {
 		slog.Error("could not query for subscriptions", "err", err)
+		return []model.Subscription{}
 	}
-	return subs
+	return mappingSubscriptions(subs)
 }

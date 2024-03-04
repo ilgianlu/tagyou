@@ -9,8 +9,8 @@ import (
 )
 
 type RunningSession struct {
-	ID              uint
-	SessionID       uint
+	ID              int64
+	SessionID       int64
 	ClientId        string
 	ProtocolVersion uint8
 	LastSeen        int64
@@ -125,7 +125,7 @@ func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {
 	s.Mu.Unlock()
 }
 
-func (s *RunningSession) ApplySessionId(sessionID uint) {
+func (s *RunningSession) ApplySessionId(sessionID int64) {
 	s.Mu.Lock()
 	s.SessionID = sessionID
 	s.Mu.Unlock()
@@ -139,6 +139,6 @@ func SessionExpired(lastSeen int64, expiryInterval int64) bool {
 	return lastSeen+expiryInterval < time.Now().Unix()
 }
 
-func (s *RunningSession) GetId() uint {
+func (s *RunningSession) GetId() int64 {
 	return s.ID
 }

@@ -1,42 +1,71 @@
 package event
 
 import (
+	"context"
+	"database/sql"
 	"os"
 	"testing"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/sqlrepository"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
 func TestClientUnsubscription(t *testing.T) {
 	os.Setenv("DEBUG", "1")
-	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
+	os.Remove("test.db3")
+
+	dbConn, err := sql.Open("sqlite3", "test.db3")
 	if err != nil {
 		t.Errorf("[API] failed to connect database")
 	}
 
+	dbConn.ExecContext(context.Background(), "PRAGMA foreign_keys = ON;")
+	dbConn.ExecContext(context.Background(), sqlc.DBSchema)
+
+	db := dbaccess.New(dbConn)
+
 	p := persistence.SqlPersistence{}
 	p.InnerInit(db, false, false, []byte(""))
 
-	db.Exec("DELETE FROM sessions")
-	db.Exec("DELETE FROM subscriptions")
-	sess1 := sqlrepository.Session{ID: 1, ClientId: "pippo", Connected: true}
-	sub1 := sqlrepository.Subscription{SessionID: sess1.ID, ClientId: "pippo", Topic: "topic1"}
-	ssub1 := sqlrepository.Subscription{SessionID: sess1.ID, ClientId: "pippo", ShareName: "share1", Topic: "sharedTopic1"}
+	sess1, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{
+		ClientID:  sql.NullString{String: "pippo", Valid: true},
+		Connected: sql.NullInt64{Int64: 1, Valid: true},
+	})
+	db.CreateSubscription(context.Background(), dbaccess.CreateSubscriptionParams{
+		Topic:     sql.NullString{String: "topic1", Valid: true},
+		ClientID:  sql.NullString{String: "pippo", Valid: true},
+		SessionID: sql.NullInt64{Int64: sess1.ID, Valid: true},
+		Shared:    sql.NullInt64{Int64: 0, Valid: true},
+	})
+	db.CreateSubscription(context.Background(), dbaccess.CreateSubscriptionParams{
+		Topic:     sql.NullString{String: "sharedTopic1", Valid: true},
+		ShareName: sql.NullString{String: "share1", Valid: true},
+		Shared:    sql.NullInt64{Int64: 1, Valid: true},
+		ClientID:  sql.NullString{String: "pippo", Valid: true},
+		SessionID: sql.NullInt64{Int64: sess1.ID, Valid: true},
+	})
 
-	sess2 := sqlrepository.Session{ID: 2, Connected: true, ClientId: "pluto"}
-	sub2 := sqlrepository.Subscription{SessionID: sess2.ID, ClientId: "pluto", Topic: "topic1"}
-	ssub2 := sqlrepository.Subscription{SessionID: sess2.ID, ClientId: "pluto", ShareName: "share2", Topic: "sharedTopic1"}
+	sess2, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{
+		ClientID:  sql.NullString{String: "pluto", Valid: true},
+		Connected: sql.NullInt64{Int64: 1, Valid: true},
+	})
+	db.CreateSubscription(context.Background(), dbaccess.CreateSubscriptionParams{
+		Topic:     sql.NullString{String: "topic1", Valid: true},
+		Shared:    sql.NullInt64{Int64: 0, Valid: true},
+		ClientID:  sql.NullString{String: "pluto", Valid: true},
+		SessionID: sql.NullInt64{Int64: sess2.ID, Valid: true},
+	})
+	db.CreateSubscription(context.Background(), dbaccess.CreateSubscriptionParams{
+		Topic:     sql.NullString{String: "sharedTopic1", Valid: true},
+		ShareName: sql.NullString{String: "share2", Valid: true},
+		Shared:    sql.NullInt64{Int64: 1, Valid: true},
+		ClientID:  sql.NullString{String: "pluto", Valid: true},
+		SessionID: sql.NullInt64{Int64: sess2.ID, Valid: true},
+	})
 
-	subscriptions := []sqlrepository.Subscription{sub1, ssub1, sub2, ssub2}
-	sessions := []sqlrepository.Session{sess1, sess2}
-	db.Create(&sessions)
-	db.Create(&subscriptions)
-
-	res := clientUnsubscription("pippo", model.Subscription{Topic: "topic1"})
+	res := clientUnsubscription("pippo", model.Subscription{Topic: "topic1", Shared: false})
 	if res != 0 {
 		t.Error("unsuccessful subscription, expected success")
 	}
@@ -46,12 +75,16 @@ func TestClientUnsubscription(t *testing.T) {
 		t.Errorf("expecting 17 (no subscription to unsub), received %d", res)
 	}
 
-	res = clientUnsubscription("pluto", model.Subscription{ClientId: "pluto", Topic: "sharedTopic1", ShareName: "share2"})
+	res = clientUnsubscription("pluto", model.Subscription{Topic: "sharedTopic1", ShareName: "share2", Shared: true})
 	if res != 0 {
 		t.Errorf("expecting 0 (success), received %d", res)
 	}
-	s := model.Subscription{}
-	if err := db.Where("share_name = ? and topic = ?", "share2", "sharedTopic1").First(&s).Error; err == nil {
+
+	ss, _ := db.GetSubscriptionsBySessionId(context.Background(), sql.NullInt64{Int64: sess2.ID, Valid: true})
+	if len(ss) != 1 {
+		t.Errorf("shared subscription was not removed!")
+	}
+	if ss[0].Topic.String != "topic1" {
 		t.Errorf("shared subscription was not removed!")
 	}
 }

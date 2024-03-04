@@ -27,5 +27,8 @@
 # third party libraries
 vendor
 
+# sqlc compiled
+sqlc/dbaccess
+
 # main binary
 tagyou

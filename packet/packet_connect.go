@@ -65,7 +65,7 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 		wml := Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		session.WillMessage = p.remainingBytes[i : i+wml]
-		slog.Debug("will topic with message", "will-topic", session.WillTopic, "will-message", session.WillMessage[:20])
+		slog.Debug("will topic with message", "will-topic", session.WillTopic, "will-message", session.WillMessage[:wml])
 		i = i + wml
 	}
 	if session.HaveUser() {

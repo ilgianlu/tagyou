@@ -68,7 +68,7 @@ func (s SimpleRouter) sendSubscribers(topic string, destSubs []string, p *packet
 }
 
 func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
-	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true, "share_name")
+	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true)
 	grouped := groupSubscribers(subs)
 	for _, group := range grouped {
 		dest := pickDest(group, 1)
@@ -118,7 +118,7 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packe
 			AckStatus:          model.WAIT_FOR_PUB_ACK,
 			CreatedAt:          time.Now().Unix(),
 		}
-		persistence.RetryRepository.SaveOne(r)
+		persistence.RetryRepository.InsertOne(r)
 		s.Send(r.ClientId, p.ToByteSlice())
 	} else if qos == 2 {
 		// prepare publish packet qos 2 (if sub permit) new packet identifier
@@ -132,7 +132,7 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packe
 			AckStatus:          model.WAIT_FOR_PUB_REL,
 			CreatedAt:          time.Now().Unix(),
 		}
-		persistence.RetryRepository.SaveOne(r)
+		persistence.RetryRepository.InsertOne(r)
 		s.Send(r.ClientId, p.ToByteSlice())
 	}
 }

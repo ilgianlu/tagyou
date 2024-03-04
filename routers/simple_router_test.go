@@ -1,14 +1,15 @@
 package routers
 
 import (
-	"sort"
+	"context"
+	"database/sql"
+	"os"
 	"testing"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/sqlrepository"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"github.com/ilgianlu/tagyou/sqlc"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
 func TestPickDest(t *testing.T) {
@@ -27,66 +28,60 @@ func TestPickDest(t *testing.T) {
 }
 
 func TestGroupSubscribers(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open("test.db3"), &gorm.Config{})
+	os.Remove("test.db3")
+
+	dbConn, err := sql.Open("sqlite3", "test.db3")
 	if err != nil {
 		t.Errorf("[API] failed to connect database")
 	}
 
+	dbConn.ExecContext(context.Background(), "PRAGMA foreign_keys = ON;")
+	dbConn.ExecContext(context.Background(), sqlc.DBSchema)
+
+	db := dbaccess.New(dbConn)
+
 	p := persistence.SqlPersistence{}
 	p.InnerInit(db, false, false, []byte(""))
 
-	db.Exec("DELETE FROM sessions")
-	db.Exec("DELETE FROM subscriptions")
-	sess1 := sqlrepository.Session{ID: 1, Connected: true}
+	sess1, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{Connected: sql.NullInt64{Int64: 1, Valid: true}})
 	sub1 := model.Subscription{SessionID: sess1.ID, ClientId: "pippo", ShareName: "share1"}
-	sess2 := sqlrepository.Session{ID: 2, Connected: true}
+	sess2, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{Connected: sql.NullInt64{Int64: 1, Valid: true}})
 	sub2 := model.Subscription{SessionID: sess2.ID, ClientId: "pluto", ShareName: "share2"}
-	sess3 := sqlrepository.Session{ID: 3, Connected: true}
+	sess3, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{Connected: sql.NullInt64{Int64: 1, Valid: true}})
 	sub3 := model.Subscription{SessionID: sess3.ID, ClientId: "minnie", ShareName: "share1"}
-	sess4 := sqlrepository.Session{ID: 4, Connected: true}
+	sess4, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{Connected: sql.NullInt64{Int64: 1, Valid: true}})
 	sub4 := model.Subscription{SessionID: sess4.ID, ClientId: "topolino", ShareName: "share2"}
-	sess5 := sqlrepository.Session{ID: 5, Connected: false}
+	sess5, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{Connected: sql.NullInt64{Int64: 0, Valid: true}})
 	sub5 := model.Subscription{SessionID: sess5.ID, ClientId: "paperino", ShareName: "share1"}
-	sess6 := sqlrepository.Session{ID: 5, Connected: false}
+	sess6, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{Connected: sql.NullInt64{Int64: 0, Valid: true}})
 	sub6 := model.Subscription{SessionID: sess6.ID, ClientId: "paperina", ShareName: "share2"}
 	ungrouped := []model.Subscription{sub1, sub2, sub3, sub4, sub5, sub6}
-	sessions := []sqlrepository.Session{sess1, sess2, sess3, sess4, sess5, sess6}
-	db.Create(&ungrouped)
-	db.Create(&sessions)
+
 	groups := groupSubscribers(ungrouped)
 	if group, ok := groups["share1"]; ok {
-		res := []uint{sess1.ID, sess3.ID}
-		data := []uint{}
-		for _, cl := range group {
-			data = append(data, cl.SessionID)
+		if len(group) != 2 {
+			t.Errorf("expecting %d subs for share1, received %d", 2, len(group))
 		}
-		sort.Slice(data, func(i, j int) bool {
-			return data[i] > data[j]
-		})
-		for i, d := range data {
-			if d != res[i] {
-				t.Errorf("expecting %d received %d", res[i], d)
-			}
+		if group[0].SessionID != sess1.ID {
+			t.Errorf("expecting %d sub id position %d, received %d", sess1.ID, 0, group[0].SessionID)
+		}
+		if group[1].SessionID != sess3.ID {
+			t.Errorf("expecting %d sub id position %d, received %d", sess3.ID, 1, group[1].SessionID)
 		}
 	} else {
 		t.Errorf("no group share1 found!")
 	}
 	if group, ok := groups["share2"]; ok {
-		res := []uint{sess2.ID, sess4.ID}
-		data := []uint{}
-		for _, cl := range group {
-			data = append(data, cl.SessionID)
+		if len(group) != 2 {
+			t.Errorf("expecting %d subs for share2, received %d", 2, len(group))
 		}
-		sort.Slice(data, func(i, j int) bool {
-			return data[i] > data[j]
-		})
-		for i, d := range data {
-			if d != res[i] {
-				t.Errorf("expecting %d received %d", res[i], d)
-			}
+		if group[0].SessionID != sess2.ID {
+			t.Errorf("expecting %d sub id position %d, received %d", sess2.ID, 0, group[0].SessionID)
+		}
+		if group[1].SessionID != sess4.ID {
+			t.Errorf("expecting %d sub id position %d, received %d", sess4.ID, 1, group[1].SessionID)
 		}
 	} else {
 		t.Errorf("no group share2 found!")
 	}
-
 }

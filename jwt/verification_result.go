@@ -2,6 +2,6 @@ package jwt
 
 type VerificationResult struct {
 	Valid  bool
-	UserId uint
+	UserId int64
 	Err    error
 }

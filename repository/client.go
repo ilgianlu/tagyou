@@ -15,6 +15,6 @@ type ClientRepository interface {
 	Create(client model.Client) error
 	GetAll() []model.Client
 	GetByClientIdUsername(clientId string, username string) (model.Client, error)
-	GetById(id uint) (model.Client, error)
-	DeleteById(id uint) error
+	GetById(id int64) (model.Client, error)
+	DeleteById(id int64) error
 }

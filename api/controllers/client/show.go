@@ -9,7 +9,7 @@ import (
 )
 
 type ShowClientDTO struct {
-	ID        uint
+	ID        int64
 	ClientId  string
 	Username  string
 	CreatedAt int64

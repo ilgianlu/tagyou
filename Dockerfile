@@ -6,6 +6,9 @@ RUN apk update && apk add --update gcc musl-dev && rm -rf /var/cache/apk/*
 
 COPY ./ .
 
+RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+RUN cd sqlc && sqlc generate
+
 RUN go mod tidy
 ENV CGO_ENABLED=1
 ENV GOOS=linux

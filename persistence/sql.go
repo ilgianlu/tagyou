@@ -1,35 +1,41 @@
 package persistence
 
 import (
-	"log"
+	"context"
+	"database/sql"
+	_ "embed"
 	"log/slog"
-	"os"
-	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/sqlc"
+	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 	"github.com/ilgianlu/tagyou/sqlrepository"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type SqlPersistence struct {
-	db *gorm.DB
 }
 
 func (p SqlPersistence) Init() error {
-	db, err := openDb()
+	dbConn, err := openDb()
 	if err != nil {
 		slog.Error("could not open DB", "err", err)
 		return err
 	}
 
+	if conf.INIT_DB {
+		if _, err := dbConn.ExecContext(context.Background(), sqlc.DBSchema); err != nil {
+			return err
+		}
+	}
+
+	db := dbaccess.New(dbConn)
+
 	return p.InnerInit(db, conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
 }
 
-func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startRetryCleaner bool, newAdminPassword []byte) error {
-	sqlrepository.Migrate(db)
-
+func (p *SqlPersistence) InnerInit(db *dbaccess.Queries, startSessionCleaner bool, startRetryCleaner bool, newAdminPassword []byte) error {
 	ClientRepository = sqlrepository.ClientSqlRepository{Db: db}
 	SessionRepository = sqlrepository.SessionSqlRepository{Db: db}
 	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
@@ -46,26 +52,14 @@ func (p *SqlPersistence) InnerInit(db *gorm.DB, startSessionCleaner bool, startR
 	if startRetryCleaner {
 		sqlrepository.StartRetryCleaner(db)
 	}
-	p.db = db
 	return nil
 }
 
-func openDb() (*gorm.DB, error) {
-	logLevel := logger.Silent
-	if os.Getenv("DEBUG") != "" {
-		logLevel = logger.Info
+func openDb() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", conf.DB_PATH+conf.DB_NAME)
+	if err != nil {
+		return db, err
 	}
-	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags), // using log until can be subst with slog
-		logger.Config{
-			SlowThreshold:             time.Second, // Slow SQL threshold
-			LogLevel:                  logLevel,    // Log level
-			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
-			ParameterizedQueries:      true,        // Don't include params in the SQL log
-			Colorful:                  false,       // Disable color
-		},
-	)
-	return gorm.Open(sqlite.Open(conf.DB_PATH+conf.DB_NAME), &gorm.Config{
-		Logger: newLogger,
-	})
+	db.ExecContext(context.Background(), "PRAGMA foreign_keys = ON;")
+	return db, nil
 }
