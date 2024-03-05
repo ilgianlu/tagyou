@@ -1,6 +1,10 @@
 -- name: GetAllRetains :many
 SELECT * FROM retains;
 
+-- name: GetRetains :many
+SELECT * FROM retains
+WHERE topic IN (sqlc.slice(topics));
+
 -- name: CreateRetain :exec
 INSERT INTO retains (
   client_id,

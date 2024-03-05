@@ -18,6 +18,10 @@ func sendWill(router routers.Router, session *model.RunningSession) {
 			return
 		}
 		willPacket := packet.Publish(session.ProtocolVersion, session.WillQoS(), session.WillRetain(), session.WillTopic, packet.NewPacketIdentifier(), session.WillMessage)
+		if willPacket.Retain() {
+			slog.Debug("[MQTT] will packet to retain")
+			saveRetain(session, &willPacket)
+		}
 		router.Forward(session.WillTopic, &willPacket)
 	}
 }

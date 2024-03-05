@@ -3,18 +3,18 @@ package sqlrepository
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"time"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
-	"github.com/ilgianlu/tagyou/topic"
 )
 
 type RetainSqlRepository struct {
 	Db *dbaccess.Queries
 }
 
-func mapped(ret dbaccess.Retain) model.Retain {
+func mappingRetain(ret dbaccess.Retain) model.Retain {
 	return model.Retain{
 		ClientID:           ret.ClientID.String,
 		Topic:              ret.Topic.String,
@@ -23,20 +23,25 @@ func mapped(ret dbaccess.Retain) model.Retain {
 	}
 }
 
-func (r RetainSqlRepository) FindRetains(subscribedTopic string) []model.Retain {
-	allRetains, err := r.Db.GetAllRetains(context.Background())
+func mappingRetains(rets []dbaccess.Retain) []model.Retain {
+	retains := []model.Retain{}
+	for _, ret := range rets {
+		retains = append(retains, mappingRetain(ret))
+	}
+	return retains
+}
+
+func (r RetainSqlRepository) FindRetains(topics []string) []model.Retain {
+	nullTpcs := []sql.NullString{}
+	for _, tpc := range topics {
+		nullTpcs = append(nullTpcs, sql.NullString{String: tpc, Valid: true})
+	}
+	retains, err := r.Db.GetRetains(context.Background(), nullTpcs)
 	if err != nil {
+		slog.Error("could not query for retains", "err", err)
 		return []model.Retain{}
 	}
-
-	retains := []model.Retain{}
-	for _, ret := range allRetains {
-		if topic.Match(ret.Topic.String, subscribedTopic) {
-			retains = append(retains, mapped(ret))
-		}
-	}
-
-	return retains
+	return mappingRetains(retains)
 }
 
 func (r RetainSqlRepository) Create(retain model.Retain) error {
