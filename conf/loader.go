@@ -10,7 +10,7 @@ func Loader() {
 	ACL_ON = os.Getenv("ACL_ON") == "true"
 	CLEAN_EXPIRED_SESSIONS = os.Getenv("CLEAN_EXPIRED_SESSIONS") == "true"
 	CLEAN_EXPIRED_RETRIES = os.Getenv("CLEAN_EXPIRED_RETRIES") == "true"
-	INIT_DB = os.Getenv("INIT_DB") == "true"
+	INIT_DB = os.Getenv("INIT_DB") == "true" || os.Getenv("INIT_DB") == "1"
 
 	var s string
 	s = os.Getenv("DB_PATH")

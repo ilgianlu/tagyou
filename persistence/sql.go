@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"log/slog"
+	"os"
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/sqlc"
@@ -17,22 +18,42 @@ import (
 type SqlPersistence struct {
 }
 
+var dbFile = conf.DB_PATH + conf.DB_NAME
+
 func (p SqlPersistence) Init() error {
+	if conf.INIT_DB {
+		err := resetDb()
+		if err != nil {
+			slog.Error("could not reset DB", "err", err)
+			return err
+		}
+	}
+
 	dbConn, err := openDb()
 	if err != nil {
 		slog.Error("could not open DB", "err", err)
 		return err
 	}
 
-	if conf.INIT_DB {
-		if _, err := dbConn.ExecContext(context.Background(), sqlc.DBSchema); err != nil {
-			return err
-		}
-	}
-
 	db := dbaccess.New(dbConn)
 
 	return p.InnerInit(db, conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
+}
+
+func resetDb() error {
+	os.Remove(dbFile)
+
+	dbConn, err := openDb()
+	if err != nil {
+		slog.Error("could not open DB", "err", err)
+		return err
+	}
+
+	if _, err := dbConn.ExecContext(context.Background(), sqlc.DBSchema); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *SqlPersistence) InnerInit(db *dbaccess.Queries, startSessionCleaner bool, startRetryCleaner bool, newAdminPassword []byte) error {
@@ -56,7 +77,7 @@ func (p *SqlPersistence) InnerInit(db *dbaccess.Queries, startSessionCleaner boo
 }
 
 func openDb() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", conf.DB_PATH+conf.DB_NAME)
+	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
 		return db, err
 	}
