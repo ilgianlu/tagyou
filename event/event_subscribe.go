@@ -6,6 +6,7 @@ import (
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
+	tpc "github.com/ilgianlu/tagyou/topic"
 )
 
 func onSubscribe(router routers.Router, session *model.RunningSession, p *packet.Packet) {
@@ -43,7 +44,8 @@ func clientSubscription(router routers.Router, session *model.RunningSession, su
 }
 
 func sendRetain(router routers.Router, protocolVersion uint8, subscription model.Subscription) {
-	retains := persistence.RetainRepository.FindRetains(subscription.Topic)
+	dests := tpc.Explode(subscription.Topic)
+	retains := persistence.RetainRepository.FindRetains(dests)
 	if len(retains) == 0 {
 		return
 	}

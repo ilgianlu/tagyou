@@ -87,7 +87,7 @@ func clientDisconnect(router routers.Router, session *model.RunningSession, clie
 func saveRetain(session *model.RunningSession, p *packet.Packet) {
 	var r model.Retain
 	r.ClientID = session.ClientId
-	r.Topic = p.Topic
+	r.Topic = session.WillTopic
 	r.ApplicationMessage = p.ApplicationMessage()
 	r.CreatedAt = time.Now().Unix()
 	persistence.RetainRepository.Delete(r)
