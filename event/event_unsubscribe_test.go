@@ -16,7 +16,7 @@ func TestClientUnsubscription(t *testing.T) {
 	os.Setenv("DEBUG", "1")
 	os.Remove("test.db3")
 
-	dbConn, err := sql.Open("sqlite3", "test.db3")
+	dbConn, err := sql.Open("sqlite", "test.db3")
 	if err != nil {
 		t.Errorf("[API] failed to connect database")
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 	"github.com/ilgianlu/tagyou/sqlrepository"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type SqlPersistence struct {
@@ -77,7 +77,7 @@ func (p *SqlPersistence) InnerInit(db *dbaccess.Queries, startSessionCleaner boo
 }
 
 func openDb() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dbFile)
+	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		return db, err
 	}

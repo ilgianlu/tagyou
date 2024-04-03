@@ -12,14 +12,14 @@ import (
 	"github.com/ilgianlu/tagyou/sqlc"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func TestClientGoodConnection(t *testing.T) {
 	os.Setenv("DEBUG", "1")
 	os.Remove("test.db3")
 
-	dbConn, err := sql.Open("sqlite3", "test.db3")
+	dbConn, err := sql.Open("sqlite", "test.db3")
 	if err != nil {
 		t.Errorf("[API] failed to connect database")
 	}
@@ -59,7 +59,7 @@ func TestClientBadConnectionWrongPasswordConnection(t *testing.T) {
 	os.Setenv("DEBUG", "1")
 	os.Remove("test.db3")
 
-	dbConn, err := sql.Open("sqlite3", "test.db3")
+	dbConn, err := sql.Open("sqlite", "test.db3")
 	if err != nil {
 		t.Errorf("[API] failed to connect database")
 	}
@@ -97,7 +97,7 @@ func TestClientBadConnectionWrongUsernameConnection(t *testing.T) {
 	os.Setenv("DEBUG", "1")
 	os.Remove("test.db3")
 
-	dbConn, err := sql.Open("sqlite3", "test.db3")
+	dbConn, err := sql.Open("sqlite", "test.db3")
 	if err != nil {
 		t.Errorf("[API] failed to connect database")
 	}

@@ -11,11 +11,11 @@ import (
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 
 	"github.com/julienschmidt/httprouter"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func TestGetSessions(t *testing.T) {
-	dbConn, err := sql.Open("sqlite3", "sqlite3.test.db3")
+	dbConn, err := sql.Open("sqlite", "sqlite3.test.db3")
 	if err != nil {
 		t.Errorf("[API] [TEST] failed to connect database %s", err)
 	}
