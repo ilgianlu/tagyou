@@ -17,12 +17,12 @@ func StartApi(httpPort string) {
 	authController.RegisterRoutes(mux)
 	clientController := client.NewController()
 	clientController.RegisterRoutes(mux)
-	sc := session.NewController()
-	sc.RegisterRoutes(mux)
-	subc := subscription.NewController()
-	subc.RegisterRoutes(mux)
-	usrc := user.NewController()
-	usrc.RegisterRoutes(mux)
+	sessionController := session.NewController()
+	sessionController.RegisterRoutes(mux)
+	subscriptionController := subscription.NewController()
+	subscriptionController.RegisterRoutes(mux)
+	userController := user.NewController()
+	userController.RegisterRoutes(mux)
 
 	slog.Info("[API] http start listening", "port", httpPort)
 	if err := http.ListenAndServe(httpPort, mux); err != nil {
