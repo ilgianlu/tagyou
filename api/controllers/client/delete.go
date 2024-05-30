@@ -5,12 +5,10 @@ import (
 	"net/http"
 
 	"github.com/ilgianlu/tagyou/persistence"
-
-	"github.com/julienschmidt/httprouter"
 )
 
-func (uc ClientController) DeleteClient(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	client, err := uc.getOne(w, r, p)
+func (uc ClientController) DeleteClient(w http.ResponseWriter, r *http.Request) {
+	client, err := uc.getOne(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

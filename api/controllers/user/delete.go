@@ -5,12 +5,10 @@ import (
 	"net/http"
 
 	"github.com/ilgianlu/tagyou/persistence"
-
-	"github.com/julienschmidt/httprouter"
 )
 
-func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	user, err := uc.getOne(w, r, p)
+func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	user, err := uc.getOne(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

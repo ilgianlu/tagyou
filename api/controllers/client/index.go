@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
 
 type IndexClientDTO struct {
@@ -16,7 +15,7 @@ type IndexClientDTO struct {
 	CreatedAt int64
 }
 
-func (uc ClientController) GetClients(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (uc ClientController) GetClients(w http.ResponseWriter, r *http.Request) {
 	clients := persistence.ClientRepository.GetAll()
 	clientDTOs := []IndexClientDTO{}
 	for _, u := range clients {

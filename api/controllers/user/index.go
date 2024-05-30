@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
 
 type IndexUserDTO struct {
@@ -15,7 +14,7 @@ type IndexUserDTO struct {
 	CreatedAt int64
 }
 
-func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
 	users := persistence.UserRepository.GetAll()
 	usersDTO := []IndexUserDTO{}
 	for _, u := range users {

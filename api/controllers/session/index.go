@@ -6,10 +6,9 @@ import (
 	"net/http"
 
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
 
-func (sc SessionController) GetSessions(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (sc SessionController) GetSessions(w http.ResponseWriter, r *http.Request) {
 	sessions := persistence.SessionRepository.GetAll()
 	if res, err := json.Marshal(sessions); err != nil {
 		slog.Error("error marshaling session rows", "err", err)

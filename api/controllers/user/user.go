@@ -8,26 +8,23 @@ import (
 	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
-
-const resourceName string = "/users"
 
 type UserController struct {
 }
 
-func New() *UserController {
+func NewController() *UserController {
 	return &UserController{}
 }
 
-func (uc UserController) RegisterRoutes(r *httprouter.Router) {
-	r.GET(resourceName, middlewares.Authenticated(uc.GetUsers))
-	r.POST(resourceName, middlewares.Authenticated(uc.CreateUser))
-	r.DELETE(resourceName+"/:id", middlewares.Authenticated(uc.DeleteUser))
+func (uc UserController) RegisterRoutes(r *http.ServeMux) {
+	r.HandleFunc("GET /users", middlewares.Authenticated(uc.GetUsers))
+	r.HandleFunc("POST /users", middlewares.Authenticated(uc.CreateUser))
+	r.HandleFunc("DELETE /users/{id}", middlewares.Authenticated(uc.DeleteUser))
 }
 
-func (uc UserController) getOne(w http.ResponseWriter, r *http.Request, p httprouter.Params) (model.User, error) {
-	id := p.ByName("id")
+func (uc UserController) getOne(w http.ResponseWriter, r *http.Request) (model.User, error) {
+	id := r.PathValue("id")
 
 	idNum, err := strconv.Atoi(id)
 	if err != nil {

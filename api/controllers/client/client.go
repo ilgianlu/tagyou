@@ -8,27 +8,24 @@ import (
 	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
-
-const resourceName string = "/clients"
 
 type ClientController struct {
 }
 
-func New() *ClientController {
+func NewController() *ClientController {
 	return &ClientController{}
 }
 
-func (uc ClientController) RegisterRoutes(r *httprouter.Router) {
-	r.GET(resourceName, middlewares.Authenticated(uc.GetClients))
-	r.GET(resourceName+"/:id", middlewares.Authenticated(uc.GetClient))
-	r.POST(resourceName, middlewares.Authenticated(uc.CreateClient))
-	r.DELETE(resourceName+"/:id", middlewares.Authenticated(uc.DeleteClient))
+func (uc ClientController) RegisterRoutes(r *http.ServeMux) {
+	r.HandleFunc("GET /clients", middlewares.Authenticated(uc.GetClients))
+	r.HandleFunc("GET /clients/{id}", middlewares.Authenticated(uc.GetClient))
+	r.HandleFunc("POST /clients", middlewares.Authenticated(uc.CreateClient))
+	r.HandleFunc("DELETE /clients/{id}", middlewares.Authenticated(uc.DeleteClient))
 }
 
-func (uc ClientController) getOne(w http.ResponseWriter, r *http.Request, p httprouter.Params) (model.Client, error) {
-	id := p.ByName("id")
+func (uc ClientController) getOne(w http.ResponseWriter, r *http.Request) (model.Client, error) {
+	id := r.PathValue("id")
 
 	idNum, err := strconv.Atoi(id)
 	if err != nil {
