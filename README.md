@@ -23,8 +23,42 @@ http apis are always authenticated, unlike the mqtt clients. First user to be cr
 To set your password for "admin", at first launch, pass INIT_ADMIN_PASSWORD as env var so a user with username "admin" is created with selected password and you can start use apis (to create more users? register clients ?). All users can access everything.
 
 ```
-docker run -e INIT_ADMIN_PASSWORD=my_fantastic_secure_password ilgianlu/tagyou
+docker run -e INIT_ADMIN_PASSWORD=my_fantastic_secure_password -e INIT_DB=true ilgianlu/tagyou
 ```
+
+## apis
+
+### auth and calling
+
+to authenticate and get an api token :
+
+```
+curl -v http://localhost:8080/auth -d '{"Username":"admin","InputPassword":"my_fantastic_secure_password"}'
+```
+
+response :
+
+```
+{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiO....."}
+```
+
+Use Authorization header in api calls
+
+```
+curl -H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQ......" http://localhost:8080/clients
+```
+
+### available resources
+* POST /auth
+* GET /clients
+* GET /clients/{id}
+* POST /clients
+* DELETE /clients/{id}
+* GET /sessions
+* GET /subscriptions
+* GET /users
+* POST /users
+* DELETE /users/{id}
 
 ## deploy
 
