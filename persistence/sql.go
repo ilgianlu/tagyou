@@ -66,6 +66,7 @@ func (p *SqlPersistence) InnerInit(db *dbaccess.Queries, startSessionCleaner boo
 
 	if len(newAdminPassword) > 0 {
 		sqlrepository.AdminPasswordReset(db, newAdminPassword)
+		os.Exit(0)
 	}
 	if startSessionCleaner {
 		sqlrepository.StartSessionCleaner(db)
