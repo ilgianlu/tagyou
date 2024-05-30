@@ -13,14 +13,13 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/routers"
-	"github.com/julienschmidt/httprouter"
 	"nhooyr.io/websocket"
 )
 
 func StartWebSocket(port string, router routers.Router) {
-	r := httprouter.New()
-	r.GET("/ws", AcceptWebsocket(router))
-	r.POST("/messages", middlewares.Authenticated(PostMessage(router)))
+	r := http.NewServeMux()
+	r.HandleFunc("GET /ws", AcceptWebsocket(router))
+	r.HandleFunc("POST /messages", middlewares.Authenticated(PostMessage(router)))
 
 	slog.Info("[WS] websocket listening on", "tcp-port", port)
 	if err := http.ListenAndServe(port, r); err != nil {
@@ -29,8 +28,8 @@ func StartWebSocket(port string, router routers.Router) {
 	}
 }
 
-func AcceptWebsocket(router routers.Router) func(http.ResponseWriter, *http.Request, httprouter.Params) {
-	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func AcceptWebsocket(router routers.Router) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			Subprotocols: []string{"mqtt"},
 		})
@@ -58,8 +57,8 @@ func AcceptWebsocket(router routers.Router) func(http.ResponseWriter, *http.Requ
 	}
 }
 
-func PostMessage(router routers.Router) func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func PostMessage(router routers.Router) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		mess := model.Message{}
 		if err := json.NewDecoder(r.Body).Decode(&mess); err != nil {
 			slog.Error("[WS] error decoding json input", "err", err)

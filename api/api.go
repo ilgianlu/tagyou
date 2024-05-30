@@ -4,30 +4,28 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
-
-	AuthController "github.com/ilgianlu/tagyou/api/controllers/auth"
-	ClientController "github.com/ilgianlu/tagyou/api/controllers/client"
-	SessionController "github.com/ilgianlu/tagyou/api/controllers/session"
-	SubscriptionController "github.com/ilgianlu/tagyou/api/controllers/subscription"
-	UserController "github.com/ilgianlu/tagyou/api/controllers/user"
+	"github.com/ilgianlu/tagyou/api/controllers/auth"
+	"github.com/ilgianlu/tagyou/api/controllers/client"
+	"github.com/ilgianlu/tagyou/api/controllers/session"
+	"github.com/ilgianlu/tagyou/api/controllers/subscription"
+	"github.com/ilgianlu/tagyou/api/controllers/user"
 )
 
 func StartApi(httpPort string) {
-	r := httprouter.New()
-	ac := AuthController.New()
-	ac.RegisterRoutes(r)
-	uc := ClientController.New()
-	uc.RegisterRoutes(r)
-	sc := SessionController.New()
-	sc.RegisterRoutes(r)
-	subc := SubscriptionController.New()
-	subc.RegisterRoutes(r)
-	usrc := UserController.New()
-	usrc.RegisterRoutes(r)
+	mux := http.NewServeMux()
+	authController := auth.NewController()
+	authController.RegisterRoutes(mux)
+	clientController := client.NewController()
+	clientController.RegisterRoutes(mux)
+	sc := session.NewController()
+	sc.RegisterRoutes(mux)
+	subc := subscription.NewController()
+	subc.RegisterRoutes(mux)
+	usrc := user.NewController()
+	usrc.RegisterRoutes(mux)
 
 	slog.Info("[API] http start listening", "port", httpPort)
-	if err := http.ListenAndServe(httpPort, r); err != nil {
+	if err := http.ListenAndServe(httpPort, mux); err != nil {
 		slog.Error("[API] http listener broken", "err", err)
 		panic(1)
 	}

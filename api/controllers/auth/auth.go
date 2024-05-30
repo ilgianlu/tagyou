@@ -1,18 +1,16 @@
 package auth
 
 import (
-	"github.com/julienschmidt/httprouter"
+	"net/http"
 )
-
-const resourceName string = "/auth"
 
 type AuthController struct {
 }
 
-func New() *AuthController {
+func NewController() *AuthController {
 	return &AuthController{}
 }
 
-func (uc AuthController) RegisterRoutes(r *httprouter.Router) {
-	r.POST(resourceName, uc.CreateToken)
+func (ac AuthController) RegisterRoutes(r *http.ServeMux) {
+	r.HandleFunc("POST /auth", ac.CreateToken)
 }

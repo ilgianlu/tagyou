@@ -9,7 +9,6 @@ import (
 	"github.com/ilgianlu/tagyou/jwt"
 	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
 
 type CreateTokenDTO struct {
@@ -21,7 +20,7 @@ type CreateTokenResponse struct {
 	Token string `json:"token"`
 }
 
-func (uc AuthController) CreateToken(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (ac AuthController) CreateToken(w http.ResponseWriter, r *http.Request) {
 	user := CreateTokenDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		slog.Error("error decoding json input", "err", err)

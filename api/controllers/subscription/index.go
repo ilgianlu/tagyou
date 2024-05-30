@@ -6,10 +6,9 @@ import (
 	"net/http"
 
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
 
-func (sc SubscriptionController) GetSubscriptions(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (sc SubscriptionController) GetSubscriptions(w http.ResponseWriter, r *http.Request) {
 	subscriptions := persistence.SubscriptionRepository.GetAll()
 	if res, err := json.Marshal(subscriptions); err != nil {
 		slog.Error("error marshaling subscriptions rows", "err", err)

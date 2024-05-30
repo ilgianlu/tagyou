@@ -6,11 +6,10 @@ import (
 
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/jwt"
-	"github.com/julienschmidt/httprouter"
 )
 
-func Authenticated(h httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func Authenticated(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		authorization := r.Header.Get("Authorization")
 		if authorization == "" {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -23,6 +22,6 @@ func Authenticated(h httprouter.Handle) httprouter.Handle {
 		}
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, CONTEXT_KEY_USER_ID, result.UserId)
-		h(w, r.WithContext(ctx), ps)
+		h(w, r.WithContext(ctx))
 	}
 }

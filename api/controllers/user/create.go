@@ -9,7 +9,6 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
 
 type CreateUserDTO struct {
@@ -28,7 +27,7 @@ func (a *CreateUserDTO) Validate() bool {
 	return true
 }
 
-func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	user := CreateUserDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		slog.Error("error decoding json input", "err", err)

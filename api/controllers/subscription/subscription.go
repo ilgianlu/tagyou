@@ -1,19 +1,18 @@
 package subscription
 
 import (
-	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
-	"github.com/julienschmidt/httprouter"
-)
+	"net/http"
 
-const resourceName string = "/subscriptions"
+	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
+)
 
 type SubscriptionController struct {
 }
 
-func New() *SubscriptionController {
+func NewController() *SubscriptionController {
 	return &SubscriptionController{}
 }
 
-func (sc SubscriptionController) RegisterRoutes(r *httprouter.Router) {
-	r.GET(resourceName, middlewares.Authenticated(sc.GetSubscriptions))
+func (sc SubscriptionController) RegisterRoutes(r *http.ServeMux) {
+	r.HandleFunc("GET /subscriptions", middlewares.Authenticated(sc.GetSubscriptions))
 }

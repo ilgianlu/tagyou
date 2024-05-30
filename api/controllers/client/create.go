@@ -9,7 +9,6 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/julienschmidt/httprouter"
 )
 
 type CreateClientDTO struct {
@@ -31,7 +30,7 @@ func (a *CreateClientDTO) Validate() bool {
 	return true
 }
 
-func (uc ClientController) CreateClient(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (uc ClientController) CreateClient(w http.ResponseWriter, r *http.Request) {
 	client := CreateClientDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&client); err != nil {
 		slog.Error("error decoding json input", "err", err)

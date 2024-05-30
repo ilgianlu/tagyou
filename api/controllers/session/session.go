@@ -1,19 +1,18 @@
 package session
 
 import (
-	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
-	"github.com/julienschmidt/httprouter"
-)
+	"net/http"
 
-const resourceName string = "/sessions"
+	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
+)
 
 type SessionController struct {
 }
 
-func New() *SessionController {
+func NewController() *SessionController {
 	return &SessionController{}
 }
 
-func (sc SessionController) RegisterRoutes(r *httprouter.Router) {
-	r.GET(resourceName, middlewares.Authenticated(sc.GetSessions))
+func (sc SessionController) RegisterRoutes(r *http.ServeMux) {
+	r.HandleFunc("GET /sessions", middlewares.Authenticated(sc.GetSessions))
 }

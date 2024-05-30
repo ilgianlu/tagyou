@@ -10,7 +10,6 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 
-	"github.com/julienschmidt/httprouter"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -27,10 +26,9 @@ func TestGetSessions(t *testing.T) {
 	// db.LogMode(true)
 	defer closeDb(dbConn)
 	r := httptest.NewRequest(http.MethodGet, "/sessions", nil)
-	sc := New()
+	sc := NewController()
 	recorder := httptest.NewRecorder()
-	params := httprouter.Params{}
-	sc.GetSessions(recorder, r, params)
+	sc.GetSessions(recorder, r)
 	if recorder.Code != 200 {
 		t.Errorf("expecting code 200, received %d", recorder.Code)
 	}
