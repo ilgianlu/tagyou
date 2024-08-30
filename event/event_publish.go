@@ -25,7 +25,7 @@ func OnPublish(router routers.Router, session *model.RunningSession, p *packet.P
 		slog.Debug("[PUBLISH] to retain")
 		saveRetain(session, p)
 	}
-	router.Forward(p.Topic, p)
+	router.Forward(session.GetClientId(), p.Topic, p)
 	if p.QoS() == conf.QOS1 {
 		slog.Debug("[PUBLISH] QoS 1 return ACK", "packet-identifier", p.PacketIdentifier())
 		sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_SUCCESS)

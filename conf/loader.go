@@ -77,4 +77,9 @@ func Loader() {
 	if s != "" {
 		INIT_ADMIN_PASSWORD = []byte(s)
 	}
+
+	s = os.Getenv("ROUTER_MODE")
+	if s != "" {
+		ROUTER_MODE = s
+	}
 }

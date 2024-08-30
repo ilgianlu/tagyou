@@ -1,13 +1,10 @@
 package conf
 
-// MatcherBasic Matcher with only full text match
-var MatcherBasic int = 0
+// Router modes:
+// "standard" router acts as standard mqtt router
+// "simple" stripped down router, match only fulltext topics, ignores pounds and pluses special chars
+// "debug" act as "standard" but also dump all published messages to debug file
+var ROUTER_MODE string = "standard"
 
-// MatcherMultilevelOnly matcher using MatcherBasic and multilevel pound sign
-var MatcherMultilevelOnly int = 10
-
-// MatcherFull matcher using multilevel pound sign and single level plus sign
-var MatcherFull int = 100
-
-// Matcher current matcher type
-var Matcher int = 100
+// with router mode "debug": use this file to write traffic
+var DEBUG_FILE string = "traffic.debug"
