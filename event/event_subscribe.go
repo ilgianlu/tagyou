@@ -6,7 +6,6 @@ import (
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
-	tpc "github.com/ilgianlu/tagyou/topic"
 )
 
 func onSubscribe(router routers.Router, session *model.RunningSession, p *packet.Packet) {
@@ -38,19 +37,7 @@ func clientSubscription(router routers.Router, session *model.RunningSession, su
 	// db.Create(&subscription)
 	persistence.SubscriptionRepository.CreateOne(subscription)
 	if !subscription.Shared {
-		sendRetain(router, protocolVersion, subscription)
+		router.SendRetain(protocolVersion, subscription)
 	}
 	return 0
-}
-
-func sendRetain(router routers.Router, protocolVersion uint8, subscription model.Subscription) {
-	dests := tpc.Explode(subscription.Topic)
-	retains := persistence.RetainRepository.FindRetains(dests)
-	if len(retains) == 0 {
-		return
-	}
-	for _, r := range retains {
-		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		router.Send(subscription.ClientId, p.ToByteSlice())
-	}
 }

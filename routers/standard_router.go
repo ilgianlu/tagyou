@@ -2,7 +2,8 @@ package routers
 
 import (
 	"log/slog"
-	"math/rand"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -11,15 +12,15 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-type SimpleRouter struct {
+type StandardRouter struct {
 	Conns Connections
 }
 
-func (s SimpleRouter) AddDestination(clientId string, conn model.TagyouConn) {
+func (s StandardRouter) AddDestination(clientId string, conn model.TagyouConn) {
 	s.Conns.Add(clientId, conn)
 }
 
-func (s SimpleRouter) RemoveDestination(clientId string) {
+func (s StandardRouter) RemoveDestination(clientId string) {
 	err := s.Conns.Close(clientId)
 	if err != nil {
 		slog.Debug("could not close connection", "client-id", clientId, "err", err)
@@ -27,12 +28,12 @@ func (s SimpleRouter) RemoveDestination(clientId string) {
 	s.Conns.Remove(clientId)
 }
 
-func (s SimpleRouter) DestinationExists(clientId string) bool {
+func (s StandardRouter) DestinationExists(clientId string) bool {
 	_, exists := s.Conns.Exists(clientId)
 	return exists
 }
 
-func (s SimpleRouter) Send(clientId string, payload []byte) {
+func (s StandardRouter) Send(clientId string, payload []byte) {
 	conn, exists := s.Conns.Exists(clientId)
 	if exists {
 		if conn == nil {
@@ -49,14 +50,14 @@ func (s SimpleRouter) Send(clientId string, payload []byte) {
 	}
 }
 
-func (s SimpleRouter) Forward(senderId string, topic string, p *packet.Packet) {
-	destSubs := []string{topic}
+func (s StandardRouter) Forward(senderId string, topic string, p *packet.Packet) {
+	destSubs := explodeFull(topic)
 	s.sendSubscribers(topic, destSubs, p)
 	s.sendSharedSubscribers(topic, destSubs, p)
 }
 
-func (s SimpleRouter) SendRetain(protocolVersion uint8, subscription model.Subscription) {
-	dests := []string{subscription.Topic}
+func (s StandardRouter) SendRetain(protocolVersion uint8, subscription model.Subscription) {
+	dests := explodeFull(subscription.Topic)
 	retains := persistence.RetainRepository.FindRetains(dests)
 	if len(retains) == 0 {
 		return
@@ -67,14 +68,14 @@ func (s SimpleRouter) SendRetain(protocolVersion uint8, subscription model.Subsc
 	}
 }
 
-func (s SimpleRouter) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s StandardRouter) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
 	subs := persistence.SubscriptionRepository.FindSubscriptions(destSubs, false)
 	for _, sub := range subs {
 		s.forwardSend(topic, sub, p)
 	}
 }
 
-func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s StandardRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
 	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true)
 	grouped := groupSubscribers(subs)
 	for _, group := range grouped {
@@ -83,31 +84,7 @@ func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p *
 	}
 }
 
-func pickDest(group []model.Subscription, mode int8) model.Subscription {
-	if mode == 0 {
-		return group[0]
-	}
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	i := r.Intn(len(group))
-	slog.Debug("picked client", "client-id", group[i].ClientId)
-	return group[i]
-}
-
-func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
-	grouped := model.SubscriptionGroup{}
-	for _, s := range subs {
-		if val, ok := grouped[s.ShareName]; ok {
-			if persistence.SessionRepository.IsOnline(s.SessionID) {
-				grouped[s.ShareName] = append(val, s)
-			}
-		} else {
-			grouped[s.ShareName] = []model.Subscription{s}
-		}
-	}
-	return grouped
-}
-
-func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packet.Packet) {
+func (s StandardRouter) forwardSend(topic string, sub model.Subscription, p *packet.Packet) {
 	qos := getQos(p.QoS(), sub.Qos)
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier
@@ -144,10 +121,39 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packe
 	}
 }
 
-func getQos(pubQos uint8, subQos uint8) uint8 {
-	if pubQos > subQos {
-		return subQos
-	} else {
-		return pubQos
+func explodeFull(topic string) []string {
+	road := strings.Split(topic, conf.LEVEL_SEPARATOR)
+	res := []string{"#"}
+	for i := 1; i <= len(road); i++ {
+		subRoads := explodeSingleLevel(road[:i])
+		for _, subRoad := range subRoads {
+			if i != len(road) {
+				subRoad = append(subRoad, conf.WILDCARD_MULTI_LEVEL)
+			}
+			res = append(res, strings.Join(subRoad, "/"))
+		}
 	}
+	return res
+}
+
+func explodeSingleLevel(road []string) [][]string {
+	res := [][]string{}
+	l := math.Pow(2, float64(len(road)))
+	for i := 0; i < int(l); i++ {
+		res = append(res, singleLevel(road, i))
+	}
+	return res
+}
+
+func singleLevel(road []string, i int) []string {
+	ss := []string{}
+	for p, e := range road {
+		o := i & (1 << p)
+		if o > 0 {
+			ss = append(ss, conf.WILDCARD_SINGLE_LEVEL)
+		} else {
+			ss = append(ss, e)
+		}
+	}
+	return ss
 }

@@ -32,3 +32,6 @@ sqlc/dbaccess
 
 # main binary
 tagyou
+
+# debug file
+*.debug

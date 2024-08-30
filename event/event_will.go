@@ -23,7 +23,7 @@ func sendWill(router routers.Router, session *model.RunningSession) {
 			willPacket.Topic = session.WillTopic
 			saveRetain(session, &willPacket)
 		}
-		router.Forward(session.WillTopic, &willPacket)
+		router.Forward(session.GetClientId(), session.WillTopic, &willPacket)
 	}
 }
 

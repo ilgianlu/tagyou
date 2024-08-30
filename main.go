@@ -32,7 +32,20 @@ func main() {
 	p := persistence.SqlPersistence{}
 	p.Init()
 
-	router := routers.NewSimple()
+	var router routers.Router
+	if conf.ROUTER_MODE == "debug" {
+		file, err := os.Create(conf.DEBUG_FILE)
+		if err != nil {
+			slog.Error("Could write debug file", "err", err)
+			panic(1)
+		}
+		defer file.Close()
+		router = routers.NewDebug(file)
+	} else if conf.ROUTER_MODE == "simple" {
+		router = routers.NewSimple()
+	} else {
+		router = routers.NewStandard()
+	}
 
 	go api.StartApi(os.Getenv("API_PORT"))
 	go mqtt.StartWebSocket(os.Getenv("WS_PORT"), router)

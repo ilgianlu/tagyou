@@ -1,8 +1,9 @@
 package routers
 
 import (
+	"encoding/json"
 	"log/slog"
-	"math/rand"
+	"os"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -11,15 +12,22 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-type SimpleRouter struct {
-	Conns Connections
+type DebugRouter struct {
+	Conns     Connections
+	DebugFile *os.File
 }
 
-func (s SimpleRouter) AddDestination(clientId string, conn model.TagyouConn) {
+type debugMessage struct {
+	SenderId string
+	Topic    string
+	Payload  string
+}
+
+func (s DebugRouter) AddDestination(clientId string, conn model.TagyouConn) {
 	s.Conns.Add(clientId, conn)
 }
 
-func (s SimpleRouter) RemoveDestination(clientId string) {
+func (s DebugRouter) RemoveDestination(clientId string) {
 	err := s.Conns.Close(clientId)
 	if err != nil {
 		slog.Debug("could not close connection", "client-id", clientId, "err", err)
@@ -27,12 +35,12 @@ func (s SimpleRouter) RemoveDestination(clientId string) {
 	s.Conns.Remove(clientId)
 }
 
-func (s SimpleRouter) DestinationExists(clientId string) bool {
+func (s DebugRouter) DestinationExists(clientId string) bool {
 	_, exists := s.Conns.Exists(clientId)
 	return exists
 }
 
-func (s SimpleRouter) Send(clientId string, payload []byte) {
+func (s DebugRouter) Send(clientId string, payload []byte) {
 	conn, exists := s.Conns.Exists(clientId)
 	if exists {
 		if conn == nil {
@@ -49,14 +57,15 @@ func (s SimpleRouter) Send(clientId string, payload []byte) {
 	}
 }
 
-func (s SimpleRouter) Forward(senderId string, topic string, p *packet.Packet) {
-	destSubs := []string{topic}
+func (s DebugRouter) Forward(senderId string, topic string, p *packet.Packet) {
+	destSubs := explodeFull(topic)
 	s.sendSubscribers(topic, destSubs, p)
 	s.sendSharedSubscribers(topic, destSubs, p)
+	s.sendDebug(senderId, topic, p)
 }
 
-func (s SimpleRouter) SendRetain(protocolVersion uint8, subscription model.Subscription) {
-	dests := []string{subscription.Topic}
+func (s DebugRouter) SendRetain(protocolVersion uint8, subscription model.Subscription) {
+	dests := explodeFull(subscription.Topic)
 	retains := persistence.RetainRepository.FindRetains(dests)
 	if len(retains) == 0 {
 		return
@@ -67,14 +76,32 @@ func (s SimpleRouter) SendRetain(protocolVersion uint8, subscription model.Subsc
 	}
 }
 
-func (s SimpleRouter) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) {
+	data := debugMessage{
+		SenderId: senderId,
+		Topic:    topic,
+		Payload:  string(p.ApplicationMessage()),
+	}
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		slog.Debug("error encoding to json debug", "error", err)
+		return
+	}
+	_, err = s.DebugFile.Write(jsonBytes)
+	if err != nil {
+		slog.Debug("error writing to debug file", "error", err)
+		return
+	}
+}
+
+func (s DebugRouter) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
 	subs := persistence.SubscriptionRepository.FindSubscriptions(destSubs, false)
 	for _, sub := range subs {
 		s.forwardSend(topic, sub, p)
 	}
 }
 
-func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s DebugRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
 	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true)
 	grouped := groupSubscribers(subs)
 	for _, group := range grouped {
@@ -83,31 +110,7 @@ func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p *
 	}
 }
 
-func pickDest(group []model.Subscription, mode int8) model.Subscription {
-	if mode == 0 {
-		return group[0]
-	}
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	i := r.Intn(len(group))
-	slog.Debug("picked client", "client-id", group[i].ClientId)
-	return group[i]
-}
-
-func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
-	grouped := model.SubscriptionGroup{}
-	for _, s := range subs {
-		if val, ok := grouped[s.ShareName]; ok {
-			if persistence.SessionRepository.IsOnline(s.SessionID) {
-				grouped[s.ShareName] = append(val, s)
-			}
-		} else {
-			grouped[s.ShareName] = []model.Subscription{s}
-		}
-	}
-	return grouped
-}
-
-func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packet.Packet) {
+func (s DebugRouter) forwardSend(topic string, sub model.Subscription, p *packet.Packet) {
 	qos := getQos(p.QoS(), sub.Qos)
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier
@@ -141,13 +144,5 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packe
 		}
 		persistence.RetryRepository.InsertOne(r)
 		s.Send(r.ClientId, p.ToByteSlice())
-	}
-}
-
-func getQos(pubQos uint8, subQos uint8) uint8 {
-	if pubQos > subQos {
-		return subQos
-	} else {
-		return pubQos
 	}
 }
