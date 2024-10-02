@@ -6,7 +6,9 @@ SOURCE_FILE = main.go
 
 # Build target
 build:
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 	cd sqlc && sqlc generate
+	go mod tidy
 	go test ./...
 	go build -o $(BINARY_NAME) $(SOURCE_FILE)
 
