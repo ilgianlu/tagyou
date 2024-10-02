@@ -18,6 +18,13 @@ Development is driven by :
 
 * futuristic support for controlling security and control through machine learning
 
+## build locally
+there is a very simple Makefile in the project root.
+
+* make build : install dependencies and build the project
+* make clean : remove any user/build data
+* make init : remove any user data to start with an empty db and new admin password
+
 ## first start
 http apis are always authenticated, unlike the mqtt clients. First user to be created is "admin".
 To set your password for "admin", at first launch, pass INIT_ADMIN_PASSWORD as env var so a user with username "admin" is created with selected password and you can start use apis (to create more users? register clients ?). All users can access everything.
@@ -71,7 +78,7 @@ Tag "latest" is continuously refresh by github actions built on main branch.
 
 ## contribution
 
-I'm developing on linux, visual studio code, go lang 1.20.
+I'm developing on linux, visual studio code, go lang 1.23.
 
 Build and modify should not more difficult than cloning the repo, branching, opening a pull request. Please open an issue before contributing and feel free to include @ilgianlu
 for the review.
