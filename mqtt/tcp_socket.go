@@ -10,6 +10,7 @@ import (
 	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
 )
 
@@ -41,6 +42,7 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 
 	events := make(chan *packet.Packet)
 	go event.RangeEvents(router, &session, events)
+	defer disconnectClient(router, &session, events)
 
 	scanner := bufio.NewScanner(conn)
 	scanner.Split(packetSplit(&session, events))
@@ -68,7 +70,6 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(keepAlive*2) * time.Second))
 		if derr != nil {
 			slog.Error("[MQTT] cannot set read deadline", "err", derr)
-			defer conn.Close()
 		}
 
 		events <- &p
@@ -101,7 +102,6 @@ func onSocketUpButSilent(session *model.RunningSession, events chan<- *packet.Pa
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] will due to keepalive not respected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
 		willEvent(events)
-		disconnectClient(events)
 		return true
 	}
 	return false
@@ -112,7 +112,6 @@ func onSocketDownClosed(session *model.RunningSession, events chan<- *packet.Pac
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] will due to socket down!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
 		willEvent(events)
-		disconnectClient(events)
 		return true
 	}
 	return false
@@ -123,7 +122,15 @@ func willEvent(e chan<- *packet.Packet) {
 	e <- &p
 }
 
-func disconnectClient(e chan<- *packet.Packet) {
+func disconnectClient(router routers.Router, session *model.RunningSession, e chan<- *packet.Packet) {
+	session.Mu.RLock()
+	clientId := session.ClientId
+	session.Mu.RUnlock()
+	if clientId != "" {
+		router.RemoveDestination(clientId)
+		persistence.SessionRepository.DisconnectSession(clientId)
+	}
 	p := packet.Packet{Event: packet.EVENT_DISCONNECT}
 	e <- &p
+	close(e)
 }
