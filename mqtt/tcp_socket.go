@@ -89,7 +89,7 @@ func packetSplit(session *model.RunningSession, events chan<- *packet.Packet) fu
 			if !atEOF {
 				return 0, nil, nil
 			}
-			slog.Debug("[MQTT] error reading bytes - session", "client-id", session.GetClientId(), err, err.Error())
+			slog.Debug("[MQTT] error reading bytes - session", "client-id", session.GetClientId(), "err", err.Error())
 			return 0, pb, bufio.ErrFinalToken
 		}
 		return len(pb), pb, nil
