@@ -32,26 +32,33 @@ func main() {
 	p := persistence.SqlPersistence{}
 	p.Init()
 
-	var router routers.Router
-	if conf.ROUTER_MODE == "debug" {
-		file, err := os.Create(conf.DEBUG_FILE)
-		if err != nil {
-			slog.Error("Could write debug file", "err", err)
-			panic(1)
-		}
-		defer file.Close()
-		router = routers.NewDebug(file)
-	} else if conf.ROUTER_MODE == "simple" {
-		router = routers.NewSimple()
-	} else {
-		router = routers.NewStandard()
-	}
+	router := selectRouter(conf.ROUTER_MODE)
 
 	go api.StartApi(os.Getenv("API_PORT"))
 	go mqtt.StartWebSocket(os.Getenv("WS_PORT"), router)
 	go mqtt.StartMQTT(os.Getenv("LISTEN_PORT"), router)
 
 	<-c
+}
+
+func selectRouter(mode string) routers.Router {
+	switch mode {
+	case conf.ROUTER_MODE_DEBUG:
+		slog.Debug("debug router")
+		file, err := os.Create(conf.DEBUG_FILE)
+		if err != nil {
+			slog.Error("Could write debug file", "err", err)
+			panic(1)
+		}
+		defer file.Close()
+		return routers.NewDebug(file)
+	case conf.ROUTER_MODE_SIMPLE:
+		slog.Debug("simple router")
+		return routers.NewSimple()
+	default:
+		slog.Debug("standard router")
+		return routers.NewStandard()
+	}
 }
 
 func loadEnv() error {
