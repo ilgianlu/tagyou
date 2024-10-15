@@ -57,8 +57,6 @@ const EVENT_DISCONNECT = 100
 const EVENT_KEEPALIVE_TIMEOUT = 101
 const EVENT_WILL_SEND = 102
 
-const EVENT_PACKET_ERR = 1000
-
 type Packet struct {
 	// header
 	header               byte
