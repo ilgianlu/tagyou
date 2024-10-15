@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/routers"
-	"nhooyr.io/websocket"
 )
 
 func StartWebSocket(port string, router routers.Router) {
