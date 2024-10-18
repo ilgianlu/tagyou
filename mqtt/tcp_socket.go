@@ -125,7 +125,5 @@ func disconnectClient(router routers.Router, session *model.RunningSession, e ch
 		router.RemoveDestination(clientId)
 		persistence.SessionRepository.DisconnectSession(clientId)
 	}
-	p := packet.Packet{Event: packet.EVENT_DISCONNECT}
-	e <- &p
 	close(e)
 }

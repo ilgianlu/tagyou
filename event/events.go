@@ -26,7 +26,7 @@ func managePacket(router routers.Router, session *model.RunningSession, p *packe
 	}
 	switch p.PacketType() {
 	case packet.PACKET_TYPE_CONNECT:
-		slog.Debug("//!! EVENT client connect", "packet-type", p.PacketType, "client-id", session.GetClientId())
+		slog.Debug("//!! EVENT client connect", "packet-type", p.PacketType(), "client-id", session.GetClientId())
 		if session.GetConnected() {
 			slog.Debug("//!! EVENT double connect event, disconnecting...", "client-id", session.GetClientId())
 			clientDisconnect(router, session, session.GetClientId())
