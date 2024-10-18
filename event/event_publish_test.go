@@ -92,7 +92,7 @@ func TestPublish(t *testing.T) {
 	p.Event = packet.EVENT_PUBLISH
 	p.Topic = topic
 
-	manageEvent(router, &publisherSession, &p)
+	managePacket(router, &publisherSession, &p)
 
 	if !router.DestinationExists("publisher") {
 		t.Errorf("expected publisher to exist in router, received false")

@@ -47,7 +47,7 @@ func AcceptWebsocket(router routers.Router) func(http.ResponseWriter, *http.Requ
 		}
 
 		events := make(chan *packet.Packet)
-		go event.RangeEvents(router, &session, events)
+		go event.RangePackets(router, &session, events)
 
 		bytesFromWs := make(chan []byte)
 		defer close(bytesFromWs)

@@ -41,11 +41,11 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 	}
 
 	events := make(chan *packet.Packet)
-	go event.RangeEvents(router, &session, events)
+	go event.RangePackets(router, &session, events)
 	defer disconnectClient(router, &session, events)
 
 	scanner := bufio.NewScanner(conn)
-	scanner.Split(packetSplit(router,&session))
+	scanner.Split(packetSplit(router, &session))
 
 	for scanner.Scan() {
 		err := scanner.Err()
@@ -101,7 +101,7 @@ func onSocketUpButSilent(router routers.Router, session *model.RunningSession) b
 	slog.Debug("[MQTT] keepalive not respected!", "keep-alive", session.KeepAlive*2)
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] will due to keepalive not respected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
-    event.SendWill(router, session)
+		event.SendWill(router, session)
 		return true
 	}
 	return false
