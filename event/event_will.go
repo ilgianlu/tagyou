@@ -9,7 +9,7 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func sendWill(router routers.Router, session *model.RunningSession) {
+func SendWill(router routers.Router, session *model.RunningSession) {
 	session.Mu.RLock()
 	defer session.Mu.RUnlock()
 	if session.WillTopic != "" {

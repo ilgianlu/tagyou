@@ -45,13 +45,13 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 	defer disconnectClient(router, &session, events)
 
 	scanner := bufio.NewScanner(conn)
-	scanner.Split(packetSplit(&session, events))
+	scanner.Split(packetSplit(router,&session))
 
 	for scanner.Scan() {
 		err := scanner.Err()
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
-				onSocketUpButSilent(&session, events)
+				onSocketUpButSilent(router, &session)
 			}
 		}
 
@@ -76,10 +76,10 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 	}
 }
 
-func packetSplit(session *model.RunningSession, events chan<- *packet.Packet) func(b []byte, atEOF bool) (int, []byte, error) {
+func packetSplit(router routers.Router, session *model.RunningSession) func(b []byte, atEOF bool) (int, []byte, error) {
 	return func(b []byte, atEOF bool) (advance int, token []byte, err error) {
 		if len(b) == 0 && atEOF {
-			wasConnected := onSocketDownClosed(session, events)
+			wasConnected := onSocketDownClosed(router, session)
 			if wasConnected {
 				return 0, nil, nil
 			}
@@ -97,29 +97,24 @@ func packetSplit(session *model.RunningSession, events chan<- *packet.Packet) fu
 	}
 }
 
-func onSocketUpButSilent(session *model.RunningSession, events chan<- *packet.Packet) bool {
+func onSocketUpButSilent(router routers.Router, session *model.RunningSession) bool {
 	slog.Debug("[MQTT] keepalive not respected!", "keep-alive", session.KeepAlive*2)
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] will due to keepalive not respected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
-		willEvent(events)
+    event.SendWill(router, session)
 		return true
 	}
 	return false
 }
 
-func onSocketDownClosed(session *model.RunningSession, events chan<- *packet.Packet) bool {
+func onSocketDownClosed(router routers.Router, session *model.RunningSession) bool {
 	slog.Debug("[MQTT] socket down closed!")
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] will due to socket down!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
-		willEvent(events)
+		event.SendWill(router, session)
 		return true
 	}
 	return false
-}
-
-func willEvent(e chan<- *packet.Packet) {
-	p := packet.Packet{Event: packet.EVENT_WILL_SEND}
-	e <- &p
 }
 
 func disconnectClient(router routers.Router, session *model.RunningSession, e chan<- *packet.Packet) {

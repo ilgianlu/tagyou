@@ -58,9 +58,6 @@ func manageEvent(router routers.Router, session *model.RunningSession, p *packet
 	case packet.EVENT_DISCONNECT:
 		slog.Debug("//!! EVENT client disconnect", "event-type", p.Event, "client-id", session.GetClientId())
 		clientDisconnect(router, session, session.GetClientId())
-	case packet.EVENT_WILL_SEND:
-		slog.Debug("//!! EVENT sending will message", "event-type", p.Event, "client-id", session.GetClientId())
-		sendWill(router, session)
 	}
 }
 
