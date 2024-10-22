@@ -18,7 +18,7 @@ import (
 type SqlPersistence struct {
 }
 
-var dbFile = conf.DB_PATH + conf.DB_NAME
+var dbFile string
 
 func (p SqlPersistence) Init() error {
 	if conf.INIT_DB {
@@ -78,6 +78,7 @@ func (p *SqlPersistence) InnerInit(db *dbaccess.Queries, startSessionCleaner boo
 }
 
 func openDb() (*sql.DB, error) {
+	dbFile = conf.DB_PATH + "/" + conf.DB_NAME
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
 		return db, err

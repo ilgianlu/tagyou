@@ -6,8 +6,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	dotenv "github.com/joho/godotenv"
-
 	"github.com/ilgianlu/tagyou/api"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/log"
@@ -20,11 +18,6 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	err := loadEnv()
-	if err != nil {
-		slog.Error("Could not load env", "err", err)
-		panic(1)
-	}
 	conf.Loader()
 
 	log.Init()
@@ -34,9 +27,9 @@ func main() {
 
 	router := selectRouter(conf.ROUTER_MODE)
 
-	go api.StartApi(os.Getenv("API_PORT"))
-	go mqtt.StartWebSocket(os.Getenv("WS_PORT"), router)
-	go mqtt.StartMQTT(os.Getenv("LISTEN_PORT"), router)
+	go api.StartApi(conf.API_PORT)
+	go mqtt.StartWebSocket(conf.WS_PORT, router)
+	go mqtt.StartMQTT(conf.LISTEN_PORT, router)
 
 	<-c
 }
@@ -59,12 +52,4 @@ func selectRouter(mode string) routers.Router {
 		slog.Debug("standard router")
 		return routers.NewStandard()
 	}
-}
-
-func loadEnv() error {
-	env := os.Getenv("TAGYOU_ENV")
-	if env == "" {
-		env = "default"
-	}
-	return dotenv.Load(".env." + env + ".local")
 }
