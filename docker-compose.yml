@@ -1,0 +1,22 @@
+services:
+  broker:
+    image: ilgianlu/tagyou
+    ports:
+      - 1883:1883
+      - 1080:1080
+      - 8080:8080
+    volumes:
+      - data:/db
+    environment:
+      - LISTEN_PORT=:1883
+      - WS_PORT=:1080
+      - API_PORT=:8080
+      - DB_PATH=/db
+      - DB_NAME=sqlite.db3
+      - FORBID_ANONYMOUS_LOGIN=false
+      - ACL_ON=false
+      - CLEAN_EXPIRED_SESSIONS=true
+      - CLEAN_EXPIRED_SESSIONS_INTERVAL=1800
+      - CLEAN_EXPIRED_RETRIES=true
+volumes:
+  data:
