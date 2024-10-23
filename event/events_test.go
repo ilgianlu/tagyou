@@ -49,7 +49,7 @@ func TestPublishWhenClientIsNotConnected(t *testing.T) {
 	}
 	p := packet.Packet{Event: packet.EVENT_PUBLISH}
 
-	manageEvent(router, &session, &p)
+	managePacket(router, &session, &p)
 
 	if session.Connected != false {
 		t.Errorf("expecting not connected session false, received true")
@@ -64,9 +64,9 @@ func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
 		ClientId:  "client-x",
 		Conn:      mockConn,
 	}
-	p := packet.Packet{Event: packet.EVENT_CONNECT}
+	p := packet.Connect()
 
-	manageEvent(router, &session, &p)
+	managePacket(router, &session, &p)
 
 	if session.Connected != false {
 		t.Errorf("expecting not connected session false, received true")
@@ -90,7 +90,7 @@ func TestSuccessfullConnect(t *testing.T) {
 		t.Errorf("did not expect parse error %s", err)
 	}
 
-	manageEvent(router, &session, &p)
+	managePacket(router, &session, &p)
 
 	if session.Connected != true {
 		t.Errorf("expecting client connected, received false")
@@ -141,7 +141,7 @@ func TestSuccessfullReconnect(t *testing.T) {
 	buf := []byte{16, 64, 0, 4, 77, 81, 84, 84, 4, 198, 0, 5, 0, 15, 109, 113, 116, 116, 106, 115, 95, 97, 97, 50, 51, 99, 56, 49, 53, 0, 5, 97, 47, 98, 47, 99, 0, 15, 119, 105, 108, 108, 32, 109, 101, 115, 115, 97, 103, 101, 46, 46, 46, 0, 4, 117, 115, 101, 114, 0, 5, 112, 108, 117, 116, 111}
 	p, _ := packet.PacketParse(&session, buf)
 
-	manageEvent(router, &session, &p)
+	managePacket(router, &session, &p)
 
 	if session.Connected != true {
 		t.Errorf("expecting client connected, received false")

@@ -64,7 +64,7 @@ func TestSubscribe(t *testing.T) {
 
 	p, _ := packet.PacketParse(&subscriberSession, buf)
 
-	manageEvent(router, &subscriberSession, &p)
+	managePacket(router, &subscriberSession, &p)
 
 	if len(receivedMsgs) != 1 {
 		t.Errorf("expected 1 msg received by subscriber, received %d", len(receivedMsgs))

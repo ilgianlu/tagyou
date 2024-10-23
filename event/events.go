@@ -10,27 +10,36 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func RangeEvents(router routers.Router, session *model.RunningSession, events <-chan *packet.Packet) {
-	for p := range events {
-		manageEvent(router, session, p)
+func RangePackets(router routers.Router, session *model.RunningSession, packets <-chan *packet.Packet) {
+	for p := range packets {
+		managePacket(router, session, p)
 	}
 }
 
-func manageEvent(router routers.Router, session *model.RunningSession, p *packet.Packet) {
-	if !session.GetConnected() && p.Event != packet.EVENT_CONNECT {
-		slog.Debug("//!! EVENT event before connect, disconnecting...", "event-type", p.Event)
+func managePacket(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+	slog.Debug("//!! is session connected?", "connected?", session.GetConnected())
+	slog.Debug("//!! packet arriving", "packet-type", p.PacketType())
+	if !session.GetConnected() && p.PacketType() != packet.PACKET_TYPE_CONNECT {
+		slog.Warn("can accept only connect, disconnecting...", "packet-type", p.PacketType())
 		session.Conn.Close()
 		return
 	}
-	switch p.Event {
-	case packet.EVENT_CONNECT:
-		slog.Debug("//!! EVENT client connect", "event-type", p.Event, "client-id", session.GetClientId())
+	switch p.PacketType() {
+	case packet.PACKET_TYPE_CONNECT:
+		slog.Debug("//!! EVENT client connect", "packet-type", p.PacketType(), "client-id", session.GetClientId())
 		if session.GetConnected() {
-			slog.Debug("//!! EVENT double connect event, disconnecting...", "event-type", p.Event)
+			slog.Debug("//!! EVENT double connect event, disconnecting...", "client-id", session.GetClientId())
 			clientDisconnect(router, session, session.GetClientId())
 			return
 		}
 		onConnect(router, session)
+		return
+	case packet.PACKET_TYPE_DISCONNECT:
+		slog.Debug("//!! EVENT client disconnect", "packet-type", p.PacketType(), "client-id", session.GetClientId())
+		clientDisconnect(router, session, session.GetClientId())
+		return
+	}
+	switch p.Event {
 	case packet.EVENT_SUBSCRIBED:
 		slog.Debug("//!! EVENT client subscribed", "event-type", p.Event, "client-id", session.GetClientId())
 		onSubscribe(router, session, p)
@@ -55,9 +64,6 @@ func manageEvent(router routers.Router, session *model.RunningSession, p *packet
 	case packet.EVENT_PING:
 		slog.Debug("//!! EVENT client ping", "event-type", p.Event, "client-id", session.GetClientId())
 		onPing(router, session)
-	case packet.EVENT_DISCONNECT:
-		slog.Debug("//!! EVENT client disconnect", "event-type", p.Event, "client-id", session.GetClientId())
-		clientDisconnect(router, session, session.GetClientId())
 	}
 }
 

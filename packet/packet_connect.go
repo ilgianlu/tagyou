@@ -7,10 +7,16 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
+// ATTENTION: partial implementation only for testing
+func Connect() Packet {
+	var p Packet
+	p.header = uint8(PACKET_TYPE_CONNECT) << 4
+	return p
+}
+
 func (p *Packet) connectReq(session *model.RunningSession) int {
 	session.Mu.Lock()
 	defer session.Mu.Unlock()
-	p.Event = EVENT_CONNECT
 	// START VARIABLE HEADER
 	i := 0
 	pl := Read2BytesInt(p.remainingBytes, i)

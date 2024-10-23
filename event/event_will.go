@@ -35,6 +35,10 @@ func needWillSend(runningSession *model.RunningSession) bool {
 			slog.Debug("[MQTT] avoid sending will! (client reconnected)", "client-id", session.GetClientId())
 			return false
 		}
+		if !runningSession.Connected {
+			slog.Debug("[MQTT] avoid sending will! client disconnected clean", "client-id", runningSession.GetClientId())
+			return false
+		}
 	}
 	return true
 }
