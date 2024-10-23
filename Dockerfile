@@ -21,12 +21,10 @@ RUN go build -a -ldflags="-w -s" -o tagyou
 
 # final stage
 FROM alpine
-EXPOSE 1883 8080
+EXPOSE 1883 1080 8080
 WORKDIR /app
 RUN apk update && \
     apk add tzdata sqlite ca-certificates && \
-    rm -rf /var/cache/apk && \
-    mkdir -p /db
+    rm -rf /var/cache/apk
 COPY --from=build-img /go/src/app/tagyou /app/
-COPY --from=build-img /go/src/app/.env.default.local /app/
 CMD ["/app/tagyou"]

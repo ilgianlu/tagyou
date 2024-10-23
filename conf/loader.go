@@ -6,13 +6,28 @@ import (
 )
 
 func Loader() {
-	FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") == "true"
+	FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") != "false"
 	ACL_ON = os.Getenv("ACL_ON") == "true"
-	CLEAN_EXPIRED_SESSIONS = os.Getenv("CLEAN_EXPIRED_SESSIONS") == "true"
-	CLEAN_EXPIRED_RETRIES = os.Getenv("CLEAN_EXPIRED_RETRIES") == "true"
+	CLEAN_EXPIRED_SESSIONS = os.Getenv("CLEAN_EXPIRED_SESSIONS") != "false"
+	CLEAN_EXPIRED_RETRIES = os.Getenv("CLEAN_EXPIRED_RETRIES") != "false"
 	INIT_DB = os.Getenv("INIT_DB") == "true" || os.Getenv("INIT_DB") == "1"
 
 	var s string
+	s = os.Getenv("API_PORT")
+	if s != "" {
+		API_PORT = s
+	}
+
+	s = os.Getenv("WS_PORT")
+	if s != "" {
+		WS_PORT = s
+	}
+
+	s = os.Getenv("LISTEN_PORT")
+	if s != "" {
+		LISTEN_PORT = s
+	}
+
 	s = os.Getenv("DB_PATH")
 	if s != "" {
 		DB_PATH = s
