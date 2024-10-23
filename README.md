@@ -26,12 +26,20 @@ there is a very simple Makefile in the project root.
 * make init : remove any user data to start with an empty db and new admin password
 
 ## first start
-http apis are always authenticated, unlike the mqtt clients. First user to be created is "admin".
+HTTP apis are always authenticated, unlike the mqtt clients. First user to be created is "admin".
 To set your password for "admin", at first launch, pass INIT_ADMIN_PASSWORD as env var so a user with username "admin" is created with selected password and you can start use apis (to create more users? register clients ?). All users can access everything.
 
 ```
-docker run -e INIT_ADMIN_PASSWORD=my_fantastic_secure_password -e INIT_DB=true ilgianlu/tagyou
+docker run -v tagyou_data:/db -e DB_PATH=/db -e INIT_ADMIN_PASSWORD=my_fantastic_secure_password -e INIT_DB=true ilgianlu/tagyou
 ```
+
+On next run db is set so you just need to attach your volume and have tagyou search db on it
+
+```
+docker run -v tagyou_data:/db -e DB_PATH=/db ilgianlu/tagyou
+```
+
+Look at included docker compose file for other often used configuration vars.
 
 ## apis
 
