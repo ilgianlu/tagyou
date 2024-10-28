@@ -18,7 +18,7 @@ func mapSession(session dbaccess.Session) model.Session {
 	if session.Connected.Int64 == 1 {
 		connectd = true
 	}
-	return Session{
+	return model.Session{
 		ID:              session.ID,
 		LastSeen:        session.LastSeen.Int64,
 		LastConnect:     session.LastConnect.Int64,
