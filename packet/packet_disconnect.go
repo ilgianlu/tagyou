@@ -7,7 +7,6 @@ import (
 )
 
 func (p *Packet) disconnectReq(protocolVersion uint8) int {
-	p.Event = EVENT_DISCONNECT
 	if len(p.remainingBytes) > 0 {
 		i := 0
 		p.ReasonCode = p.remainingBytes[i]

@@ -21,7 +21,6 @@ func Pubcomp(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Pack
 	return p
 }
 func (p *Packet) pubcompReq(protocolVersion uint8) int {
-	p.Event = EVENT_PUBCOMPED
 	i := 2 // expect packet identifier in first 2 bytes
 	if i < len(p.remainingBytes) {
 		p.ReasonCode = p.remainingBytes[i]

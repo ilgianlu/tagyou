@@ -12,7 +12,6 @@ import (
 func (p *Packet) subscribeReq(session *model.RunningSession) int {
 	session.Mu.RLock()
 	defer session.Mu.RUnlock()
-	p.Event = EVENT_SUBSCRIBED
 	// variable header
 	i := 2 // 2 bytes for packet identifier
 	if session.ProtocolVersion >= conf.MQTT_V5 {

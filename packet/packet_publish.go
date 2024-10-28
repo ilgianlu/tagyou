@@ -34,7 +34,6 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 }
 
 func (p *Packet) publishReq(protocolVersion uint8) int {
-	p.Event = EVENT_PUBLISH
 	i := 0
 	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2

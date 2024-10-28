@@ -41,22 +41,6 @@ const PUBREL_SUCCESS = 0x00
 const PUBREC_SUCCESS = 0x00
 const PUBREC_NOT_AUTHORIZED = 0x87
 
-// event type
-const EVENT_CONNECT = 0
-const EVENT_PUBLISH = 2
-const EVENT_PUBACKED = 3
-const EVENT_PUBRECED = 4
-const EVENT_PUBRELED = 5
-const EVENT_PUBCOMPED = 6
-const EVENT_SUBSCRIBED = 10
-const EVENT_SUBSCRIPTION = 11
-const EVENT_PING = 12
-const EVENT_UNSUBSCRIBED = 20
-const EVENT_UNSUBSCRIPTION = 21
-const EVENT_DISCONNECT = 100
-const EVENT_KEEPALIVE_TIMEOUT = 101
-const EVENT_WILL_SEND = 102
-
 type Packet struct {
 	// header
 	header               byte
@@ -78,7 +62,6 @@ type Packet struct {
 	// metadata
 	Subscriptions []model.Subscription
 	Topic         string
-	Event         int
 }
 
 func (p *Packet) RemainingBytes() []byte {

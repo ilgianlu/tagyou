@@ -22,7 +22,6 @@ func Puback(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Packe
 }
 
 func (p *Packet) pubackReq(protocolVersion uint8) int {
-	p.Event = EVENT_PUBACKED
 	i := 2 // expect packet identifier in first 2 bytes
 	if i < len(p.remainingBytes) {
 		p.ReasonCode = p.remainingBytes[i]

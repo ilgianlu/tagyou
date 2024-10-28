@@ -32,8 +32,8 @@ func TestParseSubscribe(t *testing.T) {
 		t.Errorf("expecting result 0, received %d", res)
 	}
 
-	if p.Event != EVENT_SUBSCRIBED {
-		t.Errorf("expecting subscribed event %d, received %d", EVENT_SUBSCRIBED, p.Event)
+	if p.PacketType() != PACKET_TYPE_SUBSCRIBE {
+		t.Errorf("expecting subscribe packet %d, received %d", PACKET_TYPE_SUBSCRIBE, p.PacketType())
 	}
 
 	if len(p.Subscriptions) != 1 {

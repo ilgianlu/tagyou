@@ -1,7 +1,6 @@
 package packet
 
 func (p *Packet) pingReq() int {
-	p.Event = EVENT_PING
 	return 0
 }
 

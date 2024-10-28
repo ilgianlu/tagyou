@@ -16,8 +16,8 @@ func TestConnectSuccess(t *testing.T) {
 		remainingBytes:  []byte{0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 0, 0, 7, 99, 108, 105, 101, 110, 116, 88},
 	}
 	p.connectReq(&s)
-	if p.Event != EVENT_CONNECT {
-		t.Errorf("expected event type %d, found %d", EVENT_CONNECT, p.Event)
+	if p.PacketType() != PACKET_TYPE_CONNECT {
+		t.Errorf("expected packet type %d, found %d", PACKET_TYPE_CONNECT, p.PacketType())
 	}
 	if s.ProtocolVersion != conf.MQTT_V5 {
 		t.Errorf("expected protocol version %d, found %d", conf.MQTT_V5, s.ProtocolVersion)
@@ -32,8 +32,8 @@ func TestConnectSuccessWithProperties(t *testing.T) {
 		remainingBytes:  []byte{0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 5, 17, 0, 0, 0, 60, 0, 7, 99, 108, 105, 101, 110, 116, 88},
 	}
 	p.connectReq(&s)
-	if p.Event != EVENT_CONNECT {
-		t.Errorf("expected event type %d, found %d", EVENT_CONNECT, p.Event)
+	if p.PacketType() != PACKET_TYPE_CONNECT {
+		t.Errorf("expected event type %d, found %d", PACKET_TYPE_CONNECT, p.PacketType())
 	}
 	if s.ProtocolVersion != conf.MQTT_V5 {
 		t.Errorf("expected protocol version %d, found %d", conf.MQTT_V5, s.ProtocolVersion)

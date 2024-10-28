@@ -80,7 +80,6 @@ func TestPublish(t *testing.T) {
 	})
 
 	p := packet.Publish(4, 0, false, topic, 0, []byte("pippo"))
-	p.Event = packet.EVENT_PUBLISH
 	p.Topic = topic
 
 	managePacket(router, &publisherSession, &p)

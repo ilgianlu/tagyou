@@ -26,7 +26,7 @@ func managePacket(router routers.Router, session *model.RunningSession, p *packe
 	}
 	switch p.PacketType() {
 	case packet.PACKET_TYPE_CONNECT:
-		slog.Debug("//!! EVENT client connect", "packet-type", p.PacketType(), "client-id", session.GetClientId())
+		slog.Debug("//!! EVENT client connect", "client-id", session.GetClientId())
 		if session.GetConnected() {
 			slog.Debug("//!! EVENT double connect event, disconnecting...", "client-id", session.GetClientId())
 			clientDisconnect(router, session, session.GetClientId())
@@ -35,35 +35,33 @@ func managePacket(router routers.Router, session *model.RunningSession, p *packe
 		onConnect(router, session)
 		return
 	case packet.PACKET_TYPE_DISCONNECT:
-		slog.Debug("//!! EVENT client disconnect", "packet-type", p.PacketType(), "client-id", session.GetClientId())
+		slog.Debug("//!! EVENT client disconnect", "client-id", session.GetClientId())
 		clientDisconnect(router, session, session.GetClientId())
 		return
-	}
-	switch p.Event {
-	case packet.EVENT_SUBSCRIBED:
-		slog.Debug("//!! EVENT client subscribed", "event-type", p.Event, "client-id", session.GetClientId())
-		onSubscribe(router, session, p)
-	case packet.EVENT_UNSUBSCRIBED:
-		slog.Debug("//!! EVENT client unsubscribed", "event-type", p.Event, "client-id", session.GetClientId())
-		onUnsubscribe(router, session, p)
-	case packet.EVENT_PUBLISH:
-		slog.Debug("//!! EVENT client published", "event-type", p.Event, "topic", p.Topic, "client-id", session.GetClientId(), "qos", p.QoS())
-		OnPublish(router, session, p)
-	case packet.EVENT_PUBACKED:
-		slog.Debug("//!! EVENT client acked message", "event-type", p.Event, "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
-		clientPuback(session, p)
-	case packet.EVENT_PUBRECED:
-		slog.Debug("//!! EVENT pub received message", "event-type", p.Event, "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
-		clientPubrec(router, session, p)
-	case packet.EVENT_PUBRELED:
-		slog.Debug("//!! EVENT pub releases message", "event-type", p.Event, "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
-		clientPubrel(router, session, p)
-	case packet.EVENT_PUBCOMPED:
-		slog.Debug("//!! EVENT pub complete message", "event-type", p.Event, "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
-		clientPubcomp(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
-	case packet.EVENT_PING:
-		slog.Debug("//!! EVENT client ping", "event-type", p.Event, "client-id", session.GetClientId())
+	case packet.PACKET_TYPE_PINGREQ:
+		slog.Debug("//!! EVENT client ping", "client-id", session.GetClientId())
 		onPing(router, session)
+	case packet.PACKET_TYPE_SUBSCRIBE:
+		slog.Debug("//!! EVENT client subscribed", "client-id", session.GetClientId())
+		onSubscribe(router, session, p)
+	case packet.PACKET_TYPE_UNSUBSCRIBE:
+		slog.Debug("//!! EVENT client unsubscribed", "client-id", session.GetClientId())
+		onUnsubscribe(router, session, p)
+	case packet.PACKET_TYPE_PUBLISH:
+		slog.Debug("//!! EVENT client published", "topic", p.Topic, "client-id", session.GetClientId(), "qos", p.QoS())
+		OnPublish(router, session, p)
+	case packet.PACKET_TYPE_PUBACK:
+		slog.Debug("//!! EVENT client acked message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
+		clientPuback(session, p)
+	case packet.PACKET_TYPE_PUBREC:
+		slog.Debug("//!! EVENT pub received message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
+		clientPubrec(router, session, p)
+	case packet.PACKET_TYPE_PUBREL:
+		slog.Debug("//!! EVENT pub releases message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
+		clientPubrel(router, session, p)
+	case packet.PACKET_TYPE_PUBCOMP:
+		slog.Debug("//!! EVENT pub complete message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
+		clientPubcomp(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
 	}
 }
 

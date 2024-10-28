@@ -46,7 +46,7 @@ func TestPublishWhenClientIsNotConnected(t *testing.T) {
 		Connected: false,
 		Conn:      mockConn,
 	}
-	p := packet.Packet{Event: packet.EVENT_PUBLISH}
+	p := packet.Publish(4, 0, false, "", 0, []byte{})
 
 	managePacket(router, &session, &p)
 

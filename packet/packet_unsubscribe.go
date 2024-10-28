@@ -11,7 +11,6 @@ import (
 func (p *Packet) unsubscribeReq(session *model.RunningSession) int {
 	session.Mu.RLock()
 	defer session.Mu.RUnlock()
-	p.Event = EVENT_UNSUBSCRIBED
 	i := 2 // 2 bytes for packet identifier
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)

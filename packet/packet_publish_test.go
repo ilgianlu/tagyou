@@ -46,8 +46,8 @@ func TestParsePublish(t *testing.T) {
 		t.Errorf("expecting result 0, received %d", res)
 	}
 
-	if p.Event != EVENT_PUBLISH {
-		t.Errorf("expecting subscribed event %d, received %d", EVENT_SUBSCRIBED, p.Event)
+	if p.PacketType() != PACKET_TYPE_PUBLISH {
+		t.Errorf("expecting packet type %d, received %d", PACKET_TYPE_PUBLISH, p.PacketType())
 	}
 
 	if p.Topic != "/topic/0/messages" {

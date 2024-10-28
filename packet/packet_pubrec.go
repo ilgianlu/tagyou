@@ -22,7 +22,6 @@ func Pubrec(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Packe
 }
 
 func (p *Packet) pubrecReq(protocolVersion uint8) int {
-	p.Event = EVENT_PUBRECED
 	i := 2 // 2 bytes for packet identifier
 	if i < len(p.remainingBytes) {
 		p.ReasonCode = p.remainingBytes[i]
