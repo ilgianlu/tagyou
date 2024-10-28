@@ -22,8 +22,11 @@ func main() {
 
 	log.Init()
 
-	p := persistence.SqlPersistence{}
-	p.Init()
+	p := persistence.SqlPersistence{
+		DbFile:       conf.DB_PATH + "/" + conf.DB_NAME,
+		InitDatabase: conf.INIT_DB,
+	}
+	p.Init(conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
 
 	router := selectRouter(conf.ROUTER_MODE)
 

@@ -96,10 +96,12 @@ func pickDest(group []model.Subscription, mode int8) model.Subscription {
 func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
 	grouped := model.SubscriptionGroup{}
 	for _, s := range subs {
+		online := persistence.SessionRepository.IsOnline(s.SessionID)
+		if !online {
+			continue
+		}
 		if val, ok := grouped[s.ShareName]; ok {
-			if persistence.SessionRepository.IsOnline(s.SessionID) {
-				grouped[s.ShareName] = append(val, s)
-			}
+			grouped[s.ShareName] = append(val, s)
 		} else {
 			grouped[s.ShareName] = []model.Subscription{s}
 		}

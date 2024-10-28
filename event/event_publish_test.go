@@ -13,27 +13,18 @@ import (
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
-	"github.com/ilgianlu/tagyou/sqlc"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
 func TestPublish(t *testing.T) {
 	conf.Loader()
 	os.Setenv("DEBUG", "1")
-	os.Remove("test.db3")
 
-	dbConn, err := sql.Open("sqlite3", "test.db3")
+	ps := persistence.SqlPersistence{DbFile: "test.db3", InitDatabase: true}
+	db, err := ps.Init(false, false, []byte{})
 	if err != nil {
-		t.Errorf("[API] failed to connect database")
+		t.Errorf("did not expect any error opening test.db3")
 	}
-
-	dbConn.ExecContext(context.Background(), "PRAGMA foreign_keys = ON;")
-	dbConn.ExecContext(context.Background(), sqlc.DBSchema)
-
-	db := dbaccess.New(dbConn)
-
-	persistence := persistence.SqlPersistence{}
-	persistence.InnerInit(db, false, false, []byte(""))
 
 	router := routers.NewSimple()
 

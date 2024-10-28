@@ -8,26 +8,16 @@ import (
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/sqlc"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 )
 
 func TestClientUnsubscription(t *testing.T) {
 	os.Setenv("DEBUG", "1")
-	os.Remove("test.db3")
-
-	dbConn, err := sql.Open("sqlite3", "test.db3")
+	p := persistence.SqlPersistence{DbFile: "test.db3", InitDatabase: true}
+	db, err := p.Init(false, false, []byte{})
 	if err != nil {
-		t.Errorf("[API] failed to connect database")
+		t.Errorf("did not expect any error opening test.db3")
 	}
-
-	dbConn.ExecContext(context.Background(), "PRAGMA foreign_keys = ON;")
-	dbConn.ExecContext(context.Background(), sqlc.DBSchema)
-
-	db := dbaccess.New(dbConn)
-
-	p := persistence.SqlPersistence{}
-	p.InnerInit(db, false, false, []byte(""))
 
 	sess1, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{
 		ClientID:  sql.NullString{String: "pippo", Valid: true},

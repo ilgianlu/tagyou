@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/sqlc"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
 	"github.com/ilgianlu/tagyou/sqlrepository"
@@ -16,34 +15,55 @@ import (
 )
 
 type SqlPersistence struct {
+	DbFile       string
+	InitDatabase bool
+	db           *sql.DB
 }
 
-var dbFile string
-
-func (p SqlPersistence) Init() error {
-	if conf.INIT_DB {
-		err := resetDb()
+func (p *SqlPersistence) Init(cleanExpiredSessions bool, cleanExpiredRetries bool, initAdminPassword []byte) (*dbaccess.Queries, error) {
+	if p.InitDatabase {
+		err := p.resetDb()
 		if err != nil {
 			slog.Error("could not reset DB", "err", err)
-			return err
+			return nil, err
 		}
 	}
 
-	dbConn, err := openDb()
+	dbConn, err := p.openDb()
 	if err != nil {
 		slog.Error("could not open DB", "err", err)
-		return err
+		return nil, err
 	}
 
 	db := dbaccess.New(dbConn)
 
-	return p.InnerInit(db, conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
+	ClientRepository = sqlrepository.ClientSqlRepository{Db: db}
+	SessionRepository = sqlrepository.SessionSqlRepository{Db: db}
+	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
+	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
+	UserRepository = sqlrepository.UserSqlRepository{Db: db}
+	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
+
+	if len(initAdminPassword) > 0 {
+		sqlrepository.AdminPasswordReset(db, initAdminPassword)
+		os.Exit(0)
+	}
+
+	if cleanExpiredSessions {
+		sqlrepository.StartSessionCleaner(db)
+	}
+
+	if cleanExpiredSessions {
+		sqlrepository.StartRetryCleaner(db)
+	}
+
+	return db, nil
 }
 
-func resetDb() error {
-	os.Remove(dbFile)
+func (p *SqlPersistence) resetDb() error {
+	os.Remove(p.DbFile)
 
-	dbConn, err := openDb()
+	dbConn, err := p.openDb()
 	if err != nil {
 		slog.Error("could not open DB", "err", err)
 		return err
@@ -56,33 +76,18 @@ func resetDb() error {
 	return nil
 }
 
-func (p *SqlPersistence) InnerInit(db *dbaccess.Queries, startSessionCleaner bool, startRetryCleaner bool, newAdminPassword []byte) error {
-	ClientRepository = sqlrepository.ClientSqlRepository{Db: db}
-	SessionRepository = sqlrepository.SessionSqlRepository{Db: db}
-	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
-	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
-	UserRepository = sqlrepository.UserSqlRepository{Db: db}
-	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
+func (p *SqlPersistence) openDb() (*sql.DB, error) {
+	if p.DbFile == "" {
+		p.DbFile = "sqlite.db3"
+	}
 
-	if len(newAdminPassword) > 0 {
-		sqlrepository.AdminPasswordReset(db, newAdminPassword)
-		os.Exit(0)
-	}
-	if startSessionCleaner {
-		sqlrepository.StartSessionCleaner(db)
-	}
-	if startRetryCleaner {
-		sqlrepository.StartRetryCleaner(db)
-	}
-	return nil
-}
-
-func openDb() (*sql.DB, error) {
-	dbFile = conf.DB_PATH + "/" + conf.DB_NAME
-	db, err := sql.Open("sqlite3", dbFile)
+	db, err := sql.Open("sqlite3", p.DbFile)
 	if err != nil {
 		return db, err
 	}
 	db.ExecContext(context.Background(), "PRAGMA foreign_keys = ON;")
+
+	p.db = db
+
 	return db, nil
 }
