@@ -30,7 +30,7 @@ func (s DebugRouter) AddDestination(clientId string, conn model.TagyouConn) {
 func (s DebugRouter) RemoveDestination(clientId string) {
 	err := s.Conns.Close(clientId)
 	if err != nil {
-		slog.Debug("could not close connection", "client-id", clientId, "err", err)
+		slog.Debug("[MQTT] could not close connection", "client-id", clientId, "err", err)
 	}
 	s.Conns.Remove(clientId)
 }
@@ -44,16 +44,16 @@ func (s DebugRouter) Send(clientId string, payload []byte) {
 	conn, exists := s.Conns.Exists(clientId)
 	if exists {
 		if conn == nil {
-			slog.Error("cannot write to net.Conn, c is nil (removing)", "client-id", clientId)
+			slog.Error("[MQTT] cannot write to net.Conn, c is nil (removing)", "client-id", clientId)
 			s.Conns.Remove(clientId)
 			return
 		}
 		_, err := conn.Write(payload)
 		if err != nil {
-			slog.Debug("cannot write to net.Conn", "client-id", clientId, "err", err)
+			slog.Debug("[MQTT] cannot write to net.Conn", "client-id", clientId, "err", err)
 		}
 	} else {
-		slog.Debug("client is not connected", "client-id", clientId)
+		slog.Debug("[MQTT] client is not connected", "client-id", clientId)
 	}
 }
 

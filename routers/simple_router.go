@@ -22,7 +22,7 @@ func (s SimpleRouter) AddDestination(clientId string, conn model.TagyouConn) {
 func (s SimpleRouter) RemoveDestination(clientId string) {
 	err := s.Conns.Close(clientId)
 	if err != nil {
-		slog.Debug("could not close connection", "client-id", clientId, "err", err)
+		slog.Debug("[MQTT] could not close connection", "client-id", clientId, "err", err)
 	}
 	s.Conns.Remove(clientId)
 }
@@ -36,16 +36,16 @@ func (s SimpleRouter) Send(clientId string, payload []byte) {
 	conn, exists := s.Conns.Exists(clientId)
 	if exists {
 		if conn == nil {
-			slog.Error("cannot write to net.Conn, c is nil (removing)", "client-id", clientId)
+			slog.Error("[MQTT] cannot write to net.Conn, c is nil (removing)", "client-id", clientId)
 			s.Conns.Remove(clientId)
 			return
 		}
 		_, err := conn.Write(payload)
 		if err != nil {
-			slog.Debug("cannot write to net.Conn", "client-id", clientId, "err", err)
+			slog.Debug("[MQTT] cannot write to net.Conn", "client-id", clientId, "err", err)
 		}
 	} else {
-		slog.Debug("client is not connected", "client-id", clientId)
+		slog.Debug("[MQTT] client is not connected", "client-id", clientId)
 	}
 }
 
@@ -89,7 +89,7 @@ func pickDest(group []model.Subscription, mode int8) model.Subscription {
 	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	i := r.Intn(len(group))
-	slog.Debug("picked client", "client-id", group[i].ClientId)
+	slog.Debug("[MQTT] picked client", "client-id", group[i].ClientId)
 	return group[i]
 }
 

@@ -108,9 +108,9 @@ func onSocketUpButSilent(router routers.Router, session *model.RunningSession) b
 }
 
 func onSocketDownClosed(router routers.Router, session *model.RunningSession) bool {
-	slog.Debug("[MQTT] socket down closed!")
+	slog.Debug("[MQTT] socket closed!", "client-id", session.GetClientId())
 	if session.GetClientId() != "" {
-		slog.Debug("[MQTT] will due to socket down!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
+		slog.Debug("[MQTT] client was connected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
 		event.SendWill(router, session)
 		return true
 	}
