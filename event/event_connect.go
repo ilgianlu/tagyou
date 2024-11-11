@@ -95,6 +95,7 @@ func startSession(session *model.RunningSession) {
 		} else {
 			slog.Debug("Updating previous session from running", "client-id", clientId)
 			session.ApplySessionId(prevSession.GetId())
+			session.SetConnected(true)
 			persistence.SessionRepository.UpdateSession(prevSession.GetId(), session)
 		}
 	} else {
