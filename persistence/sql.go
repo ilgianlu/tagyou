@@ -38,7 +38,7 @@ func (p *SqlPersistence) Init(cleanExpiredSessions bool, cleanExpiredRetries boo
 	db := dbaccess.New(dbConn)
 
 	ClientRepository = sqlrepository.ClientSqlRepository{Db: db}
-	SessionRepository = sqlrepository.SessionSqlRepository{Db: db}
+	SessionRepository = sqlrepository.SessionSqlRepository{Db: db, SqlConn: dbConn}
 	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
 	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
 	UserRepository = sqlrepository.UserSqlRepository{Db: db}

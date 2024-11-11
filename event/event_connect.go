@@ -80,8 +80,8 @@ func checkConnectionTakeOver(session *model.RunningSession, router routers.Route
 func startSession(session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if prevSession, ok := persistence.SessionRepository.SessionExists(clientId); ok {
+		slog.Debug("[MQTT] check existing session", "last-seen", prevSession.GetLastSeen(), "clean-start", session.CleanStart(), "expired", prevSession.Expired(), "new-protocol-version", session.GetProtocolVersion(), "prev-protocol-version", prevSession.GetProtocolVersion())
 		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.GetProtocolVersion() {
-			slog.Debug("[MQTT] check session", "clean-start", session.CleanStart(), "expired", prevSession.Expired(), "new-protocol-version", session.GetProtocolVersion(), "prev-protocol-version", prevSession.GetProtocolVersion())
 			slog.Debug("[MQTT] Cleaning previous session: Invalid or to clean", "client-id", clientId)
 			if err := persistence.SessionRepository.CleanSession(clientId); err != nil {
 				slog.Error("[MQTT] error removing previous session", "client-id", clientId, "err", err)
@@ -95,6 +95,7 @@ func startSession(session *model.RunningSession) {
 		} else {
 			slog.Debug("Updating previous session from running", "client-id", clientId)
 			session.ApplySessionId(prevSession.GetId())
+			session.SetConnected(true)
 			persistence.SessionRepository.UpdateSession(prevSession.GetId(), session)
 		}
 	} else {
