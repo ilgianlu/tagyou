@@ -37,6 +37,11 @@ DELETE FROM retries
 WHERE id = ?
 RETURNING *;
 
+-- name: DeleteRetryBySessionId :exec
+DELETE FROM retries
+WHERE session_id = ?
+RETURNING *;
+
 -- name: DeleteRetriesOlder :exec
 DELETE FROM retries
 WHERE created_at < ?

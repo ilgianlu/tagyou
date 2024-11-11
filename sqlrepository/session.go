@@ -3,6 +3,7 @@ package sqlrepository
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"time"
 
 	"github.com/ilgianlu/tagyou/model"
@@ -10,7 +11,8 @@ import (
 )
 
 type SessionSqlRepository struct {
-	Db *dbaccess.Queries
+	Db      *dbaccess.Queries
+	SqlConn *sql.DB
 }
 
 func mapSession(session dbaccess.Session) model.Session {
@@ -77,11 +79,21 @@ func (sr SessionSqlRepository) UpdateSession(sessionId int64, running *model.Run
 }
 
 func (sr SessionSqlRepository) CleanSession(clientId string) error {
-	_, err := sr.Db.GetSessionByClientId(context.Background(), sql.NullString{String: clientId, Valid: true})
+	tx, err := sr.SqlConn.Begin()
 	if err != nil {
 		return err
 	}
-	return sr.Db.DeleteSessionByClientId(context.Background(), sql.NullString{String: clientId, Valid: true})
+	defer tx.Rollback()
+	qtx := sr.Db.WithTx(tx)
+	sess, err := qtx.GetSessionByClientId(context.Background(), sql.NullString{String: clientId, Valid: true})
+	if err != nil {
+		return err
+	}
+	slog.Debug("[MQTT] cleaning session", "session-id", sess.ID)
+	qtx.DeleteSubscriptionBySessionId(context.Background(), sql.NullInt64{Int64: sess.ID, Valid: true})
+	qtx.DeleteRetryBySessionId(context.Background(), sql.NullInt64{Int64: sess.ID, Valid: true})
+	qtx.DeleteSessionById(context.Background(), sess.ID)
+	return tx.Commit()
 }
 
 func (sr SessionSqlRepository) SessionExists(clientId string) (model.Session, bool) {
@@ -92,7 +104,7 @@ func (sr SessionSqlRepository) SessionExists(clientId string) (model.Session, bo
 func (sr SessionSqlRepository) DisconnectSession(clientId string) {
 	sr.Db.DisconnectSessionByClientId(context.Background(), dbaccess.DisconnectSessionByClientIdParams{
 		ClientID: sql.NullString{String: clientId, Valid: true},
-		LastSeen: sql.NullInt64{Int64: time.Now().Unix()},
+		LastSeen: sql.NullInt64{Int64: time.Now().Unix(), Valid: true},
 	})
 }
 

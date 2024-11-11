@@ -39,6 +39,11 @@ SELECT * FROM sessions
 WHERE client_id = ?
 LIMIT 1;
 
+-- name: DeleteSessionById :exec
+DELETE FROM sessions
+WHERE id = ?
+RETURNING *;
+
 -- name: DeleteSessionByClientId :exec
 DELETE FROM sessions
 WHERE client_id = ?

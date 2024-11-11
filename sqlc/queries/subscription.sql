@@ -48,3 +48,8 @@ DELETE FROM subscriptions
 WHERE share_name = ? AND topic = ? AND client_id = ?
 RETURNING *;
 
+-- name: DeleteSubscriptionBySessionId :exec
+DELETE FROM subscriptions
+WHERE session_id = ?
+RETURNING *;
+

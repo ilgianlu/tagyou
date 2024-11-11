@@ -33,11 +33,13 @@ func StartMQTT(port string, router routers.Router) {
 func handleTcpConnection(router routers.Router, conn net.Conn) {
 	defer conn.Close()
 
+	sessionTimestamp := time.Now().Unix()
 	session := model.RunningSession{
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
 		ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 		Conn:           conn,
-		LastConnect:    time.Now().Unix(),
+		LastConnect:    sessionTimestamp,
+		LastSeen:       sessionTimestamp,
 	}
 
 	events := make(chan *packet.Packet)
