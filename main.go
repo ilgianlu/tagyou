@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/ilgianlu/tagyou/api"
@@ -28,7 +29,10 @@ func main() {
 	}
 	p.Init(conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
 
-	router := selectRouter(conf.ROUTER_MODE)
+	router, debugFile := selectRouter(conf.ROUTER_MODE)
+	if debugFile != nil {
+		defer debugFile.Close()
+	}
 
 	go api.StartApi(conf.API_PORT)
 	go mqtt.StartWebSocket(conf.WS_PORT, router)
@@ -37,22 +41,19 @@ func main() {
 	<-c
 }
 
-func selectRouter(mode string) routers.Router {
+func selectRouter(mode string) (routers.Router, *os.File) {
+	slog.Info("starting with router", "mode", strings.ToUpper(mode))
 	switch mode {
 	case conf.ROUTER_MODE_DEBUG:
-		slog.Debug("debug router")
 		file, err := os.Create(conf.DEBUG_FILE)
 		if err != nil {
 			slog.Error("Could write debug file", "err", err)
 			panic(1)
 		}
-		defer file.Close()
-		return routers.NewDebug(file)
+		return routers.NewDebug(file, conf.DEBUG_CLIENTS), file
 	case conf.ROUTER_MODE_SIMPLE:
-		slog.Debug("simple router")
-		return routers.NewSimple()
+		return routers.NewSimple(), nil
 	default:
-		slog.Debug("standard router")
-		return routers.NewStandard()
+		return routers.NewStandard(), nil
 	}
 }

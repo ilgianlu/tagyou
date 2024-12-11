@@ -14,11 +14,11 @@ func NewSimple() Router {
 	return SimpleRouter{Conns: &simple}
 }
 
-func NewDebug(debugFile *os.File) Router {
+func NewDebug(debugFile *os.File, debugClients string) Router {
 	debug := SimpleConnections{
 		Conns: make(map[string]model.TagyouConn),
 	}
-	return DebugRouter{Conns: &debug, DebugFile: debugFile}
+	return DebugRouter{Conns: &debug, DebugFile: debugFile, DebugClients: debugClients}
 }
 
 func NewStandard() Router {

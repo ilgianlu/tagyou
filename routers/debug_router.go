@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -13,8 +14,9 @@ import (
 )
 
 type DebugRouter struct {
-	Conns     Connections
-	DebugFile *os.File
+	Conns        Connections
+	DebugFile    *os.File
+	DebugClients string
 }
 
 type debugMessage struct {
@@ -77,6 +79,10 @@ func (s DebugRouter) SendRetain(protocolVersion uint8, subscription model.Subscr
 }
 
 func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) {
+	slog.Debug("to debug?", "sender", senderId, "debugged", s.DebugClients, "contained", strings.Contains(s.DebugClients, senderId))
+	if s.DebugClients != "" && !strings.Contains(s.DebugClients, senderId) {
+		return
+	}
 	data := debugMessage{
 		SenderId: senderId,
 		Topic:    topic,

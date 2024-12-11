@@ -97,4 +97,9 @@ func Loader() {
 	if s != "" {
 		ROUTER_MODE = s
 	}
+
+	s = os.Getenv("DEBUG_CLIENTS")
+	if s != "" {
+		DEBUG_CLIENTS = s
+	}
 }
