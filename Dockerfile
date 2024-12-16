@@ -1,5 +1,5 @@
 # build stage
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build-img
+FROM golang:1.23-alpine AS build-img
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -14,11 +14,6 @@ RUN cd sqlc && sqlc generate
 
 RUN go mod tidy
 ENV CGO_ENABLED=1
-ENV GOOS=linux
-ARG GOARCH
-ENV GOARCH=${GOARCH:-amd64}
-
-RUN go env
 
 RUN go test ./...
 

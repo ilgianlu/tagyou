@@ -23,14 +23,24 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build and push Docker images
+    - name: Build and push Docker images AMD64
       uses: docker/build-push-action@v3
       with:
         context: .
-        platforms: linux/arm64,linux/amd64
-        file: ./Dockerfile
+        platforms: linux/amd64
         push: true
         tags: |
           ilgianlu/tagyou:latest
           ilgianlu/tagyou:${{ github.ref_name }}
           ilgianlu/tagyou:${{ github.ref_name }}-${{ github.sha }}
+
+    - name: Build and push Docker images ARM64/v8
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        platforms: linux/arm64
+        push: true
+        tags: |
+          ilgianlu/tagyou:arm-latest
+          ilgianlu/tagyou:arm-${{ github.ref_name }}
+          ilgianlu/tagyou:arm-${{ github.ref_name }}-${{ github.sha }}
