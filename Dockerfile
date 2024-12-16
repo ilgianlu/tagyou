@@ -1,5 +1,8 @@
 # build stage
-FROM golang:1.23-alpine AS build-img
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build-img
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /go/src/app
 RUN apk update && apk add gcc musl-dev
@@ -15,9 +18,11 @@ ENV GOOS=linux
 ARG GOARCH
 ENV GOARCH=${GOARCH:-amd64}
 
+RUN go env
+
 RUN go test ./...
 
-RUN go build -a -ldflags="-w -s" -o tagyou
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -ldflags="-w -s" -o tagyou
 
 # final stage
 FROM alpine
