@@ -86,7 +86,7 @@ Tag "latest" is continuously refresh by github actions built on main branch.
 
 ## contribution
 
-I'm developing on linux, visual studio code, go lang 1.23.
+I'm developing on linux, visual studio code, go lang 1.24.
 
 Build and modify should not more difficult than cloning the repo, branching, opening a pull request. Please open an issue before contributing and feel free to include @ilgianlu
 for the review.
