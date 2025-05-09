@@ -43,8 +43,8 @@ func MatcherSubset(subMatcher string, matcher string) bool {
 	if len(setRoad) < len(subMatcherRoad) && setRoad[len(setRoad)-1] != "#" {
 		return false
 	}
-	for i := 0; i < len(setRoad); i++ {
-		if setRoad[i] != "+" && setRoad[i] != "#" && setRoad[i] != subMatcherRoad[i] {
+	for i, c := range setRoad {
+		if c != "+" && c != "#" && c != subMatcherRoad[i] {
 			return false
 		}
 	}

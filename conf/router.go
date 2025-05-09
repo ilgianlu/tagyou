@@ -8,7 +8,7 @@ const ROUTER_MODE_STANDARD = "standard"
 const ROUTER_MODE_SIMPLE = "simple"
 
 // "debug" act as "standard" but also dump all published messages to debug file,
-// use SELECTED_CLIENTS to dump only some clients traffic
+// use DEBUG_CLIENTS to dump only some clients traffic
 const ROUTER_MODE_DEBUG = "debug"
 
 // list of selected clientId to debug traffic separated by slash "/" "client1/client2", empty string dump all traffic
