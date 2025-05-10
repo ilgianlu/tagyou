@@ -3,7 +3,6 @@ package insights
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -56,15 +55,12 @@ func (dc InsightsController) Blueprint(w http.ResponseWriter, r *http.Request) {
 	defer output.Close()
 
 	// blueprint csv header
-	output.Write([]byte("\"order\",\"message\"\n"))
+	output.Write([]byte("\"timestamp\",\"message\"\n"))
 
 	scanner := bufio.NewScanner(input)
-	i := 0
 	for scanner.Scan() {
 		inputline := scanner.Text()
-		outputline := fmt.Sprintf("%d,\"%s\"\n", i, inputline)
-		output.WriteString(outputline)
-		i++
+		output.WriteString(inputline)
 	}
 	if err := scanner.Err(); err != nil {
 		slog.Error("Error scanning file", "err", err)

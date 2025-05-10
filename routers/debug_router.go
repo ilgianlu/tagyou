@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -98,7 +99,11 @@ func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) 
 		slog.Debug("error writing to debug file", "err", err, "filename", filename)
 		return
 	}
-	_, err = debugFile.Write(append(jsonBytes, byte('\n')))
+	debugLine := []byte(strconv.FormatInt(time.Now().Unix(), 10))
+	debugLine = append(debugLine, byte(','))
+	debugLine = append(debugLine, jsonBytes...)
+	debugLine = append(debugLine, byte(','))
+	_, err = debugFile.Write(debugLine)
 	if err != nil {
 		slog.Debug("error writing to debug file", "err", err, "filename", filename)
 		return
