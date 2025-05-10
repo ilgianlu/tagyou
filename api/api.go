@@ -9,6 +9,7 @@ import (
 	"github.com/ilgianlu/tagyou/api/controllers/session"
 	"github.com/ilgianlu/tagyou/api/controllers/subscription"
 	"github.com/ilgianlu/tagyou/api/controllers/user"
+	"github.com/ilgianlu/tagyou/api/controllers/insights"
 )
 
 func StartApi(httpPort string) {
@@ -23,6 +24,8 @@ func StartApi(httpPort string) {
 	subscriptionController.RegisterRoutes(mux)
 	userController := user.NewController()
 	userController.RegisterRoutes(mux)
+	insightsController := insights.NewController()
+	insightsController.RegisterRoutes(mux)
 
 	slog.Info("[API] http start listening", "port", httpPort)
 	if err := http.ListenAndServe(httpPort, mux); err != nil {

@@ -102,4 +102,24 @@ func Loader() {
 	if s != "" {
 		DEBUG_CLIENTS = s
 	}
+
+	s = os.Getenv("DEBUG_DATA_PATH")
+	if s != "" {
+		DEBUG_DATA_PATH = s
+	}
+
+	s = os.Getenv("AI_URL")
+	if s != "" {
+		AI_URL = s
+	}
+
+	s = os.Getenv("AI_MODEL")
+	if s != "" {
+		AI_MODEL = s
+	}
+
+	s = os.Getenv("AI_API_KEY")
+	if s != "" {
+		AI_API_KEY = s
+	}
 }

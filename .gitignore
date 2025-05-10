@@ -34,4 +34,7 @@ sqlc/dbaccess
 tagyou
 
 # debug file
-*.debug
+*.dump
+
+# blueprints
+*.csv

@@ -15,7 +15,6 @@ import (
 
 type DebugRouter struct {
 	Conns        Connections
-	DebugFile    *os.File
 	DebugClients string
 }
 
@@ -90,14 +89,22 @@ func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) 
 	}
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
-		slog.Debug("error encoding to json debug", "error", err)
+		slog.Debug("error encoding to json debug", "err", err)
 		return
 	}
-	_, err = s.DebugFile.Write(jsonBytes)
+	filename := conf.DEBUG_DATA_PATH + "/" + senderId + ".dump"
+	debugFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		slog.Debug("error writing to debug file", "error", err)
+		slog.Debug("error writing to debug file", "err", err, "filename", filename)
 		return
 	}
+	_, err = debugFile.Write(append(jsonBytes, byte('\n')))
+	if err != nil {
+		slog.Debug("error writing to debug file", "err", err, "filename", filename)
+		return
+	}
+
+	debugFile.Close()
 }
 
 func (s DebugRouter) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
