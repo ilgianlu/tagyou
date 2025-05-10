@@ -92,7 +92,7 @@ func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) 
 		slog.Debug("error encoding to json debug", "err", err)
 		return
 	}
-	filename := conf.DEBUG_DATA_PATH + "/" + senderId + ".dump"
+	filename := conf.DebugDataFilepath(senderId)
 	debugFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		slog.Debug("error writing to debug file", "err", err, "filename", filename)

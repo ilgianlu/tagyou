@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/ilgianlu/tagyou/conf"
 )
 
 type BlueprintDTO struct {
@@ -37,7 +39,7 @@ func (dc InsightsController) Blueprint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Debug("blueprint request", "client-id", blueprintParams.ClientID, "model", blueprintParams.Model)
-	input, err := os.OpenFile(debugDataFilepath(blueprintParams.ClientID), os.O_RDONLY, 0644)
+	input, err := os.OpenFile(conf.DebugDataFilepath(blueprintParams.ClientID), os.O_RDONLY, 0644)
 	if (err != nil) {
 		slog.Error("Error opening debug data file", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -45,7 +47,7 @@ func (dc InsightsController) Blueprint(w http.ResponseWriter, r *http.Request) {
 	}
 	defer input.Close()
 
-	output, err := os.OpenFile(blueprintFilepath(blueprintParams.Model), os.O_CREATE|os.O_WRONLY, 0644)
+	output, err := os.OpenFile(conf.BlueprintFilepath(blueprintParams.Model), os.O_CREATE|os.O_WRONLY, 0644)
 	if (err != nil) {
 		slog.Error("Error creating blueprint file", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)

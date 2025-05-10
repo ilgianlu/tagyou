@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 	"text/template"
+
+	"github.com/ilgianlu/tagyou/conf"
 )
 
 type TemplateData struct {
@@ -35,7 +37,7 @@ func prompt(model string, clientID string) (string, error) {
 }
 
 func readBlueprint(model string) (string, error) {
-    modelBluePrint, err := os.ReadFile(blueprintFilepath(model))
+    modelBluePrint, err := os.ReadFile(conf.BlueprintFilepath(model))
 	if err != nil {
 		slog.Debug("Failed to read file", "err", err)
 		return fmt.Sprintf("No data for model %s", model), err
@@ -44,7 +46,7 @@ func readBlueprint(model string) (string, error) {
 }
 
 func readDebugData(clientID string) (string, error) {
-    debugData, err := os.ReadFile(debugDataFilepath(clientID))
+    debugData, err := os.ReadFile(conf.DebugDataFilepath(clientID))
 	if err != nil {
 		slog.Debug("Failed to read file", "err", err)
 		return fmt.Sprintf("no debug data for client %s", clientID), err
