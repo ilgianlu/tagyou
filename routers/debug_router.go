@@ -1,9 +1,10 @@
 package routers
 
 import (
-	"encoding/json"
+	"encoding/csv"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 
 type DebugRouter struct {
 	Conns        Connections
-	DebugFile    *os.File
 	DebugClients string
 }
 
@@ -83,19 +83,26 @@ func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) 
 	if s.DebugClients != "" && !strings.Contains(s.DebugClients, senderId) {
 		return
 	}
-	data := debugMessage{
-		SenderId: senderId,
-		Topic:    topic,
-		Payload:  string(p.ApplicationMessage()),
-	}
-	jsonBytes, err := json.Marshal(data)
+	filename := conf.DebugDataFilepath(senderId)
+	debugFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		slog.Debug("error encoding to json debug", "error", err)
+		slog.Error("error writing to debug file", "err", err, "filename", filename)
 		return
 	}
-	_, err = s.DebugFile.Write(jsonBytes)
+	defer debugFile.Close()
+
+	writer := csv.NewWriter(debugFile)
+	defer writer.Flush()
+
+	debugLine := []string {
+		strconv.FormatInt(time.Now().Unix(), 10),
+	    senderId,
+		topic,
+		string(p.ApplicationMessage()),
+	}
+	err = writer.Write(debugLine)
 	if err != nil {
-		slog.Debug("error writing to debug file", "error", err)
+		slog.Error("error writing to debug file", "err", err, "filename", filename)
 		return
 	}
 }

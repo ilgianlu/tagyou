@@ -29,10 +29,7 @@ func main() {
 	}
 	p.Init(conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
 
-	router, debugFile := selectRouter(conf.ROUTER_MODE)
-	if debugFile != nil {
-		defer debugFile.Close()
-	}
+	router := selectRouter(conf.ROUTER_MODE)
 
 	go api.StartApi(conf.API_PORT)
 	go mqtt.StartWebSocket(conf.WS_PORT, router)
@@ -41,19 +38,14 @@ func main() {
 	<-c
 }
 
-func selectRouter(mode string) (routers.Router, *os.File) {
+func selectRouter(mode string) (routers.Router) {
 	slog.Info("starting with router", "mode", strings.ToUpper(mode))
 	switch mode {
 	case conf.ROUTER_MODE_DEBUG:
-		file, err := os.Create(conf.DEBUG_FILE)
-		if err != nil {
-			slog.Error("Could write debug file", "err", err)
-			panic(1)
-		}
-		return routers.NewDebug(file, conf.DEBUG_CLIENTS), file
+		return routers.NewDebug(conf.DEBUG_CLIENTS)
 	case conf.ROUTER_MODE_SIMPLE:
-		return routers.NewSimple(), nil
+		return routers.NewSimple()
 	default:
-		return routers.NewStandard(), nil
+		return routers.NewStandard()
 	}
 }
