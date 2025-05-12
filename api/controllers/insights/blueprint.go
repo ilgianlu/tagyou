@@ -1,8 +1,8 @@
 package insights
 
 import (
-	"bufio"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -55,15 +55,9 @@ func (dc InsightsController) Blueprint(w http.ResponseWriter, r *http.Request) {
 	defer output.Close()
 
 	// blueprint csv header
-	output.Write([]byte("\"timestamp\",\"message\"\n"))
-
-	scanner := bufio.NewScanner(input)
-	for scanner.Scan() {
-		inputline := scanner.Text()
-		output.WriteString(inputline)
-	}
-	if err := scanner.Err(); err != nil {
-		slog.Error("Error scanning file", "err", err)
+	output.Write([]byte("\"timestamp\",\"senderid\",\"topic\",\"message\"\n"))
+	if _, err := io.Copy(output, input); err != nil {
+		slog.Error("Error creating blueprint file", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -22,5 +22,5 @@ func BlueprintFilepath(model string) string {
 }
 
 func DebugDataFilepath(clientID string) string {
-	return fmt.Sprintf(DEBUG_DATA_PATH + "/%s.dump", clientID)
+	return fmt.Sprintf(DEBUG_DATA_PATH + "/%s.csv", clientID)
 }
