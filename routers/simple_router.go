@@ -49,7 +49,7 @@ func (s SimpleRouter) Send(clientId string, payload []byte) {
 	}
 }
 
-func (s SimpleRouter) Forward(senderId string, topic string, p *packet.Packet) {
+func (s SimpleRouter) Forward(senderId string, topic string, p model.Packet) {
 	destSubs := []string{topic}
 	s.sendSubscribers(topic, destSubs, p)
 	s.sendSharedSubscribers(topic, destSubs, p)
@@ -67,14 +67,14 @@ func (s SimpleRouter) SendRetain(protocolVersion uint8, subscription model.Subsc
 	}
 }
 
-func (s SimpleRouter) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s SimpleRouter) sendSubscribers(topic string, destSubs []string, p model.Packet) {
 	subs := persistence.SubscriptionRepository.FindSubscriptions(destSubs, false)
 	for _, sub := range subs {
 		s.forwardSend(topic, sub, p)
 	}
 }
 
-func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s SimpleRouter) sendSharedSubscribers(topic string, destSubs []string, p model.Packet) {
 	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true)
 	grouped := groupSubscribers(subs)
 	for _, group := range grouped {
@@ -109,7 +109,7 @@ func groupSubscribers(subs []model.Subscription) model.SubscriptionGroup {
 	return grouped
 }
 
-func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p *packet.Packet) {
+func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p model.Packet) {
 	qos := getQos(p.QoS(), sub.Qos)
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier

@@ -11,10 +11,9 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/routers"
 )
 
-func StartMQTT(port string, router routers.Router) {
+func StartMQTT(port string, router model.Router) {
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
 		slog.Error("[MQTT] tcp listen error", "err", err)
@@ -30,7 +29,7 @@ func StartMQTT(port string, router routers.Router) {
 	}
 }
 
-func handleTcpConnection(router routers.Router, conn net.Conn) {
+func handleTcpConnection(router model.Router, conn net.Conn) {
 	defer conn.Close()
 
 	sessionTimestamp := time.Now().Unix()
@@ -78,7 +77,7 @@ func handleTcpConnection(router routers.Router, conn net.Conn) {
 	}
 }
 
-func packetSplit(router routers.Router, session *model.RunningSession) func(b []byte, atEOF bool) (int, []byte, error) {
+func packetSplit(router model.Router, session *model.RunningSession) func(b []byte, atEOF bool) (int, []byte, error) {
 	return func(b []byte, atEOF bool) (advance int, token []byte, err error) {
 		if len(b) == 0 && atEOF {
 			wasConnected := onSocketDownClosed(router, session)
@@ -99,7 +98,7 @@ func packetSplit(router routers.Router, session *model.RunningSession) func(b []
 	}
 }
 
-func onSocketUpButSilent(router routers.Router, session *model.RunningSession) bool {
+func onSocketUpButSilent(router model.Router, session *model.RunningSession) bool {
 	slog.Debug("[MQTT] keepalive not respected!", "keep-alive", session.KeepAlive*2)
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] will due to keepalive not respected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
@@ -109,7 +108,7 @@ func onSocketUpButSilent(router routers.Router, session *model.RunningSession) b
 	return false
 }
 
-func onSocketDownClosed(router routers.Router, session *model.RunningSession) bool {
+func onSocketDownClosed(router model.Router, session *model.RunningSession) bool {
 	slog.Debug("[MQTT] socket closed!", "client-id", session.GetClientId())
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] client was connected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
@@ -119,7 +118,7 @@ func onSocketDownClosed(router routers.Router, session *model.RunningSession) bo
 	return false
 }
 
-func disconnectClient(router routers.Router, session *model.RunningSession, e chan<- *packet.Packet) {
+func disconnectClient(router model.Router, session *model.RunningSession, e chan<- *packet.Packet) {
 	session.Mu.RLock()
 	clientId := session.ClientId
 	session.Mu.RUnlock()

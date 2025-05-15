@@ -8,10 +8,9 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/routers"
 )
 
-func OnPublish(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+func OnPublish(router model.Router, session *model.RunningSession, p *packet.Packet) {
 	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(p.Topic, session.PublishAcl) {
 		if p.QoS() == conf.QOS1 {
 			sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_NOT_AUTHORIZED)
@@ -37,12 +36,12 @@ func OnPublish(router routers.Router, session *model.RunningSession, p *packet.P
 	}
 }
 
-func sendAck(router routers.Router, session *model.RunningSession, packetIdentifier int, reasonCode uint8) {
+func sendAck(router model.Router, session *model.RunningSession, packetIdentifier int, reasonCode uint8) {
 	puback := packet.Puback(packetIdentifier, reasonCode, session.ProtocolVersion)
 	router.Send(session.ClientId, puback.ToByteSlice())
 }
 
-func sendPubrec(router routers.Router, session *model.RunningSession, p *packet.Packet, reasonCode uint8) {
+func sendPubrec(router model.Router, session *model.RunningSession, p *packet.Packet, reasonCode uint8) {
 	session.Mu.RLock()
 	clientId := session.ClientId
 	protocolVersion := session.ProtocolVersion

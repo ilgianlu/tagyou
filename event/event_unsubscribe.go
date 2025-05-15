@@ -7,10 +7,9 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onUnsubscribe(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+func onUnsubscribe(router model.Router, session *model.RunningSession, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, unsub := range p.Subscriptions {
 		rCode := clientUnsubscription(session.GetClientId(), unsub)
@@ -19,7 +18,7 @@ func onUnsubscribe(router routers.Router, session *model.RunningSession, p *pack
 	clientUnsubscribed(router, session, p.PacketIdentifier(), reasonCodes)
 }
 
-func clientUnsubscribed(router routers.Router, session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
+func clientUnsubscribed(router model.Router, session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
 	toSend := packet.Unsuback(packetIdentifier, reasonCodes, session.GetProtocolVersion())
 	router.Send(session.GetClientId(), toSend.ToByteSlice())
 }

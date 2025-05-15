@@ -7,16 +7,15 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/routers"
 )
 
-func RangePackets(router routers.Router, session *model.RunningSession, packets <-chan *packet.Packet) {
+func RangePackets(router model.Router, session *model.RunningSession, packets <-chan *packet.Packet) {
 	for p := range packets {
 		managePacket(router, session, p)
 	}
 }
 
-func managePacket(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+func managePacket(router model.Router, session *model.RunningSession, p *packet.Packet) {
 	slog.Debug("//!! is session connected?", "connected?", session.GetConnected())
 	slog.Debug("//!! packet arriving", "packet-type", p.PacketType())
 	if !session.GetConnected() && p.PacketType() != packet.PACKET_TYPE_CONNECT {
@@ -65,12 +64,12 @@ func managePacket(router routers.Router, session *model.RunningSession, p *packe
 	}
 }
 
-func onPing(router routers.Router, session *model.RunningSession) {
+func onPing(router model.Router, session *model.RunningSession) {
 	toSend := packet.PingResp()
 	router.Send(session.GetClientId(), toSend.ToByteSlice())
 }
 
-func clientDisconnect(router routers.Router, session *model.RunningSession, clientId string) {
+func clientDisconnect(router model.Router, session *model.RunningSession, clientId string) {
 	session.SetConnected(false)
 	if router.DestinationExists(clientId) {
 		needDisconnection := needDisconnection(session)
