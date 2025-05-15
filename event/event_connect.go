@@ -8,10 +8,9 @@ import (
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onConnect(router routers.Router, session *model.RunningSession) {
+func onConnect(router model.Router, session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !session.FromLocalhost() {
 		if !doAuth(session) {
@@ -57,11 +56,10 @@ func checkAuth(clientId string, username string, sessionPassword string) (bool, 
 		slog.Debug("[MQTT] wrong password")
 		return false, "", ""
 	}
-
 	return true, client.PublishAcl, client.SubscribeAcl
 }
 
-func checkConnectionTakeOver(session *model.RunningSession, router routers.Router) bool {
+func checkConnectionTakeOver(session *model.RunningSession, router model.Router) bool {
 	session.Mu.RLock()
 	clientId := session.ClientId
 	protocolVersion := session.ProtocolVersion

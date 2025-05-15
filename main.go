@@ -10,6 +10,7 @@ import (
 	"github.com/ilgianlu/tagyou/api"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/log"
+	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/mqtt"
 	"github.com/ilgianlu/tagyou/persistence"
 	"github.com/ilgianlu/tagyou/routers"
@@ -38,7 +39,7 @@ func main() {
 	<-c
 }
 
-func selectRouter(mode string) (routers.Router) {
+func selectRouter(mode string) model.Router {
 	slog.Info("starting with router", "mode", strings.ToUpper(mode))
 	switch mode {
 	case conf.ROUTER_MODE_DEBUG:

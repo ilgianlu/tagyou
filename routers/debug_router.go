@@ -19,12 +19,6 @@ type DebugRouter struct {
 	DebugClients string
 }
 
-type debugMessage struct {
-	SenderId string
-	Topic    string
-	Payload  string
-}
-
 func (s DebugRouter) AddDestination(clientId string, conn model.TagyouConn) {
 	s.Conns.Add(clientId, conn)
 }
@@ -59,7 +53,7 @@ func (s DebugRouter) Send(clientId string, payload []byte) {
 	}
 }
 
-func (s DebugRouter) Forward(senderId string, topic string, p *packet.Packet) {
+func (s DebugRouter) Forward(senderId string, topic string, p model.Packet) {
 	destSubs := explodeFull(topic)
 	s.sendSubscribers(topic, destSubs, p)
 	s.sendSharedSubscribers(topic, destSubs, p)
@@ -78,7 +72,7 @@ func (s DebugRouter) SendRetain(protocolVersion uint8, subscription model.Subscr
 	}
 }
 
-func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) {
+func (s DebugRouter) sendDebug(senderId string, topic string, p model.Packet) {
 	slog.Debug("to debug?", "sender", senderId, "debugged", s.DebugClients, "contained", strings.Contains(s.DebugClients, senderId))
 	if s.DebugClients != "" && !strings.Contains(s.DebugClients, senderId) {
 		return
@@ -94,9 +88,9 @@ func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) 
 	writer := csv.NewWriter(debugFile)
 	defer writer.Flush()
 
-	debugLine := []string {
+	debugLine := []string{
 		strconv.FormatInt(time.Now().Unix(), 10),
-	    senderId,
+		senderId,
 		topic,
 		string(p.ApplicationMessage()),
 	}
@@ -107,14 +101,14 @@ func (s DebugRouter) sendDebug(senderId string, topic string, p *packet.Packet) 
 	}
 }
 
-func (s DebugRouter) sendSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s DebugRouter) sendSubscribers(topic string, destSubs []string, p model.Packet) {
 	subs := persistence.SubscriptionRepository.FindSubscriptions(destSubs, false)
 	for _, sub := range subs {
 		s.forwardSend(topic, sub, p)
 	}
 }
 
-func (s DebugRouter) sendSharedSubscribers(topic string, destSubs []string, p *packet.Packet) {
+func (s DebugRouter) sendSharedSubscribers(topic string, destSubs []string, p model.Packet) {
 	subs := persistence.SubscriptionRepository.FindOrderedSubscriptions(destSubs, true)
 	grouped := groupSubscribers(subs)
 	for _, group := range grouped {
@@ -123,7 +117,7 @@ func (s DebugRouter) sendSharedSubscribers(topic string, destSubs []string, p *p
 	}
 }
 
-func (s DebugRouter) forwardSend(topic string, sub model.Subscription, p *packet.Packet) {
+func (s DebugRouter) forwardSend(topic string, sub model.Subscription, p model.Packet) {
 	qos := getQos(p.QoS(), sub.Qos)
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier

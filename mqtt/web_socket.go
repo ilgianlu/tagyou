@@ -13,10 +13,9 @@ import (
 	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
-	"github.com/ilgianlu/tagyou/routers"
 )
 
-func StartWebSocket(port string, router routers.Router) {
+func StartWebSocket(port string, router model.Router) {
 	r := http.NewServeMux()
 	r.HandleFunc("GET /ws", AcceptWebsocket(router))
 	r.HandleFunc("POST /messages", middlewares.Authenticated(PostMessage(router)))
@@ -28,7 +27,7 @@ func StartWebSocket(port string, router routers.Router) {
 	}
 }
 
-func AcceptWebsocket(router routers.Router) func(http.ResponseWriter, *http.Request) {
+func AcceptWebsocket(router model.Router) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			Subprotocols: []string{"mqtt"},
@@ -57,7 +56,7 @@ func AcceptWebsocket(router routers.Router) func(http.ResponseWriter, *http.Requ
 	}
 }
 
-func PostMessage(router routers.Router) func(w http.ResponseWriter, r *http.Request) {
+func PostMessage(router model.Router) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		mess := model.Message{}
 		if err := json.NewDecoder(r.Body).Decode(&mess); err != nil {

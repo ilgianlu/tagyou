@@ -5,10 +5,9 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onSubscribe(router routers.Router, session *model.RunningSession, p *packet.Packet) {
+func onSubscribe(router model.Router, session *model.RunningSession, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
 		rCode := clientSubscription(router, session, subscription)
@@ -17,14 +16,14 @@ func onSubscribe(router routers.Router, session *model.RunningSession, p *packet
 	clientSubscribed(router, session, p.PacketIdentifier(), reasonCodes)
 }
 
-func clientSubscribed(router routers.Router, session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
+func clientSubscribed(router model.Router, session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
 	session.Mu.RLock()
 	toSend := packet.Suback(packetIdentifier, reasonCodes, session.ProtocolVersion)
 	router.Send(session.ClientId, toSend.ToByteSlice())
 	session.Mu.RUnlock()
 }
 
-func clientSubscription(router routers.Router, session *model.RunningSession, subscription model.Subscription) uint8 {
+func clientSubscription(router model.Router, session *model.RunningSession, subscription model.Subscription) uint8 {
 	session.Mu.RLock()
 	fromLocalhost := session.FromLocalhost()
 	subscribeAcl := session.SubscribeAcl
