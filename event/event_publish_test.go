@@ -26,7 +26,10 @@ func TestPublish(t *testing.T) {
 		t.Errorf("did not expect any error opening test.db3")
 	}
 
-	router := routers.NewSimple()
+	connections := model.SimpleConnections{
+		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
+	}
+	router := routers.NewSimple(&connections)
 
 	receivedMsgs = []Msg{}
 

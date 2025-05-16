@@ -40,11 +40,14 @@ func (mock TagyouConnMock) RemoteAddr() net.Addr {
 }
 
 func TestPublishWhenClientIsNotConnected(t *testing.T) {
+	connections := model.SimpleConnections{
+		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
+	}
 	mockConn := TagyouConnMock{}
 	session := model.RunningSession{
 		Connected: false,
 		Conn:      mockConn,
-		Router:    routers.NewSimple(),
+		Router:    routers.NewSimple(&connections),
 	}
 	p := packet.Publish(4, 0, false, "", 0, []byte{})
 
@@ -56,12 +59,15 @@ func TestPublishWhenClientIsNotConnected(t *testing.T) {
 }
 
 func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
+	connections := model.SimpleConnections{
+		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
+	}
 	mockConn := TagyouConnMock{}
 	session := model.RunningSession{
 		Connected: true,
 		ClientId:  "client-x",
 		Conn:      mockConn,
-		Router:    routers.NewSimple(),
+		Router:    routers.NewSimple(&connections),
 	}
 	p := packet.Connect()
 
@@ -73,13 +79,16 @@ func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
 }
 
 func TestSuccessfullConnect(t *testing.T) {
+	connections := model.SimpleConnections{
+		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
+	}
 	mockConn := TagyouConnMock{
 		remoteAddr: &net.IPAddr{IP: net.IPv4(127, 0, 0, 1)},
 	}
 	session := model.RunningSession{
 		Connected: false,
 		Conn:      mockConn,
-		Router:    routers.NewSimple(),
+		Router:    routers.NewSimple(&connections),
 	}
 
 	buf := []byte{16, 25, 0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 5, 17, 0, 0, 0, 60, 0, 7, 99, 108, 105, 101, 110, 116, 88}
@@ -117,7 +126,10 @@ func TestSuccessfullReconnect(t *testing.T) {
 		ProtocolVersion: sql.NullInt64{Int64: conf.MQTT_V3_11, Valid: true},
 	})
 
-	router := routers.NewSimple()
+	connections := model.SimpleConnections{
+		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
+	}
+	router := routers.NewSimple(&connections)
 
 	receivedMsgs = []Msg{}
 	mockConn := TagyouConnMock{
