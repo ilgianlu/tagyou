@@ -9,13 +9,13 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func RangePackets(router model.Router, session *model.RunningSession, packets <-chan *packet.Packet) {
+func RangePackets(session *model.RunningSession, packets <-chan *packet.Packet) {
 	for p := range packets {
-		managePacket(router, session, p)
+		managePacket(session, p)
 	}
 }
 
-func managePacket(router model.Router, session *model.RunningSession, p *packet.Packet) {
+func managePacket(session *model.RunningSession, p *packet.Packet) {
 	slog.Debug("//!! is session connected?", "connected?", session.GetConnected())
 	slog.Debug("//!! packet arriving", "packet-type", p.PacketType())
 	if !session.GetConnected() && p.PacketType() != packet.PACKET_TYPE_CONNECT {
@@ -28,55 +28,55 @@ func managePacket(router model.Router, session *model.RunningSession, p *packet.
 		slog.Debug("//!! EVENT client connect", "client-id", session.GetClientId())
 		if session.GetConnected() {
 			slog.Debug("//!! EVENT double connect event, disconnecting...", "client-id", session.GetClientId())
-			clientDisconnect(router, session, session.GetClientId())
+			clientDisconnect(session, session.GetClientId())
 			return
 		}
-		onConnect(router, session)
+		onConnect(session)
 		return
 	case packet.PACKET_TYPE_DISCONNECT:
 		slog.Debug("//!! EVENT client disconnect", "client-id", session.GetClientId())
-		clientDisconnect(router, session, session.GetClientId())
+		clientDisconnect(session, session.GetClientId())
 		return
 	case packet.PACKET_TYPE_PINGREQ:
 		slog.Debug("//!! EVENT client ping", "client-id", session.GetClientId())
-		onPing(router, session)
+		onPing(session)
 	case packet.PACKET_TYPE_SUBSCRIBE:
 		slog.Debug("//!! EVENT client subscribed", "client-id", session.GetClientId())
-		onSubscribe(router, session, p)
+		onSubscribe(session, p)
 	case packet.PACKET_TYPE_UNSUBSCRIBE:
 		slog.Debug("//!! EVENT client unsubscribed", "client-id", session.GetClientId())
-		onUnsubscribe(router, session, p)
+		onUnsubscribe(session, p)
 	case packet.PACKET_TYPE_PUBLISH:
 		slog.Debug("//!! EVENT client published", "topic", p.Topic, "client-id", session.GetClientId(), "qos", p.QoS())
-		OnPublish(router, session, p)
+		OnPublish(session, p)
 	case packet.PACKET_TYPE_PUBACK:
 		slog.Debug("//!! EVENT client acked message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
 		clientPuback(session, p)
 	case packet.PACKET_TYPE_PUBREC:
 		slog.Debug("//!! EVENT pub received message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
-		clientPubrec(router, session, p)
+		clientPubrec(session, p)
 	case packet.PACKET_TYPE_PUBREL:
 		slog.Debug("//!! EVENT pub releases message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
-		clientPubrel(router, session, p)
+		clientPubrel(session, p)
 	case packet.PACKET_TYPE_PUBCOMP:
 		slog.Debug("//!! EVENT pub complete message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
 		clientPubcomp(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
 	}
 }
 
-func onPing(router model.Router, session *model.RunningSession) {
+func onPing(session *model.RunningSession) {
 	toSend := packet.PingResp()
-	router.Send(session.GetClientId(), toSend.ToByteSlice())
+	session.Router.Send(session.GetClientId(), toSend.ToByteSlice())
 }
 
-func clientDisconnect(router model.Router, session *model.RunningSession, clientId string) {
+func clientDisconnect(session *model.RunningSession, clientId string) {
 	session.SetConnected(false)
-	if router.DestinationExists(clientId) {
+	if session.Router.DestinationExists(clientId) {
 		needDisconnection := needDisconnection(session)
 		if !needDisconnection {
 			return
 		}
-		router.RemoveDestination(clientId)
+		session.Router.RemoveDestination(clientId)
 		persistence.SessionRepository.DisconnectSession(clientId)
 	}
 }

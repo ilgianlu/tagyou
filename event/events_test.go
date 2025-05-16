@@ -40,15 +40,15 @@ func (mock TagyouConnMock) RemoteAddr() net.Addr {
 }
 
 func TestPublishWhenClientIsNotConnected(t *testing.T) {
-	router := routers.NewSimple()
 	mockConn := TagyouConnMock{}
 	session := model.RunningSession{
 		Connected: false,
 		Conn:      mockConn,
+		Router:    routers.NewSimple(),
 	}
 	p := packet.Publish(4, 0, false, "", 0, []byte{})
 
-	managePacket(router, &session, &p)
+	managePacket(&session, &p)
 
 	if session.Connected != false {
 		t.Errorf("expecting not connected session false, received true")
@@ -56,16 +56,16 @@ func TestPublishWhenClientIsNotConnected(t *testing.T) {
 }
 
 func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
-	router := routers.NewSimple()
 	mockConn := TagyouConnMock{}
 	session := model.RunningSession{
 		Connected: true,
 		ClientId:  "client-x",
 		Conn:      mockConn,
+		Router:    routers.NewSimple(),
 	}
 	p := packet.Connect()
 
-	managePacket(router, &session, &p)
+	managePacket(&session, &p)
 
 	if session.Connected != false {
 		t.Errorf("expecting not connected session false, received true")
@@ -73,13 +73,13 @@ func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
 }
 
 func TestSuccessfullConnect(t *testing.T) {
-	router := routers.NewSimple()
 	mockConn := TagyouConnMock{
 		remoteAddr: &net.IPAddr{IP: net.IPv4(127, 0, 0, 1)},
 	}
 	session := model.RunningSession{
 		Connected: false,
 		Conn:      mockConn,
+		Router:    routers.NewSimple(),
 	}
 
 	buf := []byte{16, 25, 0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 5, 17, 0, 0, 0, 60, 0, 7, 99, 108, 105, 101, 110, 116, 88}
@@ -89,7 +89,7 @@ func TestSuccessfullConnect(t *testing.T) {
 		t.Errorf("did not expect parse error %s", err)
 	}
 
-	managePacket(router, &session, &p)
+	managePacket(&session, &p)
 
 	if session.Connected != true {
 		t.Errorf("expecting client connected, received false")
@@ -126,12 +126,13 @@ func TestSuccessfullReconnect(t *testing.T) {
 	session := model.RunningSession{
 		Connected: false,
 		Conn:      mockConn,
+		Router:    router,
 	}
 
 	buf := []byte{16, 64, 0, 4, 77, 81, 84, 84, 4, 198, 0, 5, 0, 15, 109, 113, 116, 116, 106, 115, 95, 97, 97, 50, 51, 99, 56, 49, 53, 0, 5, 97, 47, 98, 47, 99, 0, 15, 119, 105, 108, 108, 32, 109, 101, 115, 115, 97, 103, 101, 46, 46, 46, 0, 4, 117, 115, 101, 114, 0, 5, 112, 108, 117, 116, 111}
 	p, _ := packet.PacketParse(&session, buf)
 
-	managePacket(router, &session, &p)
+	managePacket(&session, &p)
 
 	if session.Connected != true {
 		t.Errorf("expecting client connected, received false")

@@ -7,28 +7,28 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func onSubscribe(router model.Router, session *model.RunningSession, p *packet.Packet) {
+func onSubscribe(session *model.RunningSession, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
-		rCode := clientSubscription(router, session, subscription)
+		rCode := clientSubscription(session, subscription)
 		reasonCodes = append(reasonCodes, rCode)
 	}
-	clientSubscribed(router, session, p.PacketIdentifier(), reasonCodes)
+	clientSubscribed(session, p.PacketIdentifier(), reasonCodes)
 }
 
-func clientSubscribed(router model.Router, session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
+func clientSubscribed(session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
 	session.Mu.RLock()
 	toSend := packet.Suback(packetIdentifier, reasonCodes, session.ProtocolVersion)
-	router.Send(session.ClientId, toSend.ToByteSlice())
+	session.Router.Send(session.ClientId, toSend.ToByteSlice())
 	session.Mu.RUnlock()
 }
 
-func clientSubscription(router model.Router, session *model.RunningSession, subscription model.Subscription) uint8 {
+func clientSubscription(session *model.RunningSession, subscription model.Subscription) uint8 {
 	session.Mu.RLock()
+	defer session.Mu.RUnlock()
 	fromLocalhost := session.FromLocalhost()
 	subscribeAcl := session.SubscribeAcl
 	protocolVersion := session.ProtocolVersion
-	session.Mu.RUnlock()
 	// check subscr qos, topic valid...
 	if conf.ACL_ON && !fromLocalhost && !CheckAcl(subscription.Topic, subscribeAcl) {
 		return conf.SUB_TOPIC_FILTER_INVALID
@@ -36,7 +36,7 @@ func clientSubscription(router model.Router, session *model.RunningSession, subs
 	// db.Create(&subscription)
 	persistence.SubscriptionRepository.CreateOne(subscription)
 	if !subscription.Shared {
-		router.SendRetain(protocolVersion, subscription)
+		session.Router.SendRetain(protocolVersion, subscription)
 	}
 	return 0
 }

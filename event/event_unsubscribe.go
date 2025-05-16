@@ -9,18 +9,18 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func onUnsubscribe(router model.Router, session *model.RunningSession, p *packet.Packet) {
+func onUnsubscribe(session *model.RunningSession, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, unsub := range p.Subscriptions {
 		rCode := clientUnsubscription(session.GetClientId(), unsub)
 		reasonCodes = append(reasonCodes, rCode)
 	}
-	clientUnsubscribed(router, session, p.PacketIdentifier(), reasonCodes)
+	clientUnsubscribed(session, p.PacketIdentifier(), reasonCodes)
 }
 
-func clientUnsubscribed(router model.Router, session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
+func clientUnsubscribed(session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
 	toSend := packet.Unsuback(packetIdentifier, reasonCodes, session.GetProtocolVersion())
-	router.Send(session.GetClientId(), toSend.ToByteSlice())
+	session.Router.Send(session.GetClientId(), toSend.ToByteSlice())
 }
 
 func clientUnsubscription(clientId string, unsub model.Subscription) uint8 {

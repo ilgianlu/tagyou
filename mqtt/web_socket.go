@@ -13,12 +13,13 @@ import (
 	"github.com/ilgianlu/tagyou/event"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
+	"github.com/ilgianlu/tagyou/routers"
 )
 
-func StartWebSocket(port string, router model.Router) {
+func StartWebSocket(port string) {
 	r := http.NewServeMux()
-	r.HandleFunc("GET /ws", AcceptWebsocket(router))
-	r.HandleFunc("POST /messages", middlewares.Authenticated(PostMessage(router)))
+	r.HandleFunc("GET /ws", AcceptWebsocket())
+	r.HandleFunc("POST /messages", middlewares.Authenticated(PostMessage()))
 
 	slog.Info("[WS] websocket listening on", "tcp-port", port)
 	if err := http.ListenAndServe(port, r); err != nil {
@@ -27,7 +28,7 @@ func StartWebSocket(port string, router model.Router) {
 	}
 }
 
-func AcceptWebsocket(router model.Router) func(http.ResponseWriter, *http.Request) {
+func AcceptWebsocket() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			Subprotocols: []string{"mqtt"},
@@ -42,11 +43,12 @@ func AcceptWebsocket(router model.Router) func(http.ResponseWriter, *http.Reques
 			KeepAlive:      conf.DEFAULT_KEEPALIVE,
 			ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 			Conn:           model.WebsocketConnection{Conn: c},
+			Router:         routers.NewDefault(conf.ROUTER_MODE),
 			LastConnect:    time.Now().Unix(),
 		}
 
 		events := make(chan *packet.Packet)
-		go event.RangePackets(router, &session, events)
+		go event.RangePackets(&session, events)
 
 		bytesFromWs := make(chan []byte)
 		defer close(bytesFromWs)
@@ -56,7 +58,7 @@ func AcceptWebsocket(router model.Router) func(http.ResponseWriter, *http.Reques
 	}
 }
 
-func PostMessage(router model.Router) func(w http.ResponseWriter, r *http.Request) {
+func PostMessage() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		mess := model.Message{}
 		if err := json.NewDecoder(r.Body).Decode(&mess); err != nil {
@@ -65,11 +67,14 @@ func PostMessage(router model.Router) func(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		session := model.RunningSession{ClientId: "PostMessage"}
+		session := model.RunningSession{
+			ClientId: "PostMessage",
+			Router:   routers.NewDefault(conf.ROUTER_MODE),
+		}
 
 		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload))
 		msg.Topic = mess.Topic
-		event.OnPublish(router, &session, &msg)
+		event.OnPublish(&session, &msg)
 
 		if res, err := json.Marshal("message published"); err != nil {
 			slog.Error("[WS] error marshaling response message", "err", err)

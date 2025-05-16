@@ -8,10 +8,10 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func clientPubrec(router model.Router, session *model.RunningSession, p *packet.Packet) {
+func clientPubrec(session *model.RunningSession, p *packet.Packet) {
 	sendPubrel := func(retry model.Retry) {
 		toSend := packet.Pubrel(retry.PacketIdentifier, retry.ReasonCode, session.ProtocolVersion)
-		router.Send(retry.ClientId, toSend.ToByteSlice())
+		session.Router.Send(retry.ClientId, toSend.ToByteSlice())
 	}
 
 	onExpectedPubrec := func(retry model.Retry) {
