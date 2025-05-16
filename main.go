@@ -8,6 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/api"
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/log"
+	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/mqtt"
 	"github.com/ilgianlu/tagyou/persistence"
 )
@@ -26,9 +27,12 @@ func main() {
 	}
 	p.Init(conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
 
+	connections := model.SimpleConnections{
+		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
+	}
 	go api.StartApi(conf.API_PORT)
-	go mqtt.StartWebSocket(conf.WS_PORT)
-	go mqtt.StartMQTT(conf.LISTEN_PORT)
+	go mqtt.StartWebSocket(conf.WS_PORT, &connections)
+	go mqtt.StartMQTT(conf.LISTEN_PORT, &connections)
 
 	<-c
 }

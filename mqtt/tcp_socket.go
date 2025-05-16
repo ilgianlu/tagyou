@@ -14,7 +14,7 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func StartMQTT(port string) {
+func StartMQTT(port string, connections model.Connections) {
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
 		slog.Error("[MQTT] tcp listen error", "err", err)
@@ -26,11 +26,11 @@ func StartMQTT(port string) {
 		if err != nil {
 			slog.Error("[MQTT] tcp accept error", "err", err)
 		}
-		go handleTcpConnection(conn)
+		go handleTcpConnection(conn, connections)
 	}
 }
 
-func handleTcpConnection(conn net.Conn) {
+func handleTcpConnection(conn net.Conn, connections model.Connections) {
 	defer conn.Close()
 
 	sessionTimestamp := time.Now().Unix()
@@ -38,7 +38,7 @@ func handleTcpConnection(conn net.Conn) {
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
 		ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 		Conn:           conn,
-		Router:         routers.NewDefault(conf.ROUTER_MODE),
+		Router:         routers.NewDefault(conf.ROUTER_MODE, connections),
 		LastConnect:    sessionTimestamp,
 		LastSeen:       sessionTimestamp,
 	}

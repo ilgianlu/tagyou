@@ -7,4 +7,5 @@ type Router interface {
 	AddDestination(clientId string, conn TagyouConn)
 	RemoveDestination(clientId string)
 	DestinationExists(clientId string) bool
+	GetConns() Connections 
 }

@@ -1,23 +1,21 @@
-package routers
+package model
 
 import (
 	"sync"
-
-	"github.com/ilgianlu/tagyou/model"
 )
 
 type SimpleConnections struct {
-	Conns map[string]model.TagyouConn
+	Conns map[string]TagyouConn
 	Mu    sync.RWMutex
 }
 
-func (c *SimpleConnections) Add(clientId string, conn model.TagyouConn) {
+func (c *SimpleConnections) Add(clientId string, conn TagyouConn) {
 	c.Mu.Lock()
 	c.Conns[clientId] = conn
 	c.Mu.Unlock()
 }
 
-func (c *SimpleConnections) Exists(clientId string) (model.TagyouConn, bool) {
+func (c *SimpleConnections) Exists(clientId string) (TagyouConn, bool) {
 	c.Mu.RLock()
 	defer c.Mu.RUnlock()
 	if conn, ok := c.Conns[clientId]; ok {

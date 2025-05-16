@@ -14,8 +14,12 @@ import (
 )
 
 type DebugRouter struct {
-	Conns        Connections
+	Conns        model.Connections
 	DebugClients string
+}
+
+func (s DebugRouter) GetConns() model.Connections {
+	return s.Conns
 }
 
 func (s DebugRouter) AddDestination(clientId string, conn model.TagyouConn) {

@@ -11,7 +11,7 @@ const ROUTER_MODE_SIMPLE = "simple"
 const ROUTER_MODE_DEBUG = "debug"
 
 // list of selected clientId to use for debug router separated by slash "/" "client1/client2", empty string use default 
-var DEBUG_CLIENTS = ""
+var DEBUG_CLIENTS = "client-0"
 
 // list of selected clientId to use for simple router separated by slash "/" "client1/client2", empty string use default 
 var SIMPLE_CLIENTS = ""

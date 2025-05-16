@@ -78,7 +78,7 @@ func checkConnectionTakeOver(session *model.RunningSession) bool {
 
 func startSession(session *model.RunningSession) {
 	clientId := session.GetClientId()
-	session.Router = routers.ByClientId(clientId)
+	session.Router = routers.ByClientId(clientId, session.Router.GetConns())
 	if prevSession, ok := persistence.SessionRepository.SessionExists(clientId); ok {
 		slog.Debug("[MQTT] check existing session", "last-seen", prevSession.GetLastSeen(), "clean-start", session.CleanStart(), "expired", prevSession.Expired(), "new-protocol-version", session.GetProtocolVersion(), "prev-protocol-version", prevSession.GetProtocolVersion())
 		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.GetProtocolVersion() {

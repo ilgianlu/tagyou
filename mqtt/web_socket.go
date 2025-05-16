@@ -16,10 +16,10 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func StartWebSocket(port string) {
+func StartWebSocket(port string, connections model.Connections) {
 	r := http.NewServeMux()
-	r.HandleFunc("GET /ws", AcceptWebsocket())
-	r.HandleFunc("POST /messages", middlewares.Authenticated(PostMessage()))
+	r.HandleFunc("GET /ws", AcceptWebsocket(connections))
+	r.HandleFunc("POST /messages", middlewares.Authenticated(PostMessage(connections)))
 
 	slog.Info("[WS] websocket listening on", "tcp-port", port)
 	if err := http.ListenAndServe(port, r); err != nil {
@@ -28,7 +28,7 @@ func StartWebSocket(port string) {
 	}
 }
 
-func AcceptWebsocket() func(http.ResponseWriter, *http.Request) {
+func AcceptWebsocket(connections model.Connections) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			Subprotocols: []string{"mqtt"},
@@ -43,7 +43,7 @@ func AcceptWebsocket() func(http.ResponseWriter, *http.Request) {
 			KeepAlive:      conf.DEFAULT_KEEPALIVE,
 			ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 			Conn:           model.WebsocketConnection{Conn: c},
-			Router:         routers.NewDefault(conf.ROUTER_MODE),
+			Router:         routers.NewDefault(conf.ROUTER_MODE, connections),
 			LastConnect:    time.Now().Unix(),
 		}
 
@@ -58,7 +58,7 @@ func AcceptWebsocket() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func PostMessage() func(w http.ResponseWriter, r *http.Request) {
+func PostMessage(connections model.Connections) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		mess := model.Message{}
 		if err := json.NewDecoder(r.Body).Decode(&mess); err != nil {
@@ -69,7 +69,7 @@ func PostMessage() func(w http.ResponseWriter, r *http.Request) {
 
 		session := model.RunningSession{
 			ClientId: "PostMessage",
-			Router:   routers.NewDefault(conf.ROUTER_MODE),
+			Router:   routers.NewDefault(conf.ROUTER_MODE, connections),
 		}
 
 		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload))

@@ -12,7 +12,11 @@ import (
 )
 
 type SimpleRouter struct {
-	Conns Connections
+	Conns model.Connections
+}
+
+func (s SimpleRouter) GetConns() model.Connections {
+	return s.Conns
 }
 
 func (s SimpleRouter) AddDestination(clientId string, conn model.TagyouConn) {

@@ -13,7 +13,11 @@ import (
 )
 
 type StandardRouter struct {
-	Conns Connections
+	Conns model.Connections
+}
+
+func (s StandardRouter) GetConns() model.Connections {
+	return s.Conns
 }
 
 func (s StandardRouter) AddDestination(clientId string, conn model.TagyouConn) {

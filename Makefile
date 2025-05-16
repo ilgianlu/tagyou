@@ -21,6 +21,7 @@ clean:
 # Init for tests
 init:
 	find . -name *.db3 -type f -delete
+	find . -name *.csv -type f -delete
 	INIT_DB=true \
 	INIT_ADMIN_PASSWORD=password \
 	go run main.go
