@@ -39,6 +39,7 @@ func TestPublish(t *testing.T) {
 		Connected: true,
 		ClientId:  "publisher",
 		Conn:      publisherConn,
+		Router:    router,
 	}
 
 	db.CreateSession(context.Background(), dbaccess.CreateSessionParams{
@@ -82,7 +83,7 @@ func TestPublish(t *testing.T) {
 	p := packet.Publish(4, 0, false, topic, 0, []byte("pippo"))
 	p.Topic = topic
 
-	managePacket(router, &publisherSession, &p)
+	managePacket(&publisherSession, &p)
 
 	if !router.DestinationExists("publisher") {
 		t.Errorf("expected publisher to exist in router, received false")

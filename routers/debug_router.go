@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -15,8 +14,12 @@ import (
 )
 
 type DebugRouter struct {
-	Conns        Connections
+	Conns        model.Connections
 	DebugClients string
+}
+
+func (s DebugRouter) GetConns() model.Connections {
+	return s.Conns
 }
 
 func (s DebugRouter) AddDestination(clientId string, conn model.TagyouConn) {
@@ -73,10 +76,6 @@ func (s DebugRouter) SendRetain(protocolVersion uint8, subscription model.Subscr
 }
 
 func (s DebugRouter) sendDebug(senderId string, topic string, p model.Packet) {
-	slog.Debug("to debug?", "sender", senderId, "debugged", s.DebugClients, "contained", strings.Contains(s.DebugClients, senderId))
-	if s.DebugClients != "" && !strings.Contains(s.DebugClients, senderId) {
-		return
-	}
 	filename := conf.DebugDataFilepath(senderId)
 	debugFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

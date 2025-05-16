@@ -10,12 +10,12 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func OnPublish(router model.Router, session *model.RunningSession, p *packet.Packet) {
+func OnPublish(session *model.RunningSession, p *packet.Packet) {
 	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(p.Topic, session.PublishAcl) {
 		if p.QoS() == conf.QOS1 {
-			sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_NOT_AUTHORIZED)
+			sendAck(session, p.PacketIdentifier(), packet.PUBACK_NOT_AUTHORIZED)
 		} else if p.QoS() == conf.QOS2 {
-			sendPubrec(router, session, p, packet.PUBREC_NOT_AUTHORIZED)
+			sendPubrec(session, p, packet.PUBREC_NOT_AUTHORIZED)
 		}
 		return
 	}
@@ -24,28 +24,28 @@ func OnPublish(router model.Router, session *model.RunningSession, p *packet.Pac
 		slog.Debug("[PUBLISH] to retain")
 		saveRetain(session, p)
 	}
-	router.Forward(session.GetClientId(), p.Topic, p)
+	session.Router.Forward(session.GetClientId(), p.Topic, p)
 	if p.QoS() == conf.QOS1 {
 		slog.Debug("[PUBLISH] QoS 1 return ACK", "packet-identifier", p.PacketIdentifier())
-		sendAck(router, session, p.PacketIdentifier(), packet.PUBACK_SUCCESS)
+		sendAck(session, p.PacketIdentifier(), packet.PUBACK_SUCCESS)
 	} else if p.QoS() == conf.QOS2 {
 		slog.Debug("[PUBLISH] QoS 2 return PUBREC")
-		sendPubrec(router, session, p, packet.PUBREC_SUCCESS)
+		sendPubrec(session, p, packet.PUBREC_SUCCESS)
 	} else if p.QoS() == conf.QOS0 {
 		slog.Debug("[PUBLISH] QoS 0 no return")
 	}
 }
 
-func sendAck(router model.Router, session *model.RunningSession, packetIdentifier int, reasonCode uint8) {
+func sendAck(session *model.RunningSession, packetIdentifier int, reasonCode uint8) {
 	puback := packet.Puback(packetIdentifier, reasonCode, session.ProtocolVersion)
-	router.Send(session.ClientId, puback.ToByteSlice())
+	session.Router.Send(session.ClientId, puback.ToByteSlice())
 }
 
-func sendPubrec(router model.Router, session *model.RunningSession, p *packet.Packet, reasonCode uint8) {
+func sendPubrec(session *model.RunningSession, p *packet.Packet, reasonCode uint8) {
 	session.Mu.RLock()
+	defer session.Mu.RUnlock()
 	clientId := session.ClientId
 	protocolVersion := session.ProtocolVersion
-	session.Mu.RUnlock()
 	r := model.Retry{
 		ClientId:           clientId,
 		PacketIdentifier:   p.PacketIdentifier(),
@@ -58,5 +58,5 @@ func sendPubrec(router model.Router, session *model.RunningSession, p *packet.Pa
 	persistence.RetryRepository.InsertOne(r)
 
 	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, protocolVersion)
-	router.Send(clientId, pubrec.ToByteSlice())
+	session.Router.Send(clientId, pubrec.ToByteSlice())
 }

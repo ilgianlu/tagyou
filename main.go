@@ -1,10 +1,8 @@
 package main
 
 import (
-	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/ilgianlu/tagyou/api"
@@ -13,7 +11,6 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/mqtt"
 	"github.com/ilgianlu/tagyou/persistence"
-	"github.com/ilgianlu/tagyou/routers"
 )
 
 func main() {
@@ -30,23 +27,13 @@ func main() {
 	}
 	p.Init(conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
 
-	router := selectRouter(conf.ROUTER_MODE)
-
+	connections := model.SimpleConnections{
+		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
+	}
 	go api.StartApi(conf.API_PORT)
-	go mqtt.StartWebSocket(conf.WS_PORT, router)
-	go mqtt.StartMQTT(conf.LISTEN_PORT, router)
+	go mqtt.StartWebSocket(conf.WS_PORT, &connections)
+	go mqtt.StartMQTT(conf.LISTEN_PORT, &connections)
 
 	<-c
 }
 
-func selectRouter(mode string) model.Router {
-	slog.Info("starting with router", "mode", strings.ToUpper(mode))
-	switch mode {
-	case conf.ROUTER_MODE_DEBUG:
-		return routers.NewDebug(conf.DEBUG_CLIENTS)
-	case conf.ROUTER_MODE_SIMPLE:
-		return routers.NewSimple()
-	default:
-		return routers.NewStandard()
-	}
-}

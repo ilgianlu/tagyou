@@ -7,13 +7,14 @@ const ROUTER_MODE_STANDARD = "standard"
 // "simple" stripped down router, match only fulltext topics, ignores pounds and pluses special chars
 const ROUTER_MODE_SIMPLE = "simple"
 
-// "debug" act as "standard" but also dump all published messages to debug file,
-// use DEBUG_CLIENTS to dump only some clients traffic
+// "debug" act as "standard" but also dump all published messages to debug file (one per client id)
 const ROUTER_MODE_DEBUG = "debug"
 
-// list of selected clientId to debug traffic separated by slash "/" "client1/client2", empty string dump all traffic
-// if at least one client is selected then traffic dump will be separated in one file per device "client1.dump"
-var DEBUG_CLIENTS = ""
+// list of selected clientId to use for debug router separated by slash "/" "client1/client2", empty string use default 
+var DEBUG_CLIENTS = "client-0"
+
+// list of selected clientId to use for simple router separated by slash "/" "client1/client2", empty string use default 
+var SIMPLE_CLIENTS = ""
 
 // current router mode (can be overridden by env var)
 var ROUTER_MODE string = ROUTER_MODE_STANDARD

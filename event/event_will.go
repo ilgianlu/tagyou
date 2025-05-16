@@ -8,7 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func SendWill(router model.Router, session *model.RunningSession) {
+func SendWill(session *model.RunningSession) {
 	session.Mu.RLock()
 	defer session.Mu.RUnlock()
 	if session.WillTopic != "" {
@@ -23,7 +23,7 @@ func SendWill(router model.Router, session *model.RunningSession) {
 			willPacket.Topic = session.WillTopic
 			saveRetain(session, &willPacket)
 		}
-		router.Forward(session.GetClientId(), session.WillTopic, &willPacket)
+		session.Router.Forward(session.GetClientId(), session.WillTopic, &willPacket)
 	}
 }
 

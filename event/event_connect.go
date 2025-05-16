@@ -8,25 +8,26 @@ import (
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/password"
 	"github.com/ilgianlu/tagyou/persistence"
+	"github.com/ilgianlu/tagyou/routers"
 )
 
-func onConnect(router model.Router, session *model.RunningSession) {
+func onConnect(session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !session.FromLocalhost() {
 		if !doAuth(session) {
 			return
 		}
 	}
-	taken := checkConnectionTakeOver(session, router)
+	taken := checkConnectionTakeOver(session)
 	if taken {
 		slog.Debug("[MQTT] client reconnecting", "client-id", clientId)
 	}
-	router.AddDestination(clientId, session.GetConn())
+	session.Router.AddDestination(clientId, session.GetConn())
 
 	startSession(session)
 
 	connack := packet.Connack(false, packet.CONNECT_OK, session.GetProtocolVersion())
-	router.Send(clientId, connack.ToByteSlice())
+	session.Router.Send(clientId, connack.ToByteSlice())
 }
 
 func doAuth(session *model.RunningSession) bool {
@@ -59,24 +60,25 @@ func checkAuth(clientId string, username string, sessionPassword string) (bool, 
 	return true, client.PublishAcl, client.SubscribeAcl
 }
 
-func checkConnectionTakeOver(session *model.RunningSession, router model.Router) bool {
+func checkConnectionTakeOver(session *model.RunningSession) bool {
 	session.Mu.RLock()
 	clientId := session.ClientId
 	protocolVersion := session.ProtocolVersion
 	session.Mu.RUnlock()
-	if !router.DestinationExists(clientId) {
+	if !session.Router.DestinationExists(clientId) {
 		return false
 	}
 
 	pkt := packet.Connack(false, packet.SESSION_TAKEN_OVER, protocolVersion)
-	router.Send(clientId, pkt.ToByteSlice())
+	session.Router.Send(clientId, pkt.ToByteSlice())
 
-	router.RemoveDestination(clientId)
+	session.Router.RemoveDestination(clientId)
 	return true
 }
 
 func startSession(session *model.RunningSession) {
 	clientId := session.GetClientId()
+	session.Router = routers.ByClientId(clientId, session.Router.GetConns())
 	if prevSession, ok := persistence.SessionRepository.SessionExists(clientId); ok {
 		slog.Debug("[MQTT] check existing session", "last-seen", prevSession.GetLastSeen(), "clean-start", session.CleanStart(), "expired", prevSession.Expired(), "new-protocol-version", session.GetProtocolVersion(), "prev-protocol-version", prevSession.GetProtocolVersion())
 		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.GetProtocolVersion() {

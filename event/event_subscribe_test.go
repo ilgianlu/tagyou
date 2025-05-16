@@ -39,6 +39,7 @@ func TestSubscribe(t *testing.T) {
 		Connected: true,
 		ClientId:  "client",
 		Conn:      subscriberConn,
+		Router:    router,
 	}
 	sess, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{
 		LastSeen:        sql.NullInt64{Int64: time.Now().Unix() - 2000, Valid: true},
@@ -55,7 +56,7 @@ func TestSubscribe(t *testing.T) {
 
 	p, _ := packet.PacketParse(&subscriberSession, buf)
 
-	managePacket(router, &subscriberSession, &p)
+	managePacket(&subscriberSession, &p)
 
 	if len(receivedMsgs) != 1 {
 		t.Errorf("expected 1 msg received by subscriber, received %d", len(receivedMsgs))
