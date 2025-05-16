@@ -103,6 +103,11 @@ func Loader() {
 		DEBUG_CLIENTS = s
 	}
 
+	s = os.Getenv("SIMPLE_CLIENTS")
+	if s != "" {
+		SIMPLE_CLIENTS = s
+	}
+
 	s = os.Getenv("DEBUG_DATA_PATH")
 	if s != "" {
 		DEBUG_DATA_PATH = s
