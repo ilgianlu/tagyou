@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/engine"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
@@ -48,6 +49,7 @@ func TestPublishWhenClientIsNotConnected(t *testing.T) {
 		Connected: false,
 		Conn:      mockConn,
 		Router:    routers.NewSimple(&connections),
+		Engine:    engine.NewEngine(),
 	}
 	p := packet.Publish(4, 0, false, "", 0, []byte{})
 
@@ -68,6 +70,7 @@ func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
 		ClientId:  "client-x",
 		Conn:      mockConn,
 		Router:    routers.NewSimple(&connections),
+		Engine:    engine.NewEngine(),
 	}
 	p := packet.Connect()
 
@@ -96,6 +99,7 @@ func TestSuccessfullConnect(t *testing.T) {
 		Connected: false,
 		Conn:      mockConn,
 		Router:    routers.NewSimple(&connections),
+		Engine:    engine.NewEngine(),
 	}
 
 	buf := []byte{16, 25, 0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 5, 17, 0, 0, 0, 60, 0, 7, 99, 108, 105, 101, 110, 116, 88}
@@ -146,6 +150,7 @@ func TestSuccessfullReconnect(t *testing.T) {
 		Connected: false,
 		Conn:      mockConn,
 		Router:    router,
+		Engine:    engine.NewEngine(),
 	}
 
 	buf := []byte{16, 64, 0, 4, 77, 81, 84, 84, 4, 198, 0, 5, 0, 15, 109, 113, 116, 116, 106, 115, 95, 97, 97, 50, 51, 99, 56, 49, 53, 0, 5, 97, 47, 98, 47, 99, 0, 15, 119, 105, 108, 108, 32, 109, 101, 115, 115, 97, 103, 101, 46, 46, 46, 0, 4, 117, 115, 101, 114, 0, 5, 112, 108, 117, 116, 111}
@@ -205,6 +210,7 @@ func TestPublish(t *testing.T) {
 		ClientId:  "publisher",
 		Conn:      publisherConn,
 		Router:    router,
+		Engine:    engine.NewEngine(),
 	}
 
 	db.CreateSession(context.Background(), dbaccess.CreateSessionParams{
@@ -225,6 +231,7 @@ func TestPublish(t *testing.T) {
 		Connected: true,
 		ClientId:  "subscriber",
 		Conn:      subscriberConn,
+		Engine:    engine.NewEngine(),
 	}
 
 	subSession, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{
@@ -294,6 +301,7 @@ func TestSubscribe(t *testing.T) {
 		ClientId:  "client",
 		Conn:      subscriberConn,
 		Router:    router,
+		Engine:    engine.NewEngine(),
 	}
 	sess, _ := db.CreateSession(context.Background(), dbaccess.CreateSessionParams{
 		LastSeen:        sql.NullInt64{Int64: time.Now().Unix() - 2000, Valid: true},

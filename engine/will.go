@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"

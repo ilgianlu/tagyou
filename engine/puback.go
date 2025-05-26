@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -7,7 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func OnClientPuback(session *model.RunningSession, p model.Packet) {
+func (s StandardEngine) OnClientPuback(session *model.RunningSession, p model.Packet) {
 	onRetryFound := func(retry model.Retry) {
 		// if retry in wait for pub rec -> send pub rel
 		if retry.AckStatus == model.WAIT_FOR_PUB_ACK {

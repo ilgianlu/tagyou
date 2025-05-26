@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -11,7 +11,7 @@ import (
 	"github.com/ilgianlu/tagyou/routers"
 )
 
-func OnConnect(session *model.RunningSession) {
+func (s StandardEngine) OnConnect(session *model.RunningSession) {
 	clientId := session.GetClientId()
 	if conf.FORBID_ANONYMOUS_LOGIN && !session.FromLocalhost() {
 		if !doAuth(session) {

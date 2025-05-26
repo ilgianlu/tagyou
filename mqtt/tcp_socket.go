@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/event"
+	"github.com/ilgianlu/tagyou/engine"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
@@ -34,11 +34,14 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 	defer conn.Close()
 
 	sessionTimestamp := time.Now().Unix()
+	r := routers.NewDefault(conf.ROUTER_MODE, connections)
+	e := engine.NewEngine()
 	session := model.RunningSession{
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
 		ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 		Conn:           conn,
-		Router:         routers.NewDefault(conf.ROUTER_MODE, connections),
+		Router:         r,
+		Engine:         e,
 		LastConnect:    sessionTimestamp,
 		LastSeen:       sessionTimestamp,
 	}
@@ -54,7 +57,7 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 		err := scanner.Err()
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
-				event.OnSocketUpButSilent(&session)
+				e.OnSocketUpButSilent(&session)
 			}
 		}
 
@@ -82,7 +85,7 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 func packetSplit(session *model.RunningSession) func(b []byte, atEOF bool) (int, []byte, error) {
 	return func(b []byte, atEOF bool) (advance int, token []byte, err error) {
 		if len(b) == 0 && atEOF {
-			wasConnected := event.OnSocketDownClosed(session)
+			wasConnected := session.Engine.OnSocketDownClosed(session)
 			if wasConnected {
 				return 0, nil, nil
 			}

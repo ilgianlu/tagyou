@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -7,7 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func OnClientDisconnect(session *model.RunningSession, clientId string) {
+func (s StandardEngine) OnClientDisconnect(session *model.RunningSession, clientId string) {
 	session.SetConnected(false)
 	if session.Router.DestinationExists(clientId) {
 		needDisconnection := needDisconnection(session)

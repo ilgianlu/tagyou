@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -6,7 +6,7 @@ import (
 	"github.com/ilgianlu/tagyou/model"
 )
 
-func OnSocketDownClosed(session *model.RunningSession) bool {
+func (s StandardEngine) OnSocketDownClosed(session *model.RunningSession) bool {
 	slog.Debug("[MQTT] socket closed!", "client-id", session.GetClientId())
 	if session.GetClientId() != "" {
 		slog.Debug("[MQTT] client was connected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)

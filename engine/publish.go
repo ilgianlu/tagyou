@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -10,7 +10,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func OnPublish(session *model.RunningSession, p model.Packet) {
+func (s StandardEngine) OnPublish(session *model.RunningSession, p model.Packet) {
 	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(p.GetPublishTopic(), session.PublishAcl) {
 		if p.QoS() == conf.QOS1 {
 			sendAck(session, p.PacketIdentifier(), packet.PUBACK_NOT_AUTHORIZED)

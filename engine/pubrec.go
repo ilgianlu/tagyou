@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -8,7 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func OnClientPubrec(session *model.RunningSession, p model.Packet) {
+func (s StandardEngine) OnClientPubrec(session *model.RunningSession, p model.Packet) {
 	sendPubrel := func(retry model.Retry) {
 		toSend := packet.Pubrel(retry.PacketIdentifier, retry.ReasonCode, session.ProtocolVersion)
 		session.Router.Send(retry.ClientId, toSend.ToByteSlice())

@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -9,7 +9,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func OnUnsubscribe(session *model.RunningSession, p model.Packet) {
+func (s StandardEngine) OnUnsubscribe(session *model.RunningSession, p model.Packet) {
 	reasonCodes := []uint8{}
 	for _, unsub := range p.GetSubscriptions() {
 		rCode := clientUnsubscription(session.GetClientId(), unsub)
