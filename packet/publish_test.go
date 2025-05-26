@@ -50,8 +50,8 @@ func TestParsePublish(t *testing.T) {
 		t.Errorf("expecting packet type %d, received %d", PACKET_TYPE_PUBLISH, p.PacketType())
 	}
 
-	if p.Topic != "/topic/0/messages" {
-		t.Errorf("expecting topic %s, received %s", "/topic/0/messages", p.Topic)
+	if p.PublishTopic != "/topic/0/messages" {
+		t.Errorf("expecting topic %s, received %s", "/topic/0/messages", p.PublishTopic)
 	}
 
 	if string(p.Payload()) != "published 0" {

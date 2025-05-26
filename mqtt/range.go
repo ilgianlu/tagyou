@@ -14,7 +14,7 @@ func rangePackets(session *model.RunningSession, packets <-chan *packet.Packet) 
 	}
 }
 
-func managePacket(session *model.RunningSession, p *packet.Packet) {
+func managePacket(session *model.RunningSession, p model.Packet) {
 	slog.Debug("//!! is session connected?", "connected?", session.GetConnected())
 	slog.Debug("//!! packet arriving", "packet-type", p.PacketType())
 	if !session.GetConnected() && p.PacketType() != packet.PACKET_TYPE_CONNECT {
@@ -46,7 +46,7 @@ func managePacket(session *model.RunningSession, p *packet.Packet) {
 		slog.Debug("//!! EVENT client unsubscribed", "client-id", session.GetClientId())
 		event.OnUnsubscribe(session, p)
 	case packet.PACKET_TYPE_PUBLISH:
-		slog.Debug("//!! EVENT client published", "topic", p.Topic, "client-id", session.GetClientId(), "qos", p.QoS())
+		slog.Debug("//!! EVENT client published", "topic", p.GetPublishTopic(), "client-id", session.GetClientId(), "qos", p.QoS())
 		event.OnPublish(session, p)
 	case packet.PACKET_TYPE_PUBACK:
 		slog.Debug("//!! EVENT client acked message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
@@ -59,6 +59,6 @@ func managePacket(session *model.RunningSession, p *packet.Packet) {
 		event.OnClientPubrel(session, p)
 	case packet.PACKET_TYPE_PUBCOMP:
 		slog.Debug("//!! EVENT pub complete message", "packet-identifier", p.PacketIdentifier(), "client-id", session.GetClientId())
-		event.OnClientPubcomp(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
+		event.OnClientPubcomp(session.GetClientId(), p.PacketIdentifier(), p.GetReasonCode())
 	}
 }

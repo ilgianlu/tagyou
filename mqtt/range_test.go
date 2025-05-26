@@ -246,7 +246,6 @@ func TestPublish(t *testing.T) {
 	})
 
 	p := packet.Publish(4, 0, false, topic, 0, []byte("pippo"))
-	p.Topic = topic
 
 	managePacket(&publisherSession, &p)
 

@@ -73,7 +73,6 @@ func PostMessage(connections model.Connections) func(w http.ResponseWriter, r *h
 		}
 
 		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload))
-		msg.Topic = mess.Topic
 		event.OnPublish(&session, &msg)
 
 		if res, err := json.Marshal("message published"); err != nil {
