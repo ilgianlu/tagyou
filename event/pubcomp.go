@@ -7,7 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func clientPubcomp(clientId string, packetIdentifier int, reasonCode uint8) {
+func OnClientPubcomp(clientId string, packetIdentifier int, reasonCode uint8) {
 	onRetryFound := func(retry model.Retry) {
 		// if retry in wait for pub rec -> send pub rel
 		if retry.AckStatus == model.WAIT_FOR_PUB_COMP {

@@ -8,7 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func clientPuback(session *model.RunningSession, p *packet.Packet) {
+func OnClientPuback(session *model.RunningSession, p *packet.Packet) {
 	onRetryFound := func(retry model.Retry) {
 		// if retry in wait for pub rec -> send pub rel
 		if retry.AckStatus == model.WAIT_FOR_PUB_ACK {

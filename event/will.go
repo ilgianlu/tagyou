@@ -8,7 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func SendWill(session *model.RunningSession) {
+func sendWill(session *model.RunningSession) {
 	session.Mu.RLock()
 	defer session.Mu.RUnlock()
 	if session.WillTopic != "" {

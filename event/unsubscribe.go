@@ -9,7 +9,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func onUnsubscribe(session *model.RunningSession, p *packet.Packet) {
+func OnUnsubscribe(session *model.RunningSession, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, unsub := range p.Subscriptions {
 		rCode := clientUnsubscription(session.GetClientId(), unsub)

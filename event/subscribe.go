@@ -7,7 +7,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func onSubscribe(session *model.RunningSession, p *packet.Packet) {
+func OnSubscribe(session *model.RunningSession, p *packet.Packet) {
 	reasonCodes := []uint8{}
 	for _, subscription := range p.Subscriptions {
 		rCode := clientSubscription(session, subscription)

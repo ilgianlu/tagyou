@@ -48,7 +48,7 @@ func AcceptWebsocket(connections model.Connections) func(http.ResponseWriter, *h
 		}
 
 		events := make(chan *packet.Packet)
-		go event.RangePackets(&session, events)
+		go rangePackets(&session, events)
 
 		bytesFromWs := make(chan []byte)
 		defer close(bytesFromWs)
