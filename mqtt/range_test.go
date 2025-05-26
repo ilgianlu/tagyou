@@ -79,6 +79,13 @@ func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
 }
 
 func TestSuccessfullConnect(t *testing.T) {
+	os.Setenv("DEBUG", "1")
+	ps := persistence.SqlPersistence{DbFile: "test.db3", InitDatabase: true}
+	_, err := ps.Init(false, false, []byte{})
+	if err != nil {
+		t.Errorf("did not expect any error opening test.db3")
+	}
+
 	connections := model.SimpleConnections{
 		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
 	}
