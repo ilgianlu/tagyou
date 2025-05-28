@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -8,7 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func clientPubrel(session *model.RunningSession, p *packet.Packet) {
+func (s StandardEngine) OnClientPubrel(session *model.RunningSession, p model.Packet) {
 	sendPubcomp := func(retry model.Retry) {
 		toSend := packet.Pubcomp(p.PacketIdentifier(), retry.ReasonCode, session.ProtocolVersion)
 		session.Router.Send(session.GetClientId(), toSend.ToByteSlice())
@@ -27,7 +27,7 @@ func clientPubrel(session *model.RunningSession, p *packet.Packet) {
 			slog.Info("pubrel for invalid retry status", "client-id", retry.ClientId, "packet-identifier", retry.PacketIdentifier, "ack-status", retry.AckStatus)
 		}
 	}
-	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifierReasonCode(session.GetClientId(), p.PacketIdentifier(), p.ReasonCode)
+	retry, err := persistence.RetryRepository.FirstByClientIdPacketIdentifierReasonCode(session.GetClientId(), p.PacketIdentifier(), p.GetReasonCode())
 	if err != nil {
 		slog.Info("pubrel for invalid retry", "client-id", retry.ClientId, "packet-identifier", retry.PacketIdentifier)
 	} else {

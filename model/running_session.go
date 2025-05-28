@@ -27,6 +27,7 @@ type RunningSession struct {
 	SubscribeAcl    string
 	PublishAcl      string
 	Router          Router
+	Engine          Engine
 	Conn            TagyouConn
 	Mu              sync.RWMutex
 }

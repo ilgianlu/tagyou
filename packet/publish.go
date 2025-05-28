@@ -18,6 +18,7 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 	// write topic length
 	p.remainingBytes = Write2BytesInt(len(topic))
 	// write topic string
+	p.PublishTopic = topic
 	p.remainingBytes = append(p.remainingBytes, []byte(topic)...)
 	// write packet identifier only if qos > 0
 	if qos != 0 {
@@ -38,7 +39,7 @@ func (p *Packet) publishReq(protocolVersion uint8) int {
 	tl := Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	// variable header
-	p.Topic = string(p.remainingBytes[i : i+tl])
+	p.PublishTopic = string(p.remainingBytes[i : i+tl])
 	i = i + tl
 	if p.QoS() > 0 {
 		i = i + 2 // + 2 for packet identifier

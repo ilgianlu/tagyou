@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/event"
+	"github.com/ilgianlu/tagyou/engine"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/persistence"
@@ -34,17 +34,20 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 	defer conn.Close()
 
 	sessionTimestamp := time.Now().Unix()
+	r := routers.NewDefault(conf.ROUTER_MODE, connections)
+	e := engine.NewEngine()
 	session := model.RunningSession{
 		KeepAlive:      conf.DEFAULT_KEEPALIVE,
 		ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 		Conn:           conn,
-		Router:         routers.NewDefault(conf.ROUTER_MODE, connections),
+		Router:         r,
+		Engine:         e,
 		LastConnect:    sessionTimestamp,
 		LastSeen:       sessionTimestamp,
 	}
 
 	events := make(chan *packet.Packet)
-	go event.RangePackets(&session, events)
+	go rangePackets(&session, events)
 	defer disconnectClient(&session, events)
 
 	scanner := bufio.NewScanner(conn)
@@ -54,7 +57,7 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 		err := scanner.Err()
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
-				onSocketUpButSilent(&session)
+				e.OnSocketUpButSilent(&session)
 			}
 		}
 
@@ -82,7 +85,7 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 func packetSplit(session *model.RunningSession) func(b []byte, atEOF bool) (int, []byte, error) {
 	return func(b []byte, atEOF bool) (advance int, token []byte, err error) {
 		if len(b) == 0 && atEOF {
-			wasConnected := onSocketDownClosed(session)
+			wasConnected := session.Engine.OnSocketDownClosed(session)
 			if wasConnected {
 				return 0, nil, nil
 			}
@@ -98,26 +101,6 @@ func packetSplit(session *model.RunningSession) func(b []byte, atEOF bool) (int,
 		}
 		return len(pb), pb, nil
 	}
-}
-
-func onSocketUpButSilent(session *model.RunningSession) bool {
-	slog.Debug("[MQTT] keepalive not respected!", "keep-alive", session.KeepAlive*2)
-	if session.GetClientId() != "" {
-		slog.Debug("[MQTT] will due to keepalive not respected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
-		event.SendWill(session)
-		return true
-	}
-	return false
-}
-
-func onSocketDownClosed(session *model.RunningSession) bool {
-	slog.Debug("[MQTT] socket closed!", "client-id", session.GetClientId())
-	if session.GetClientId() != "" {
-		slog.Debug("[MQTT] client was connected!", "client-id", session.GetClientId(), "last-connect", session.LastConnect)
-		event.SendWill(session)
-		return true
-	}
-	return false
 }
 
 func disconnectClient(session *model.RunningSession, e chan<- *packet.Packet) {

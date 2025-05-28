@@ -10,7 +10,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/ilgianlu/tagyou/api/controllers/middlewares"
 	"github.com/ilgianlu/tagyou/conf"
-	"github.com/ilgianlu/tagyou/event"
+	"github.com/ilgianlu/tagyou/engine"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
 	"github.com/ilgianlu/tagyou/routers"
@@ -44,11 +44,12 @@ func AcceptWebsocket(connections model.Connections) func(http.ResponseWriter, *h
 			ExpiryInterval: int64(conf.SESSION_MAX_DURATION_SECONDS),
 			Conn:           model.WebsocketConnection{Conn: c},
 			Router:         routers.NewDefault(conf.ROUTER_MODE, connections),
+			Engine:         engine.NewEngine(),
 			LastConnect:    time.Now().Unix(),
 		}
 
 		events := make(chan *packet.Packet)
-		go event.RangePackets(&session, events)
+		go rangePackets(&session, events)
 
 		bytesFromWs := make(chan []byte)
 		defer close(bytesFromWs)
@@ -70,11 +71,11 @@ func PostMessage(connections model.Connections) func(w http.ResponseWriter, r *h
 		session := model.RunningSession{
 			ClientId: "PostMessage",
 			Router:   routers.NewDefault(conf.ROUTER_MODE, connections),
+			Engine:   engine.NewEngine(),
 		}
 
 		msg := packet.Publish(4, mess.Qos, mess.Retained, mess.Topic, 0, payloadFromPayloadType(mess.Payload))
-		msg.Topic = mess.Topic
-		event.OnPublish(&session, &msg)
+		session.Engine.OnPublish(&session, &msg)
 
 		if res, err := json.Marshal("message published"); err != nil {
 			slog.Error("[WS] error marshaling response message", "err", err)

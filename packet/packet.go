@@ -61,7 +61,7 @@ type Packet struct {
 
 	// metadata
 	Subscriptions []model.Subscription
-	Topic         string
+	PublishTopic  string
 }
 
 func (p *Packet) RemainingBytes() []byte {
@@ -97,12 +97,12 @@ func (p *Packet) Retain() bool {
 	return false
 }
 
-func (p *Packet) PublishTopic() []byte {
-	if p.PacketType() == PACKET_TYPE_PUBLISH {
-		tl := Read2BytesInt(p.remainingBytes, 0)
-		return p.remainingBytes[:tl]
-	}
-	return []byte{}
+func (p *Packet) GetPublishTopic() string {
+	return p.PublishTopic
+}
+
+func (p *Packet) GetReasonCode() uint8 {
+	return p.ReasonCode
 }
 
 func (p *Packet) PacketIdentifier() int {
@@ -135,6 +135,10 @@ func (p *Packet) ApplicationMessage() []byte {
 		return p.remainingBytes[p.payloadOffset:]
 	}
 	return []byte{}
+}
+
+func (p *Packet) GetSubscriptions() []model.Subscription {
+	return p.Subscriptions
 }
 
 func (p *Packet) CompletePacket(buff []byte) int {

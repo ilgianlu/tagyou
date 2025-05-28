@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -10,8 +10,8 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func OnPublish(session *model.RunningSession, p *packet.Packet) {
-	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(p.Topic, session.PublishAcl) {
+func (s StandardEngine) OnPublish(session *model.RunningSession, p model.Packet) {
+	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(p.GetPublishTopic(), session.PublishAcl) {
 		if p.QoS() == conf.QOS1 {
 			sendAck(session, p.PacketIdentifier(), packet.PUBACK_NOT_AUTHORIZED)
 		} else if p.QoS() == conf.QOS2 {
@@ -22,9 +22,9 @@ func OnPublish(session *model.RunningSession, p *packet.Packet) {
 
 	if p.Retain() {
 		slog.Debug("[PUBLISH] to retain")
-		saveRetain(session, p)
+		saveRetain(session.GetClientId(), p.GetPublishTopic(), p.ApplicationMessage())
 	}
-	session.Router.Forward(session.GetClientId(), p.Topic, p)
+	session.Router.Forward(session.GetClientId(), p.GetPublishTopic(), p)
 	if p.QoS() == conf.QOS1 {
 		slog.Debug("[PUBLISH] QoS 1 return ACK", "packet-identifier", p.PacketIdentifier())
 		sendAck(session, p.PacketIdentifier(), packet.PUBACK_SUCCESS)
@@ -41,7 +41,7 @@ func sendAck(session *model.RunningSession, packetIdentifier int, reasonCode uin
 	session.Router.Send(session.ClientId, puback.ToByteSlice())
 }
 
-func sendPubrec(session *model.RunningSession, p *packet.Packet, reasonCode uint8) {
+func sendPubrec(session *model.RunningSession, p model.Packet, reasonCode uint8) {
 	session.Mu.RLock()
 	defer session.Mu.RUnlock()
 	clientId := session.ClientId

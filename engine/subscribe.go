@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"github.com/ilgianlu/tagyou/conf"
@@ -7,9 +7,9 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func onSubscribe(session *model.RunningSession, p *packet.Packet) {
+func (s StandardEngine) OnSubscribe(session *model.RunningSession, p model.Packet) {
 	reasonCodes := []uint8{}
-	for _, subscription := range p.Subscriptions {
+	for _, subscription := range p.GetSubscriptions() {
 		rCode := clientSubscription(session, subscription)
 		reasonCodes = append(reasonCodes, rCode)
 	}

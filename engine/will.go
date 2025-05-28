@@ -1,4 +1,4 @@
-package event
+package engine
 
 import (
 	"log/slog"
@@ -8,7 +8,7 @@ import (
 	"github.com/ilgianlu/tagyou/persistence"
 )
 
-func SendWill(session *model.RunningSession) {
+func sendWill(session *model.RunningSession) {
 	session.Mu.RLock()
 	defer session.Mu.RUnlock()
 	if session.WillTopic != "" {
@@ -20,8 +20,7 @@ func SendWill(session *model.RunningSession) {
 		willPacket := packet.Publish(session.ProtocolVersion, session.WillQoS(), session.WillRetain(), session.WillTopic, packet.NewPacketIdentifier(), session.WillMessage)
 		if willPacket.Retain() {
 			slog.Debug("[MQTT] will packet to retain")
-			willPacket.Topic = session.WillTopic
-			saveRetain(session, &willPacket)
+			saveRetain(session.GetClientId(), willPacket.GetPublishTopic(), willPacket.ApplicationMessage())
 		}
 		session.Router.Forward(session.GetClientId(), session.WillTopic, &willPacket)
 	}
