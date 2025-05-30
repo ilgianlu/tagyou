@@ -42,8 +42,6 @@ func sendAck(session *model.RunningSession, packetIdentifier int, reasonCode uin
 }
 
 func sendPubrec(session *model.RunningSession, p model.Packet, reasonCode uint8) {
-	session.Mu.RLock()
-	defer session.Mu.RUnlock()
 	clientId := session.ClientId
 	protocolVersion := session.ProtocolVersion
 	r := model.Retry{

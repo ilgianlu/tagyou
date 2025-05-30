@@ -31,11 +31,9 @@ func (s StandardEngine) OnConnect(session *model.RunningSession) {
 }
 
 func doAuth(session *model.RunningSession) bool {
-	session.Mu.RLock()
 	clientId := session.ClientId
 	username := session.Username
 	sessionPassword := session.Password
-	session.Mu.RUnlock()
 	ok, pubAcl, subAcl := checkAuth(clientId, username, sessionPassword)
 	if !ok {
 		slog.Debug("[MQTT] wrong connect credentials")
@@ -61,10 +59,8 @@ func checkAuth(clientId string, username string, sessionPassword string) (bool, 
 }
 
 func checkConnectionTakeOver(session *model.RunningSession) bool {
-	session.Mu.RLock()
 	clientId := session.ClientId
 	protocolVersion := session.ProtocolVersion
-	session.Mu.RUnlock()
 	if !session.Router.DestinationExists(clientId) {
 		return false
 	}

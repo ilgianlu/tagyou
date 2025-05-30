@@ -46,6 +46,10 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 		LastSeen:       sessionTimestamp,
 	}
 
+	// the size of the channel is equivalent to:
+	// 0 -> store client messages queue on the socket cache of the Operating System
+	// 1 - Infinite -> store "some" client messages queue on channel (application) memory, rest on OS
+	// events := make(chan *packet.Packet, 5)
 	events := make(chan *packet.Packet)
 	go rangePackets(&session, events)
 	defer disconnectClient(&session, events)
@@ -67,10 +71,8 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 			return
 		}
 
-		session.Mu.RLock()
 		clientId := session.ClientId
 		keepAlive := session.KeepAlive
-		session.Mu.RUnlock()
 
 		slog.Debug("[MQTT] session setting read deadline of seconds", "client-id", clientId, "keep-alive", keepAlive*2)
 		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(keepAlive*2) * time.Second))
@@ -104,9 +106,7 @@ func packetSplit(session *model.RunningSession) func(b []byte, atEOF bool) (int,
 }
 
 func disconnectClient(session *model.RunningSession, e chan<- *packet.Packet) {
-	session.Mu.RLock()
 	clientId := session.ClientId
-	session.Mu.RUnlock()
 	if clientId != "" {
 		session.Router.RemoveDestination(clientId)
 		persistence.SessionRepository.DisconnectSession(clientId)

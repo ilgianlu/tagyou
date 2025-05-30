@@ -17,15 +17,11 @@ func (s StandardEngine) OnSubscribe(session *model.RunningSession, p model.Packe
 }
 
 func clientSubscribed(session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
-	session.Mu.RLock()
 	toSend := packet.Suback(packetIdentifier, reasonCodes, session.ProtocolVersion)
 	session.Router.Send(session.ClientId, toSend.ToByteSlice())
-	session.Mu.RUnlock()
 }
 
 func clientSubscription(session *model.RunningSession, subscription model.Subscription) uint8 {
-	session.Mu.RLock()
-	defer session.Mu.RUnlock()
 	fromLocalhost := session.FromLocalhost()
 	subscribeAcl := session.SubscribeAcl
 	protocolVersion := session.ProtocolVersion
