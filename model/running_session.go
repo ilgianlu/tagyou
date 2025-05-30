@@ -37,8 +37,6 @@ func (s *RunningSession) ReservedBit() bool {
 }
 
 func (s *RunningSession) CleanStart() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return (s.ConnectFlags & 0x02) > 0
 }
 
@@ -67,70 +65,48 @@ func (s *RunningSession) FromLocalhost() bool {
 }
 
 func (s *RunningSession) GetClientId() string {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return s.ClientId
 }
 
 func (s *RunningSession) GetProtocolVersion() uint8 {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return s.ProtocolVersion
 }
 
 func (s *RunningSession) GetConn() TagyouConn {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return s.Conn
 }
 
 func (s *RunningSession) GetKeepAlive() int {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return s.KeepAlive
 }
 
 func (s *RunningSession) GetLastSeen() int64 {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return s.LastSeen
 }
 
 func (s *RunningSession) GetLastConnect() int64 {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return s.LastConnect
 }
 
 func (s *RunningSession) GetExpiryInterval() int64 {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return s.ExpiryInterval
 }
 
 func (s *RunningSession) GetConnected() bool {
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
 	return s.Connected
 }
 
 func (s *RunningSession) SetConnected(connected bool) {
-	s.Mu.Lock()
 	s.Connected = connected
-	s.Mu.Unlock()
 }
 
 func (s *RunningSession) ApplyAcl(pubAcl string, subAcl string) {
-	s.Mu.Lock()
 	s.PublishAcl = pubAcl
 	s.SubscribeAcl = subAcl
-	s.Mu.Unlock()
 }
 
 func (s *RunningSession) ApplySessionId(sessionID int64) {
-	s.Mu.Lock()
 	s.SessionID = sessionID
-	s.Mu.Unlock()
 }
 
 func (s *RunningSession) Expired() bool {

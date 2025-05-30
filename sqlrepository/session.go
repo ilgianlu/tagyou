@@ -40,8 +40,6 @@ func mappingSessions(sessions []dbaccess.Session) []model.Session {
 }
 
 func (sr SessionSqlRepository) PersistSession(running *model.RunningSession) (int64, error) {
-	running.Mu.RLock()
-	defer running.Mu.RUnlock()
 	var connectd int64 = 0
 	if running.Connected {
 		connectd = 1
@@ -59,8 +57,6 @@ func (sr SessionSqlRepository) PersistSession(running *model.RunningSession) (in
 }
 
 func (sr SessionSqlRepository) UpdateSession(sessionId int64, running *model.RunningSession) (int64, error) {
-	running.Mu.RLock()
-	defer running.Mu.RUnlock()
 	var connectd int64 = 0
 	if running.Connected {
 		connectd = 1

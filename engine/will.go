@@ -9,8 +9,6 @@ import (
 )
 
 func sendWill(session *model.RunningSession) {
-	session.Mu.RLock()
-	defer session.Mu.RUnlock()
 	if session.WillTopic != "" {
 		slog.Debug("[MQTT] will topic was set")
 		needWillSend := needWillSend(session)

@@ -15,8 +15,6 @@ func Connect() Packet {
 }
 
 func (p *Packet) connectReq(session *model.RunningSession) int {
-	session.Mu.Lock()
-	defer session.Mu.Unlock()
 	// START VARIABLE HEADER
 	i := 0
 	pl := Read2BytesInt(p.remainingBytes, i)

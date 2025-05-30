@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
@@ -14,6 +15,7 @@ func rangePackets(session *model.RunningSession, packets <-chan *packet.Packet) 
 }
 
 func managePacket(session *model.RunningSession, p model.Packet) {
+	defer time.Sleep(100 * time.Millisecond)
 	slog.Debug("//!! is session connected?", "connected?", session.GetConnected())
 	slog.Debug("//!! packet arriving", "packet-type", p.PacketType())
 	if !session.GetConnected() && p.PacketType() != packet.PACKET_TYPE_CONNECT {
