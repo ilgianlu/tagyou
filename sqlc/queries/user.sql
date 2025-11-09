@@ -8,6 +8,9 @@ INSERT INTO users (
 )
 RETURNING *;
 
+-- name: UpdateUserPassword :exec
+UPDATE users set password = ?;
+
 -- name: GetAllUsers :many
 SELECT * FROM users;
 

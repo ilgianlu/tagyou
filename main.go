@@ -25,7 +25,10 @@ func main() {
 		DbFile:       conf.DB_PATH + "/" + conf.DB_NAME,
 		InitDatabase: conf.INIT_DB,
 	}
-	p.Init(conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
+	_, err := p.Init(conf.CLEAN_EXPIRED_SESSIONS, conf.CLEAN_EXPIRED_RETRIES, conf.INIT_ADMIN_PASSWORD)
+	if err != nil {
+		panic(1)
+	}
 
 	connections := model.SimpleConnections{
 		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
@@ -36,4 +39,3 @@ func main() {
 
 	<-c
 }
-

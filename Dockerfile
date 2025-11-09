@@ -27,5 +27,4 @@ RUN apk update && \
     apk add tzdata sqlite ca-certificates && \
     rm -rf /var/cache/apk
 COPY --from=build-img /go/src/app/tagyou /app/
-COPY --from=build-img /go/src/app/db.docker /app/sqlite.db3
 CMD ["/app/tagyou"]

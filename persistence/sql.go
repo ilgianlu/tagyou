@@ -21,15 +21,7 @@ type SqlPersistence struct {
 }
 
 func (p *SqlPersistence) Init(cleanExpiredSessions bool, cleanExpiredRetries bool, initAdminPassword []byte) (*dbaccess.Queries, error) {
-	if p.InitDatabase {
-		err := p.resetDb()
-		if err != nil {
-			slog.Error("could not reset DB", "err", err)
-			return nil, err
-		}
-	}
-
-	dbConn, err := p.openDb()
+	dbConn, err := p.openDB()
 	if err != nil {
 		slog.Error("could not open DB", "err", err)
 		return nil, err
@@ -46,7 +38,6 @@ func (p *SqlPersistence) Init(cleanExpiredSessions bool, cleanExpiredRetries boo
 
 	if len(initAdminPassword) > 0 {
 		sqlrepository.AdminPasswordReset(db, initAdminPassword)
-		os.Exit(0)
 	}
 
 	if cleanExpiredSessions {
@@ -60,25 +51,39 @@ func (p *SqlPersistence) Init(cleanExpiredSessions bool, cleanExpiredRetries boo
 	return db, nil
 }
 
-func (p *SqlPersistence) resetDb() error {
-	os.Remove(p.DbFile)
+func (p *SqlPersistence) resetDB() error {
+	return os.Remove(p.DbFile)
+}
 
-	dbConn, err := p.openDb()
-	if err != nil {
-		slog.Error("could not open DB", "err", err)
-		return err
-	}
-
+func (p *SqlPersistence) initTables(dbConn *sql.DB) error {
 	if _, err := dbConn.ExecContext(context.Background(), sqlc.DBSchema); err != nil {
+		os.Remove(p.DbFile)
 		return err
 	}
 
 	return nil
 }
 
-func (p *SqlPersistence) openDb() (*sql.DB, error) {
+func (p *SqlPersistence) needReset() bool {
+	if p.InitDatabase {
+		return true
+	}
+	_, err := os.Open(p.DbFile)
+	if err != nil && os.IsNotExist(err) {
+		return true
+	}
+	return false
+}
+
+func (p *SqlPersistence) openDB() (*sql.DB, error) {
 	if p.DbFile == "" {
 		p.DbFile = "sqlite.db3"
+	}
+
+	resetted := false
+	if p.needReset() {
+		p.resetDB()
+		resetted = true
 	}
 
 	db, err := sql.Open("sqlite3", p.DbFile)
@@ -88,6 +93,10 @@ func (p *SqlPersistence) openDb() (*sql.DB, error) {
 	db.ExecContext(context.Background(), "PRAGMA foreign_keys = ON;")
 
 	p.db = db
+
+	if resetted {
+		p.initTables(db)
+	}
 
 	return db, nil
 }
