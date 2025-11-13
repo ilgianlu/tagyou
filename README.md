@@ -30,10 +30,11 @@ HTTP apis are always authenticated, unlike the mqtt clients. First user to be cr
 To set your password for "admin", at first launch, pass INIT_ADMIN_PASSWORD as env var so a user with username "admin" is created with selected password and you can start use apis (to create more users? register clients ?). All users can access everything.
 
 ```
-docker run -v tagyou_data:/db -e DB_PATH=/db -e INIT_ADMIN_PASSWORD=my_fantastic_secure_password -e INIT_DB=true ilgianlu/tagyou
+docker run -v tagyou_data:/db -e DB_PATH=/db -e INIT_ADMIN_PASSWORD=my_fantastic_secure_password ilgianlu/tagyou
 ```
 
-On next run db is set so you just need to attach your volume and have tagyou search db on it
+Last command does not reset db, if you already have one, rerun same command to update admin password.
+On next run db is set so you just need to attach your volume and have tagyou search db on it.
 
 ```
 docker run -v tagyou_data:/db -e DB_PATH=/db ilgianlu/tagyou
