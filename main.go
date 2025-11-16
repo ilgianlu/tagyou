@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,12 +16,12 @@ import (
 )
 
 func main() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	defer cancel()
 	conf.Loader()
 
 	log.Init()
+	slog.Warn("Configuration loaded, Logging started, Tagyou starting up")
 
 	p := persistence.SqlPersistence{
 		DbFile:       conf.DB_PATH + "/" + conf.DB_NAME,
@@ -37,5 +39,7 @@ func main() {
 	go mqtt.StartWebSocket(conf.WS_PORT, &connections)
 	go mqtt.StartMQTT(conf.LISTEN_PORT, &connections)
 
-	<-c
+	<-ctx.Done()
+	slog.Warn("Going away...")
+	p.Close()
 }

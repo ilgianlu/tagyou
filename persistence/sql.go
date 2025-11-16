@@ -100,3 +100,9 @@ func (p *SqlPersistence) openDB() (*sql.DB, error) {
 
 	return db, nil
 }
+
+func (p *SqlPersistence) Close() {
+	if p.db != nil {
+		p.Close()
+	}
+}

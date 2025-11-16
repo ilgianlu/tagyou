@@ -12,8 +12,3 @@ var (
 	RetryRepository        repository.RetryRepository
 	UserRepository         repository.UserRepository
 )
-
-type Persistence interface {
-	Init() error
-	Close()
-}
