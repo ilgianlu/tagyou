@@ -1,14 +1,12 @@
 package persistence
 
-import (
-	"github.com/ilgianlu/tagyou/repository"
-)
+import "github.com/ilgianlu/tagyou/sqlrepository"
 
 var (
-	ClientRepository       repository.ClientRepository
-	SessionRepository      repository.SessionRepository
-	SubscriptionRepository repository.SubscriptionRepository
-	RetainRepository       repository.RetainRepository
-	RetryRepository        repository.RetryRepository
-	UserRepository         repository.UserRepository
+	ClientRepository       sqlrepository.ClientSqlRepository
+	SessionRepository      sqlrepository.SessionSqlRepository
+	SubscriptionRepository sqlrepository.SubscriptionSqlRepository
+	RetainRepository       sqlrepository.RetainSqlRepository
+	RetryRepository        sqlrepository.RetrySqlRepository
+	UserRepository         sqlrepository.UserSqlRepository
 )
