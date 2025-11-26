@@ -5,9 +5,9 @@ import (
 	"os"
 )
 
-func Init() {
+func Init(debugging bool) slog.Level {
 	minLevel := slog.LevelInfo
-	if os.Getenv("DEBUG") != "" {
+	if debugging {
 		minLevel = slog.LevelDebug
 	}
 
@@ -22,4 +22,5 @@ func Init() {
 	)
 	slog.SetLogLoggerLevel(minLevel)
 	slog.SetDefault(logger)
+	return minLevel
 }

@@ -20,8 +20,8 @@ func main() {
 	defer cancel()
 	conf.Loader()
 
-	log.Init()
-	slog.Warn("Configuration loaded, Logging started, Tagyou starting up")
+	logLevel := log.Init(os.Getenv("DEBUG") != "")
+	slog.Warn("Configuration loaded, Logging started, Tagyou starting up", "log_level", logLevel)
 
 	p := persistence.SqlPersistence{
 		DbFile:       conf.DB_PATH + "/" + conf.DB_NAME,
