@@ -103,6 +103,6 @@ func (p *SqlPersistence) openDB() (*sql.DB, error) {
 
 func (p *SqlPersistence) Close() {
 	if p.db != nil {
-		p.Close()
+		p.db.Close()
 	}
 }
