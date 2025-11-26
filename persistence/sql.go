@@ -9,7 +9,6 @@ import (
 
 	"github.com/ilgianlu/tagyou/sqlc"
 	"github.com/ilgianlu/tagyou/sqlc/dbaccess"
-	"github.com/ilgianlu/tagyou/sqlrepository"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -29,23 +28,23 @@ func (p *SqlPersistence) Init(cleanExpiredSessions bool, cleanExpiredRetries boo
 
 	db := dbaccess.New(dbConn)
 
-	ClientRepository = sqlrepository.ClientSqlRepository{Db: db}
-	SessionRepository = sqlrepository.SessionSqlRepository{Db: db, SqlConn: dbConn}
-	SubscriptionRepository = sqlrepository.SubscriptionSqlRepository{Db: db}
-	RetainRepository = sqlrepository.RetainSqlRepository{Db: db}
-	UserRepository = sqlrepository.UserSqlRepository{Db: db}
-	RetryRepository = sqlrepository.RetrySqlRepository{Db: db}
+	ClientRepository = ClientSqlRepository{Db: db}
+	SessionRepository = SessionSqlRepository{Db: db, SqlConn: dbConn}
+	SubscriptionRepository = SubscriptionSqlRepository{Db: db}
+	RetainRepository = RetainSqlRepository{Db: db}
+	UserRepository = UserSqlRepository{Db: db}
+	RetryRepository = RetrySqlRepository{Db: db}
 
 	if len(initAdminPassword) > 0 {
-		sqlrepository.AdminPasswordReset(db, initAdminPassword)
+		AdminPasswordReset(db, initAdminPassword)
 	}
 
 	if cleanExpiredSessions {
-		sqlrepository.StartSessionCleaner(db)
+		StartSessionCleaner(db)
 	}
 
 	if cleanExpiredSessions {
-		sqlrepository.StartRetryCleaner(db)
+		StartRetryCleaner(db)
 	}
 
 	return db, nil

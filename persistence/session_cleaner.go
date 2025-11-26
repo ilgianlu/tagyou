@@ -1,4 +1,4 @@
-package sqlrepository
+package persistence
 
 import (
 	"context"
