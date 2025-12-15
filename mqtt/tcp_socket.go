@@ -15,6 +15,7 @@ import (
 )
 
 func StartMQTT(port string, connections model.Connections) {
+	slog.Info("[MQTT] default router mode", "mode", conf.ROUTER_MODE)
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
 		slog.Error("[MQTT] tcp listen error", "err", err)
