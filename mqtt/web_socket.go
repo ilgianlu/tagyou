@@ -35,7 +35,10 @@ func AcceptWebsocket(connections model.Connections) func(http.ResponseWriter, *h
 		})
 		if err != nil {
 			slog.Error("[WS] error accepting websocket connection", "err", err)
-			c.Close(websocket.StatusInternalError, "the sky is falling")
+			err := c.Close(websocket.StatusInternalError, "the sky is falling")
+			if err != nil {
+				slog.Error("[WS] could not clean close connection", "err", err)
+			}
 			return
 		}
 

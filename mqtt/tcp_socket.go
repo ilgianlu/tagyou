@@ -27,12 +27,17 @@ func StartMQTT(port string, connections model.Connections) {
 		if err != nil {
 			slog.Error("[MQTT] tcp accept error", "err", err)
 		}
-		go handleTcpConnection(conn, connections)
+		go handleTCPConnection(conn, connections)
 	}
 }
 
-func handleTcpConnection(conn net.Conn, connections model.Connections) {
-	defer conn.Close()
+func handleTCPConnection(conn net.Conn, connections model.Connections) {
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			slog.Warn("[MQTT] could not clean close connection", "err", err)
+		}
+	}()
 
 	sessionTimestamp := time.Now().Unix()
 	r := routers.NewDefault(conf.ROUTER_MODE, connections)
@@ -72,10 +77,10 @@ func handleTcpConnection(conn net.Conn, connections model.Connections) {
 			return
 		}
 
-		clientId := session.ClientId
+		clientID := session.ClientId
 		keepAlive := session.KeepAlive
 
-		slog.Debug("[MQTT] session setting read deadline of seconds", "client-id", clientId, "keep-alive", keepAlive*2)
+		slog.Debug("[MQTT] session setting read deadline of seconds", "client-id", clientID, "keep-alive", keepAlive*2)
 		derr := conn.SetReadDeadline(time.Now().Add(time.Duration(keepAlive*2) * time.Second))
 		if derr != nil {
 			slog.Error("[MQTT] cannot set read deadline", "err", derr)
@@ -107,10 +112,10 @@ func packetSplit(session *model.RunningSession) func(b []byte, atEOF bool) (int,
 }
 
 func disconnectClient(session *model.RunningSession, e chan<- *packet.Packet) {
-	clientId := session.ClientId
-	if clientId != "" {
-		session.Router.RemoveDestination(clientId)
-		persistence.SessionRepository.DisconnectSession(clientId)
+	clientID := session.ClientId
+	if clientID != "" {
+		session.Router.RemoveDestination(clientID)
+		persistence.SessionRepository.DisconnectSession(clientID)
 	}
 	close(e)
 }
