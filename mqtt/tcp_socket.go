@@ -85,8 +85,12 @@ func handleTCPConnection(conn net.Conn, connections model.Connections) {
 			return
 		}
 
-		p.Parse(&session)
-
+		errCode := p.Parse(&session)
+		if errCode != 0 {
+			slog.Debug("[MQTT] error parsing remaining bytes", "client-id", session.GetClientId())
+			disconnectClient(&session, packets)
+			return
+		}
 		clientID := session.ClientId
 		keepAlive := session.KeepAlive
 

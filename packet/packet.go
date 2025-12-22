@@ -125,6 +125,9 @@ func (p *Packet) PacketIdentifier() (int, error) {
 	var offset int
 	if p.header.PacketType() == PACKET_TYPE_PUBLISH {
 		topicLength, err := format.Read2BytesInt(p.remainingBytes, 0)
+		if err != nil {
+			return 0, err
+		}
 		offset = 2 + topicLength
 	}
 	return format.Read2BytesInt(p.remainingBytes, offset)
@@ -200,7 +203,7 @@ func ReadFromByteSlice(buff []byte) ([]byte, error) {
 		return nil, fmt.Errorf("header: not enough bytes in buffer")
 	}
 	i := 1
-	rl, k, err := ReadVarInt(buff[i:])
+	rl, k, err := format.ReadVarIntFromBytes(buff[i:])
 	if err != nil {
 		slog.Error("header: malformed remainingLength format", "err", err)
 		return nil, err
@@ -213,11 +216,14 @@ func ReadFromByteSlice(buff []byte) ([]byte, error) {
 	return buff[:i], nil
 }
 
-func (p *Packet) ToByteSlice() []byte {
+func (p *Packet) ToByteSlice() ([]byte, error) {
 	res := make([]byte, 1)
 	res[0] = byte(p.header)
-	encodedLength := WriteVarInt(p.remainingLength)
+	encodedLength, err := format.WriteVarInt(p.remainingLength)
+	if err != nil {
+		return []byte{}, err
+	}
 	res = append(res, encodedLength...)
 	res = append(res, p.remainingBytes...)
-	return res
+	return res, nil
 }
