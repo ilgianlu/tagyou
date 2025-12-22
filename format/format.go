@@ -1,3 +1,4 @@
+// Package format collection of basic coders/encoders
 package format
 
 import (
