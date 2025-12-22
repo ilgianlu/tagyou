@@ -85,6 +85,8 @@ func handleTCPConnection(conn net.Conn, connections model.Connections) {
 			return
 		}
 
+		p.Parse(&session)
+
 		clientID := session.ClientId
 		keepAlive := session.KeepAlive
 
