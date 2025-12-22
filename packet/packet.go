@@ -1,49 +1,61 @@
 package packet
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 
+	"github.com/ilgianlu/tagyou/format"
 	"github.com/ilgianlu/tagyou/model"
 )
 
-const PACKET_TYPE_CONNECT = 1
-const PACKET_TYPE_CONNACK = 2
-const PACKET_TYPE_PUBLISH = 3
-const PACKET_TYPE_PUBACK = 4
-const PACKET_TYPE_PUBREC = 5
-const PACKET_TYPE_PUBREL = 6
-const PACKET_TYPE_PUBCOMP = 7
-const PACKET_TYPE_SUBSCRIBE = 8
-const PACKET_TYPE_SUBACK = 9
-const PACKET_TYPE_UNSUBSCRIBE = 10
-const PACKET_TYPE_UNSUBACK = 11
-const PACKET_TYPE_PINGREQ = 12
-const PACKET_TYPE_PINGRES = 13
-const PACKET_TYPE_DISCONNECT = 14
-const PACKET_MAX_SIZE = 65000
+const (
+	PACKET_TYPE_CONNECT     = 1
+	PACKET_TYPE_CONNACK     = 2
+	PACKET_TYPE_PUBLISH     = 3
+	PACKET_TYPE_PUBACK      = 4
+	PACKET_TYPE_PUBREC      = 5
+	PACKET_TYPE_PUBREL      = 6
+	PACKET_TYPE_PUBCOMP     = 7
+	PACKET_TYPE_SUBSCRIBE   = 8
+	PACKET_TYPE_SUBACK      = 9
+	PACKET_TYPE_UNSUBSCRIBE = 10
+	PACKET_TYPE_UNSUBACK    = 11
+	PACKET_TYPE_PINGREQ     = 12
+	PACKET_TYPE_PINGRES     = 13
+	PACKET_TYPE_DISCONNECT  = 14
+	PACKET_MAX_SIZE         = 65000
+)
 
 // connect response
-const CONNECT_OK = 0
-const UNSPECIFIED_ERROR = 0x80
-const MALFORMED_PACKET = 0x81
-const UNSUPPORTED_PROTOCOL_VERSION = 0x84
-const SESSION_TAKEN_OVER = 0x8E
+const (
+	CONNECT_OK                   = 0
+	UNSPECIFIED_ERROR            = 0x80
+	MALFORMED_PACKET             = 0x81
+	UNSUPPORTED_PROTOCOL_VERSION = 0x84
+	SESSION_TAKEN_OVER           = 0x8E
+)
 
 // publish ack in QoS 1
-const PUBACK_SUCCESS = 0x00
-const PUBACK_NO_MATCHING_SUBSCRIBERS = 0x10
-const PUBACK_NOT_AUTHORIZED = 0x87
+const (
+	PUBACK_SUCCESS                 = 0x00
+	PUBACK_NO_MATCHING_SUBSCRIBERS = 0x10
+	PUBACK_NOT_AUTHORIZED          = 0x87
+)
 
 // publish in QoS 2
-const PUBCOMP_SUCCESS = 0x00
-const PUBREL_SUCCESS = 0x00
-const PUBREC_SUCCESS = 0x00
-const PUBREC_NOT_AUTHORIZED = 0x87
+const (
+	PUBCOMP_SUCCESS       = 0x00
+	PUBREL_SUCCESS        = 0x00
+	PUBREC_SUCCESS        = 0x00
+	PUBREC_NOT_AUTHORIZED = 0x87
+)
 
 type Packet struct {
 	// header
-	header               byte
+	header               header
 	remainingLength      int
 	remainingLengthBytes int
 	// packet remaining bytes
@@ -64,37 +76,41 @@ type Packet struct {
 	PublishTopic  string
 }
 
+func (p *Packet) ReadHeader(r *bufio.Reader) error {
+	h, err := r.ReadByte()
+	if err != nil {
+		return errors.New("[PACKET] error on client side")
+	}
+	if CheckHeader(h) {
+		p.header = header(h)
+		return nil
+	}
+	return errors.New("invalid header")
+}
+
+func (p *Packet) ReadRemainingLength(r *bufio.Reader) error {
+	v, n, err := format.ReadVarInt(r)
+	if err != nil {
+		return err
+	}
+	p.remainingLength = v
+	p.remainingLengthBytes = n
+	return nil
+}
+
+func (p *Packet) ReadRemainingBytes(r *bufio.Reader) error {
+	buf := make([]byte, p.remainingLength)
+	n, err := io.ReadFull(r, buf)
+	slog.Debug("[PACKET] read %d bytes, expected remaining length %d", n, p.remainingLength)
+	if err != nil || n < p.remainingLength {
+		return errors.New("[PACKET] fewer bytes read")
+	}
+	p.remainingBytes = buf
+	return nil
+}
+
 func (p *Packet) RemainingBytes() []byte {
 	return p.remainingBytes
-}
-
-func (p *Packet) PacketType() byte {
-	return (p.header & 0x00F0) >> 4
-}
-
-func (p *Packet) Flags() byte {
-	return p.header & 0x0F
-}
-
-func (p *Packet) QoS() byte {
-	if p.PacketType() == PACKET_TYPE_PUBLISH {
-		return p.Flags() & 0x06 >> 1
-	}
-	return 0x10
-}
-
-func (p *Packet) Dup() bool {
-	if p.PacketType() == PACKET_TYPE_PUBLISH {
-		return (p.Flags() & 0x08 >> 3) == 1
-	}
-	return false
-}
-
-func (p *Packet) Retain() bool {
-	if p.PacketType() == PACKET_TYPE_PUBLISH {
-		return (p.Flags() & 0x01) == 1
-	}
-	return false
 }
 
 func (p *Packet) GetPublishTopic() string {
@@ -105,13 +121,13 @@ func (p *Packet) GetReasonCode() uint8 {
 	return p.ReasonCode
 }
 
-func (p *Packet) PacketIdentifier() int {
+func (p *Packet) PacketIdentifier() (int, error) {
 	var offset int
-	if p.PacketType() == PACKET_TYPE_PUBLISH {
-		topicLength := Read2BytesInt(p.remainingBytes, 0)
+	if p.header.PacketType() == PACKET_TYPE_PUBLISH {
+		topicLength, err := format.Read2BytesInt(p.remainingBytes, 0)
 		offset = 2 + topicLength
 	}
-	return Read2BytesInt(p.remainingBytes, offset)
+	return format.Read2BytesInt(p.remainingBytes, offset)
 }
 
 func (p *Packet) PacketLength() int {
@@ -131,7 +147,7 @@ func (p *Packet) Payload() []byte {
 }
 
 func (p *Packet) ApplicationMessage() []byte {
-	if p.PacketType() == PACKET_TYPE_PUBLISH && p.PacketComplete() {
+	if p.header.PacketType() == PACKET_TYPE_PUBLISH && p.PacketComplete() {
 		return p.remainingBytes[p.payloadOffset:]
 	}
 	return []byte{}
@@ -151,79 +167,8 @@ func (p *Packet) CompletePacket(buff []byte) int {
 	}
 }
 
-func Start(buff []byte) (Packet, error) {
-	var p Packet
-	if len(buff) < 2 {
-		return p, fmt.Errorf("Start: buffer too short")
-	}
-	i := 0
-	p.header = buff[i]
-	i++
-	if p.checkHeader() {
-		rl, k, err := ReadVarInt(buff[i:])
-		p.remainingLengthBytes = k
-		if err != nil {
-			return p, fmt.Errorf("header: malformed remainingLength format: %s", err)
-		}
-		p.remainingLength = rl
-		i = i + k
-		p.CompletePacket(buff[i:])
-		return p, nil
-	} else {
-		return p, fmt.Errorf("header: invalid %b", buff[0])
-	}
-}
-
-func (p *Packet) checkHeader() bool {
-	switch p.PacketType() {
-	case PACKET_TYPE_CONNECT:
-		if p.Flags() != 0 {
-			return false
-		}
-		return true
-	case PACKET_TYPE_PUBLISH:
-		if p.QoS() > 2 {
-			return false
-		}
-		return true
-	case PACKET_TYPE_PUBACK:
-		if p.Flags() != 0 {
-			return false
-		}
-		return true
-	case PACKET_TYPE_PUBREC:
-		if p.Flags() != 0 {
-			return false
-		}
-		return true
-	case PACKET_TYPE_PUBREL:
-		if p.Flags() != 2 {
-			return false
-		}
-		return true
-	case PACKET_TYPE_PUBCOMP:
-		if p.Flags() != 0 {
-			return false
-		}
-		return true
-	case PACKET_TYPE_SUBSCRIBE:
-		if p.Flags() != 2 {
-			return false
-		}
-		return true
-	case PACKET_TYPE_UNSUBSCRIBE:
-		return true
-	case PACKET_TYPE_PINGREQ:
-		return true
-	case PACKET_TYPE_DISCONNECT:
-		return true
-	default:
-		return false
-	}
-}
-
 func (p *Packet) Parse(session *model.RunningSession) int {
-	switch p.PacketType() {
+	switch p.header.PacketType() {
 	case PACKET_TYPE_CONNECT:
 		return p.connectReq(session)
 	case PACKET_TYPE_DISCONNECT:
@@ -245,23 +190,9 @@ func (p *Packet) Parse(session *model.RunningSession) int {
 	case PACKET_TYPE_PINGREQ:
 		return p.pingReq()
 	default:
-		slog.Warn("[MQTT] Unknown packet type", "packet-type", p.PacketType())
+		slog.Warn("[MQTT] Unknown packet type", "packet-type", p.header.PacketType())
 		return MALFORMED_PACKET
 	}
-}
-
-func PacketParse(session *model.RunningSession, buf []byte) (Packet, error) {
-	p, err := Start(buf)
-	if err != nil {
-		slog.Error("[MQTT] Start err", "err", err)
-		return p, err
-	}
-	parseErr := p.Parse(session)
-	if parseErr != 0 {
-		slog.Error("[MQTT] parse err", "parse-err", parseErr)
-		return p, fmt.Errorf("%d", parseErr)
-	}
-	return p, nil
 }
 
 func ReadFromByteSlice(buff []byte) ([]byte, error) {
@@ -284,7 +215,7 @@ func ReadFromByteSlice(buff []byte) ([]byte, error) {
 
 func (p *Packet) ToByteSlice() []byte {
 	res := make([]byte, 1)
-	res[0] = p.header
+	res[0] = byte(p.header)
 	encodedLength := WriteVarInt(p.remainingLength)
 	res = append(res, encodedLength...)
 	res = append(res, p.remainingBytes...)
