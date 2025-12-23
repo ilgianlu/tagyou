@@ -12,7 +12,10 @@ import (
 
 func (p *Packet) subscribeReq(session *model.RunningSession) int {
 	// variable header
-	i := 2 // 2 bytes for packet identifier
+	i := 0
+	packetIdentifier, _ := format.Read2BytesInt(p.remainingBytes, i)
+	p.packetIdentifier = packetIdentifier
+	i = i + 2
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {

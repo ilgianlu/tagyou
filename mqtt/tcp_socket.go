@@ -67,28 +67,24 @@ func handleTCPConnection(conn net.Conn, connections model.Connections) {
 		err := p.ReadHeader(reader)
 		if err != nil {
 			slog.Debug("[MQTT] error reading header byte", "client-id", session.GetClientId(), "err", err)
-			disconnectClient(&session, packets)
 			return
 		}
 
 		err = p.ReadRemainingLength(reader)
 		if err != nil {
 			slog.Debug("[MQTT] error reading remaining length bytes", "client-id", session.GetClientId(), "err", err)
-			disconnectClient(&session, packets)
 			return
 		}
 
 		err = p.ReadRemainingBytes(reader)
 		if err != nil {
 			slog.Debug("[MQTT] error reading remaining bytes", "client-id", session.GetClientId(), "err", err)
-			disconnectClient(&session, packets)
 			return
 		}
 
 		errCode := p.ParseRemainingBytes(&session)
 		if errCode != 0 {
 			slog.Debug("[MQTT] error parsing remaining bytes", "client-id", session.GetClientId())
-			disconnectClient(&session, packets)
 			return
 		}
 		clientID := session.ClientId

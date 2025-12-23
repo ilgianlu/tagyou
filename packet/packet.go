@@ -91,11 +91,12 @@ func (p *Packet) ReadHeader(r *bufio.Reader) error {
 	if err != nil {
 		return errors.New("[PACKET] error on client side")
 	}
+	slog.Debug("[PACKET] header read", "header", h)
 	if CheckHeader(h) {
 		p.header = header(h)
 		return nil
 	}
-	return errors.New("invalid header")
+	return errors.New("[PACKET] invalid header")
 }
 
 func (p *Packet) ReadRemainingLength(r *bufio.Reader) error {
@@ -111,7 +112,7 @@ func (p *Packet) ReadRemainingLength(r *bufio.Reader) error {
 func (p *Packet) ReadRemainingBytes(r *bufio.Reader) error {
 	buf := make([]byte, p.remainingLength)
 	n, err := io.ReadFull(r, buf)
-	slog.Debug("[PACKET] read %d bytes, expected remaining length %d", "n", p.remainingLength)
+	slog.Debug("[PACKET] reading remaining bytes", "expected", p.remainingLength, "read", n)
 	if err != nil || n < p.remainingLength {
 		return errors.New("[PACKET] fewer bytes read")
 	}
