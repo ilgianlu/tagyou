@@ -182,7 +182,7 @@ func (p *Packet) ParseRemainingBytes(session *model.RunningSession) int {
 	case PACKET_TYPE_PINGREQ:
 		return p.pingReq()
 	default:
-		slog.Warn("[MQTT] Unknown packet type", "packet-type", p.header.PacketType())
+		slog.Warn("[MQTT] unknown packet type", "packet-type", p.PacketType())
 		return MALFORMED_PACKET
 	}
 }
