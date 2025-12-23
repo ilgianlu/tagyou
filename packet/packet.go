@@ -56,7 +56,7 @@ const (
 
 type Packet struct {
 	// header
-	header               header
+	header
 	remainingLength      int
 	remainingLengthBytes int
 	// packet remaining bytes

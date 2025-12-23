@@ -20,7 +20,11 @@ func (s StandardEngine) OnUnsubscribe(session *model.RunningSession, p model.Pac
 
 func clientUnsubscribed(session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
 	toSend := packet.Unsuback(packetIdentifier, reasonCodes, session.GetProtocolVersion())
-	session.Router.Send(session.GetClientId(), toSend.ToByteSlice())
+	bs, err := toSend.ToByteSlice()
+	if err != nil {
+		return
+	}
+	session.Router.Send(session.GetClientId(), bs)
 }
 
 func clientUnsubscription(clientId string, unsub model.Subscription) uint8 {

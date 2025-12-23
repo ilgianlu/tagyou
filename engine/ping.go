@@ -7,5 +7,9 @@ import (
 
 func (s StandardEngine) OnPing(session *model.RunningSession) {
 	toSend := packet.PingResp()
-	session.Router.Send(session.GetClientId(), toSend.ToByteSlice())
+	bs, err := toSend.ToByteSlice()
+	if err != nil {
+		return
+	}
+	session.Router.Send(session.GetClientId(), bs)
 }

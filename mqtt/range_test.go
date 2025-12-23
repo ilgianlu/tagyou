@@ -187,7 +187,6 @@ func TestSuccessfullReconnect(t *testing.T) {
 
 func TestPublish(t *testing.T) {
 	conf.Loader()
-	os.Setenv("DEBUG", "1")
 
 	ps := persistence.SqlPersistence{DbFile: "test.db3", InitDatabase: true}
 	db, err := ps.Init(false, false, []byte{})
@@ -272,8 +271,12 @@ func TestPublish(t *testing.T) {
 
 	// receivedPacket, _ := packet.PacketParse(&subscriberSession, receivedMsgs[0])
 	buf := bytes.NewReader(receivedMsgs[0])
+	reader := bufio.NewReader(buf)
 	p = packet.Packet{}
-	err = p.Parse(bufio.NewReader(buf), &subscriberSession)
+	err = p.Parse(reader, &subscriberSession)
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
 	if p.PacketType() != packet.PACKET_TYPE_PUBLISH {
 		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, p.PacketType())
 	}
@@ -281,7 +284,6 @@ func TestPublish(t *testing.T) {
 
 func TestSubscribe(t *testing.T) {
 	conf.Loader()
-	os.Setenv("DEBUG", "1")
 
 	ps := persistence.SqlPersistence{DbFile: "test.db3", InitDatabase: true}
 	db, err := ps.Init(false, false, []byte{})
@@ -320,9 +322,13 @@ func TestSubscribe(t *testing.T) {
 
 	// (0x82) subscription of client 'client' to topic '/topic/#'
 	buf := bytes.NewReader([]byte{0x82, 0x0d, 0x33, 0x41, 0x00, 0x08, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x23, 0x00})
+	reader := bufio.NewReader(buf)
 
 	p := packet.Packet{}
-	err = p.Parse(bufio.NewReader(buf), &subscriberSession)
+	err = p.Parse(reader, &subscriberSession)
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
 
 	managePacket(&subscriberSession, &p)
 
@@ -330,12 +336,15 @@ func TestSubscribe(t *testing.T) {
 		t.Errorf("expected 1 msg received by subscriber, received %d", len(receivedMsgs))
 	}
 
-	// receivedPacket, _ := tParse(&subscriberSession, receivedMsgs[0])
 	buf = bytes.NewReader(receivedMsgs[0])
+	reader = bufio.NewReader(buf)
 	p = packet.Packet{}
-	err = p.Parse(bufio.NewReader(buf), &subscriberSession)
+	err = p.Parse(reader, &subscriberSession)
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
 	if p.PacketType() != packet.PACKET_TYPE_SUBACK {
-		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, p.PacketType())
+		t.Errorf("expected type %d (suback) msg received, received %d", packet.PACKET_TYPE_SUBACK, p.PacketType())
 	}
 
 	subscriptions, err := db.GetSubscriptionsBySessionId(context.Background(), sql.NullInt64{Int64: sess.ID, Valid: true})

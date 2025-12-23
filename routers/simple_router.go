@@ -67,7 +67,11 @@ func (s SimpleRouter) SendRetain(protocolVersion uint8, subscription model.Subsc
 	}
 	for _, r := range retains {
 		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		s.Send(subscription.ClientId, p.ToByteSlice())
+		bs, err := p.ToByteSlice()
+		if err != nil {
+			return
+		}
+		s.Send(subscription.ClientId, bs)
 	}
 }
 
@@ -118,7 +122,11 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p model.
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier
 		p := packet.Publish(sub.ProtocolVersion, conf.QOS0, p.Retain(), topic, 0, p.ApplicationMessage())
-		s.Send(sub.ClientId, p.ToByteSlice())
+		bs, err := p.ToByteSlice()
+		if err != nil {
+			return
+		}
+		s.Send(sub.ClientId, bs)
 	} else if qos == conf.QOS1 {
 		// prepare publish packet qos 1 (if sub permit) new packet identifier
 		p := packet.Publish(sub.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
@@ -132,7 +140,11 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p model.
 			CreatedAt:          time.Now().Unix(),
 		}
 		persistence.RetryRepository.InsertOne(r)
-		s.Send(r.ClientId, p.ToByteSlice())
+		bs, err := p.ToByteSlice()
+		if err != nil {
+			return
+		}
+		s.Send(r.ClientId, bs)
 	} else if qos == 2 {
 		// prepare publish packet qos 2 (if sub permit) new packet identifier
 		p := packet.Publish(sub.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
@@ -146,7 +158,11 @@ func (s SimpleRouter) forwardSend(topic string, sub model.Subscription, p model.
 			CreatedAt:          time.Now().Unix(),
 		}
 		persistence.RetryRepository.InsertOne(r)
-		s.Send(r.ClientId, p.ToByteSlice())
+		bs, err := p.ToByteSlice()
+		if err != nil {
+			return
+		}
+		s.Send(r.ClientId, bs)
 	}
 }
 

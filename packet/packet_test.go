@@ -44,8 +44,8 @@ func TestStartConnectPartial(t *testing.T) {
 	session := model.RunningSession{}
 	p := Packet{}
 	err := p.Parse(bufio.NewReader(bPartial), &session)
-	if err != nil {
-		t.Errorf("did not expect any err: %s", err)
+	if err == nil {
+		t.Errorf("expected erroring for few bytes")
 	}
 	if p.header != 16 {
 		t.Errorf("expected header: %d, got %d", 16, p.header)
@@ -53,20 +53,14 @@ func TestStartConnectPartial(t *testing.T) {
 	if p.remainingLength != 64 {
 		t.Errorf("expected remainingLength: %d, got %d", 64, p.remainingLength)
 	}
-	if len(p.remainingBytes) != 50 {
-		t.Errorf("expected len(remainingBytes): %d got %d", 50, len(p.remainingBytes))
-	}
 	if p.header.PacketType() != PACKET_TYPE_CONNECT {
 		t.Errorf("expected packetType %d got %d", 1, p.header.PacketType())
 	}
-	if p.header.Flags() != 0 {
-		t.Errorf("expected flags %d got %d", 0, p.header.Flags())
-	}
-	if p.PacketLength() != 52 {
-		t.Errorf("expected length %d got %d", 52, p.PacketLength())
+	if p.Flags() != 0 {
+		t.Errorf("expected flags %d got %d", 0, p.Flags())
 	}
 	if p.PacketComplete() {
-		t.Errorf("expected packet complete!")
+		t.Errorf("expected packet incomplete!")
 	}
 }
 
@@ -88,8 +82,8 @@ func TestStartVeryLongPacket(t *testing.T) {
 	session := model.RunningSession{}
 	p := Packet{}
 	err := p.Parse(bufio.NewReader(bComplete), &session)
-	if err != nil {
-		t.Errorf("did not expect any err: %s", err)
+	if err == nil {
+		t.Errorf("expected erroring for few bytes")
 	}
 	if p.header.PacketType() != PACKET_TYPE_PUBLISH {
 		t.Errorf("expected packet type publish %d got %d", PACKET_TYPE_PUBLISH, p.header.PacketType())

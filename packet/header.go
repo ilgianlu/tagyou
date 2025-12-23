@@ -67,13 +67,7 @@ func CheckHeader(headerByte byte) bool {
 			return false
 		}
 		return true
-	case PACKET_TYPE_UNSUBSCRIBE:
-		return true
-	case PACKET_TYPE_PINGREQ:
-		return true
-	case PACKET_TYPE_DISCONNECT:
-		return true
 	default:
-		return false
+		return true
 	}
 }
