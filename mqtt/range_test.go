@@ -1,6 +1,8 @@
 package mqtt
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"database/sql"
 	"net"
@@ -82,7 +84,6 @@ func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
 }
 
 func TestSuccessfullConnect(t *testing.T) {
-	os.Setenv("DEBUG", "1")
 	ps := persistence.SqlPersistence{DbFile: "test.db3", InitDatabase: true}
 	_, err := ps.Init(false, false, []byte{})
 	if err != nil {
@@ -102,9 +103,9 @@ func TestSuccessfullConnect(t *testing.T) {
 		Engine:    engine.NewEngine(),
 	}
 
-	buf := []byte{16, 25, 0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 5, 17, 0, 0, 0, 60, 0, 7, 99, 108, 105, 101, 110, 116, 88}
-	p, err := packet.PacketParse(&session, buf)
-
+	buf := bytes.NewReader([]byte{16, 25, 0, 4, 77, 81, 84, 84, 5, 2, 0, 30, 5, 17, 0, 0, 0, 60, 0, 7, 99, 108, 105, 101, 110, 116, 88})
+	p := packet.Packet{}
+	err = p.Parse(bufio.NewReader(buf), &session)
 	if err != nil {
 		t.Errorf("did not expect parse error %s", err)
 	}
@@ -153,8 +154,9 @@ func TestSuccessfullReconnect(t *testing.T) {
 		Engine:    engine.NewEngine(),
 	}
 
-	buf := []byte{16, 64, 0, 4, 77, 81, 84, 84, 4, 198, 0, 5, 0, 15, 109, 113, 116, 116, 106, 115, 95, 97, 97, 50, 51, 99, 56, 49, 53, 0, 5, 97, 47, 98, 47, 99, 0, 15, 119, 105, 108, 108, 32, 109, 101, 115, 115, 97, 103, 101, 46, 46, 46, 0, 4, 117, 115, 101, 114, 0, 5, 112, 108, 117, 116, 111}
-	p, _ := packet.PacketParse(&session, buf)
+	buf := bytes.NewReader([]byte{16, 64, 0, 4, 77, 81, 84, 84, 4, 198, 0, 5, 0, 15, 109, 113, 116, 116, 106, 115, 95, 97, 97, 50, 51, 99, 56, 49, 53, 0, 5, 97, 47, 98, 47, 99, 0, 15, 119, 105, 108, 108, 32, 109, 101, 115, 115, 97, 103, 101, 46, 46, 46, 0, 4, 117, 115, 101, 114, 0, 5, 112, 108, 117, 116, 111})
+	p := packet.Packet{}
+	err = p.Parse(bufio.NewReader(buf), &session)
 
 	managePacket(&session, &p)
 
@@ -268,9 +270,12 @@ func TestPublish(t *testing.T) {
 		t.Errorf("expected 1 msg received by subscriber, received %d", len(receivedMsgs))
 	}
 
-	receivedPacket, _ := packet.PacketParse(&subscriberSession, receivedMsgs[0])
-	if receivedPacket.PacketType() != packet.PACKET_TYPE_PUBLISH {
-		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, receivedPacket.PacketType())
+	// receivedPacket, _ := packet.PacketParse(&subscriberSession, receivedMsgs[0])
+	buf := bytes.NewReader(receivedMsgs[0])
+	p = packet.Packet{}
+	err = p.Parse(bufio.NewReader(buf), &subscriberSession)
+	if p.PacketType() != packet.PACKET_TYPE_PUBLISH {
+		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, p.PacketType())
 	}
 }
 
@@ -314,9 +319,10 @@ func TestSubscribe(t *testing.T) {
 	subscriberSession.SessionID = sess.ID
 
 	// (0x82) subscription of client 'client' to topic '/topic/#'
-	buf := []byte{0x82, 0x0d, 0x33, 0x41, 0x00, 0x08, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x23, 0x00}
+	buf := bytes.NewReader([]byte{0x82, 0x0d, 0x33, 0x41, 0x00, 0x08, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x23, 0x00})
 
-	p, _ := packet.PacketParse(&subscriberSession, buf)
+	p := packet.Packet{}
+	err = p.Parse(bufio.NewReader(buf), &subscriberSession)
 
 	managePacket(&subscriberSession, &p)
 
@@ -324,9 +330,12 @@ func TestSubscribe(t *testing.T) {
 		t.Errorf("expected 1 msg received by subscriber, received %d", len(receivedMsgs))
 	}
 
-	receivedPacket, _ := packet.PacketParse(&subscriberSession, receivedMsgs[0])
-	if receivedPacket.PacketType() != packet.PACKET_TYPE_SUBACK {
-		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, receivedPacket.PacketType())
+	// receivedPacket, _ := tParse(&subscriberSession, receivedMsgs[0])
+	buf = bytes.NewReader(receivedMsgs[0])
+	p = packet.Packet{}
+	err = p.Parse(bufio.NewReader(buf), &subscriberSession)
+	if p.PacketType() != packet.PACKET_TYPE_SUBACK {
+		t.Errorf("expected %d (publish) msg received, received %d", packet.PACKET_TYPE_PUBLISH, p.PacketType())
 	}
 
 	subscriptions, err := db.GetSubscriptionsBySessionId(context.Background(), sql.NullInt64{Int64: sess.ID, Valid: true})

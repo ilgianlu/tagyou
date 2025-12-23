@@ -4,13 +4,14 @@ import (
 	"log/slog"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/format"
 )
 
 func Puback(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Packet {
 	var p Packet
-	p.header = uint8(PACKET_TYPE_PUBACK) << 4
+	p.header = header(uint8(PACKET_TYPE_PUBACK) << 4)
 	// var header
-	p.remainingBytes = Write2BytesInt(packetIdentifier)
+	p.remainingBytes = format.Write2BytesInt(packetIdentifier)
 	p.remainingBytes = append(p.remainingBytes, ReasonCode)
 	if protocolVersion >= conf.MQTT_V5 {
 		// TODO: encode properties

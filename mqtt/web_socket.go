@@ -1,6 +1,8 @@
 package mqtt
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -51,14 +53,14 @@ func AcceptWebsocket(connections model.Connections) func(http.ResponseWriter, *h
 			LastConnect:    time.Now().Unix(),
 		}
 
-		events := make(chan *packet.Packet)
-		go rangePackets(&session, events)
+		packets := make(chan *packet.Packet)
+		go rangePackets(&session, packets)
 
 		bytesFromWs := make(chan []byte)
 		defer close(bytesFromWs)
 
 		go readFromWs(c, bytesFromWs)
-		handleMqtt(&session, bytesFromWs, events)
+		handleMqtt(&session, bytesFromWs, packets)
 	}
 }
 
@@ -114,7 +116,7 @@ func readFromWs(c *websocket.Conn, bytesFromWs chan<- []byte) {
 	}
 }
 
-func handleMqtt(session *model.RunningSession, bytesFromWs <-chan []byte, events chan<- *packet.Packet) {
+func handleMqtt(session *model.RunningSession, bytesFromWs <-chan []byte, packets chan<- *packet.Packet) {
 	buf := []byte{}
 	for bytesRead := range bytesFromWs {
 		slog.Debug("[WS] received message", "msg-bytes", string(bytesRead))
@@ -125,20 +127,16 @@ func handleMqtt(session *model.RunningSession, bytesFromWs <-chan []byte, events
 
 		buf = append(buf, bytesRead...)
 
-		pb, err := packet.ReadFromByteSlice(buf)
-		if err != nil {
-			slog.Debug("[WS] error during ReadFromByteSlice", "err", err.Error())
-			continue
-		}
+		bufReader := bytes.NewReader(buf)
+		reader := bufio.NewReader(bufReader)
 
-		buf = buf[len(buf):]
-
-		p, err := packet.PacketParse(session, pb)
+		p := packet.Packet{}
+		err := p.Parse(reader, session)
 		if err != nil {
 			slog.Debug("[WS] error during packet parse", "err", err.Error())
 			return
 		}
 
-		events <- &p
+		packets <- &p
 	}
 }

@@ -4,20 +4,24 @@ import (
 	"log/slog"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/format"
 	"github.com/ilgianlu/tagyou/model"
 )
 
-// ATTENTION: partial implementation only for testing
+// Connect ATTENTION: partial implementation only for testing
 func Connect() Packet {
 	var p Packet
-	p.header = uint8(PACKET_TYPE_CONNECT) << 4
+	p.header = header(uint8(PACKET_TYPE_CONNECT) << 4)
 	return p
 }
 
 func (p *Packet) connectReq(session *model.RunningSession) int {
 	// START VARIABLE HEADER
 	i := 0
-	pl := Read2BytesInt(p.remainingBytes, i)
+	pl, err := format.Read2BytesInt(p.remainingBytes, i)
+	if err != nil {
+		return 1
+	}
 	i = i + 2
 	slog.Debug("protocolName", "bytes-read", pl, "protocol-name", string(p.remainingBytes[i:i+pl]))
 	i = i + pl
@@ -32,8 +36,11 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 	session.ConnectFlags = p.remainingBytes[i]
 	i++
 	ka := p.remainingBytes[i : i+2]
-	session.KeepAlive = Read2BytesInt(ka, 0)
-	slog.Debug("keepAlive", "keep-alive", Read2BytesInt(ka, 0))
+	session.KeepAlive, err = format.Read2BytesInt(ka, 0)
+	if err != nil {
+		return 1
+	}
+	slog.Debug("keepAlive", "keep-alive", session.KeepAlive)
 	i = i + 2
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
@@ -46,7 +53,10 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 	// END VARIABLE HEADER
 	// START PAYLOAD
 	p.payloadOffset = i
-	cil := Read2BytesInt(p.remainingBytes, i)
+	cil, err := format.Read2BytesInt(p.remainingBytes, i)
+	if err != nil {
+		return 1
+	}
 	i = i + 2
 	session.ClientId = string(p.remainingBytes[i : i+cil])
 	// log.Printf("%d bytes, clientId %s\n", cil, event.clientId)
@@ -61,12 +71,18 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 			i = i + pl
 		}
 		// read will topic
-		wtl := Read2BytesInt(p.remainingBytes, i)
+		wtl, err := format.Read2BytesInt(p.remainingBytes, i)
+		if err != nil {
+			return 1
+		}
 		i = i + 2
 		session.WillTopic = string(p.remainingBytes[i : i+wtl])
 		i = i + wtl
 		// will message
-		wml := Read2BytesInt(p.remainingBytes, i)
+		wml, err := format.Read2BytesInt(p.remainingBytes, i)
+		if err != nil {
+			return 1
+		}
 		i = i + 2
 		session.WillMessage = p.remainingBytes[i : i+wml]
 		slog.Debug("will topic with message", "will-topic", session.WillTopic, "will-message", session.WillMessage[:wml])
@@ -74,12 +90,18 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 	}
 	if session.HaveUser() {
 		// read username
-		unl := Read2BytesInt(p.remainingBytes, i)
+		unl, err := format.Read2BytesInt(p.remainingBytes, i)
+		if err != nil {
+			return 1
+		}
 		i = i + 2
 		session.Username = string(p.remainingBytes[i : i+unl])
 		i = i + unl
 		// read password
-		pwdl := Read2BytesInt(p.remainingBytes, i)
+		pwdl, err := format.Read2BytesInt(p.remainingBytes, i)
+		if err != nil {
+			return 1
+		}
 		i = i + 2
 		session.Password = string(p.remainingBytes[i : i+pwdl])
 		slog.Debug("user logging in", "username", session.Username)

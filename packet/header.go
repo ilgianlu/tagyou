@@ -2,9 +2,7 @@ package packet
 
 type header byte
 
-func (h header) PacketType() byte {
-	return byte(h >> 4)
-}
+func (h header) PacketType() byte { return byte(h >> 4) }
 
 func (h header) Flags() byte {
 	return byte(h & 0x0F)

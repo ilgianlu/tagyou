@@ -13,7 +13,7 @@ func rangePackets(session *model.RunningSession, packets <-chan *packet.Packet) 
 	}
 }
 
-func managePacket(session *model.RunningSession, p model.Packet) {
+func managePacket(session *model.RunningSession, p *packet.Packet) {
 	slog.Debug("[MQTT] packet arriving", "packet-type", p.PacketType())
 	if !session.GetConnected() && p.PacketType() != packet.PACKET_TYPE_CONNECT {
 		slog.Warn("[MQTT] session is disconnected,I can accept only connect, closing...", "packet-type", p.PacketType())

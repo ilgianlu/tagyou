@@ -71,13 +71,17 @@ func (s DebugRouter) SendRetain(protocolVersion uint8, subscription model.Subscr
 	}
 	for _, r := range retains {
 		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		s.Send(subscription.ClientId, p.ToByteSlice())
+		pBytes, err := p.ToByteSlice()
+		if err != nil {
+			continue
+		}
+		s.Send(subscription.ClientId, pBytes)
 	}
 }
 
 func (s DebugRouter) sendDebug(senderId string, topic string, p model.Packet) {
 	filename := conf.DebugDataFilepath(senderId)
-	debugFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	debugFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		slog.Error("error writing to debug file", "err", err, "filename", filename)
 		return

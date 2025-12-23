@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/format"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/topic"
 )
@@ -24,7 +25,7 @@ func (p *Packet) subscribeReq(session *model.RunningSession) int {
 	j := 0
 	p.Subscriptions = []model.Subscription{}
 	for {
-		sl := Read2BytesInt(p.remainingBytes, i)
+		sl, _ := format.Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
 		sub := model.Subscription{

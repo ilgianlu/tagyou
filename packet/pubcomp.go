@@ -4,12 +4,13 @@ import (
 	"log/slog"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/format"
 )
 
 func Pubcomp(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Packet {
 	var p Packet
-	p.header = uint8(PACKET_TYPE_PUBCOMP) << 4
-	p.remainingBytes = Write2BytesInt(packetIdentifier)
+	p.header = header(uint8(PACKET_TYPE_PUBCOMP) << 4)
+	p.remainingBytes = format.Write2BytesInt(packetIdentifier)
 	if ReasonCode != 0 {
 		p.remainingBytes = append(p.remainingBytes, ReasonCode)
 	}
@@ -20,6 +21,7 @@ func Pubcomp(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Pack
 	p.remainingLength = len(p.remainingBytes)
 	return p
 }
+
 func (p *Packet) pubcompReq(protocolVersion uint8) int {
 	i := 2 // expect packet identifier in first 2 bytes
 	if i < len(p.remainingBytes) {

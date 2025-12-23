@@ -4,12 +4,13 @@ import (
 	"log/slog"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/format"
 )
 
 func Pubrel(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Packet {
 	var p Packet
-	p.header = uint8(PACKET_TYPE_PUBREL) << 4
-	p.remainingBytes = Write2BytesInt(packetIdentifier)
+	p.header = header(uint8(PACKET_TYPE_PUBREL) << 4)
+	p.remainingBytes = format.Write2BytesInt(packetIdentifier)
 	if ReasonCode != 0 {
 		p.remainingBytes = append(p.remainingBytes, ReasonCode)
 	}

@@ -1,3 +1,4 @@
+// package packet definition of mqtt packet
 package packet
 
 import (
@@ -72,8 +73,17 @@ type Packet struct {
 	willProperties Properties
 
 	// metadata
-	Subscriptions []model.Subscription
-	PublishTopic  string
+	Subscriptions    []model.Subscription
+	PublishTopic     string
+	packetIdentifier int
+}
+
+func (p Packet) PacketType() byte {
+	return p.header.PacketType()
+}
+
+func (p Packet) QoS() byte {
+	return p.header.QoS()
 }
 
 func (p *Packet) ReadHeader(r *bufio.Reader) error {
@@ -101,7 +111,7 @@ func (p *Packet) ReadRemainingLength(r *bufio.Reader) error {
 func (p *Packet) ReadRemainingBytes(r *bufio.Reader) error {
 	buf := make([]byte, p.remainingLength)
 	n, err := io.ReadFull(r, buf)
-	slog.Debug("[PACKET] read %d bytes, expected remaining length %d", n, p.remainingLength)
+	slog.Debug("[PACKET] read %d bytes, expected remaining length %d", "n", p.remainingLength)
 	if err != nil || n < p.remainingLength {
 		return errors.New("[PACKET] fewer bytes read")
 	}
@@ -121,16 +131,8 @@ func (p *Packet) GetReasonCode() uint8 {
 	return p.ReasonCode
 }
 
-func (p *Packet) PacketIdentifier() (int, error) {
-	var offset int
-	if p.header.PacketType() == PACKET_TYPE_PUBLISH {
-		topicLength, err := format.Read2BytesInt(p.remainingBytes, 0)
-		if err != nil {
-			return 0, err
-		}
-		offset = 2 + topicLength
-	}
-	return format.Read2BytesInt(p.remainingBytes, offset)
+func (p *Packet) PacketIdentifier() int {
+	return p.packetIdentifier
 }
 
 func (p *Packet) PacketLength() int {
@@ -139,10 +141,6 @@ func (p *Packet) PacketLength() int {
 
 func (p *Packet) PacketComplete() bool {
 	return len(p.remainingBytes) == p.remainingLength
-}
-
-func (p *Packet) missingBytes() int {
-	return p.remainingLength - len(p.remainingBytes)
 }
 
 func (p *Packet) Payload() []byte {
@@ -160,17 +158,7 @@ func (p *Packet) GetSubscriptions() []model.Subscription {
 	return p.Subscriptions
 }
 
-func (p *Packet) CompletePacket(buff []byte) int {
-	if len(buff) >= p.missingBytes() {
-		p.remainingBytes = append(p.remainingBytes, buff[:p.missingBytes()]...)
-		return p.missingBytes()
-	} else {
-		p.remainingBytes = append(p.remainingBytes, buff...)
-		return len(buff)
-	}
-}
-
-func (p *Packet) Parse(session *model.RunningSession) int {
+func (p *Packet) ParseRemainingBytes(session *model.RunningSession) int {
 	switch p.header.PacketType() {
 	case PACKET_TYPE_CONNECT:
 		return p.connectReq(session)
@@ -196,6 +184,33 @@ func (p *Packet) Parse(session *model.RunningSession) int {
 		slog.Warn("[MQTT] Unknown packet type", "packet-type", p.header.PacketType())
 		return MALFORMED_PACKET
 	}
+}
+
+func (p *Packet) Parse(reader *bufio.Reader, session *model.RunningSession) error {
+	err := p.ReadHeader(reader)
+	if err != nil {
+		slog.Debug("[MQTT] error reading header byte", "client-id", session.GetClientId(), "err", err)
+		return err
+	}
+
+	err = p.ReadRemainingLength(reader)
+	if err != nil {
+		slog.Debug("[MQTT] error reading remaining length bytes", "client-id", session.GetClientId(), "err", err)
+		return err
+	}
+
+	err = p.ReadRemainingBytes(reader)
+	if err != nil {
+		slog.Debug("[MQTT] error reading remaining bytes", "client-id", session.GetClientId(), "err", err)
+		return err
+	}
+
+	errCode := p.ParseRemainingBytes(session)
+	if errCode != 0 {
+		slog.Debug("[MQTT] error parsing remaining bytes", "client-id", session.GetClientId())
+		return err
+	}
+	return nil
 }
 
 func ReadFromByteSlice(buff []byte) ([]byte, error) {

@@ -1,6 +1,8 @@
 package packet
 
 import (
+	"bufio"
+	"bytes"
 	"testing"
 
 	"github.com/ilgianlu/tagyou/conf"
@@ -9,9 +11,16 @@ import (
 
 func TestParseSubscribe(t *testing.T) {
 	// (0x82) subscription of client 'client' to topic '/topic/#'
-	buf := []byte{0x82, 0x0d, 0x33, 0x41, 0x00, 0x08, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x23, 0x00}
+	buf := bytes.NewReader([]byte{0x82, 0x0d, 0x33, 0x41, 0x00, 0x08, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x23, 0x00})
 
-	p, _ := Start(buf)
+	session := model.RunningSession{
+		ProtocolVersion: conf.MQTT_V3_11,
+		SessionID:       1,
+		ClientId:        "client",
+	}
+
+	p := Packet{}
+	p.Parse(bufio.NewReader(buf), &session)
 
 	if p.header != 0x82 {
 		t.Errorf("expecting subscribe header %d, received %d", 0x82, p.header)
@@ -21,19 +30,13 @@ func TestParseSubscribe(t *testing.T) {
 		t.Errorf("expecting remaining length %d, received %d", len(p.remainingBytes), p.remainingLength)
 	}
 
-	session := model.RunningSession{
-		ProtocolVersion: conf.MQTT_V3_11,
-		SessionID:       1,
-		ClientId:        "client",
-	}
-
 	res := p.subscribeReq(&session)
 	if res != 0 {
 		t.Errorf("expecting result 0, received %d", res)
 	}
 
-	if p.PacketType() != PACKET_TYPE_SUBSCRIBE {
-		t.Errorf("expecting subscribe packet %d, received %d", PACKET_TYPE_SUBSCRIBE, p.PacketType())
+	if p.header.PacketType() != PACKET_TYPE_SUBSCRIBE {
+		t.Errorf("expecting subscribe packet %d, received %d", PACKET_TYPE_SUBSCRIBE, p.header.PacketType())
 	}
 
 	if len(p.Subscriptions) != 1 {
