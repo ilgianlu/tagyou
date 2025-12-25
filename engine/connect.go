@@ -27,7 +27,11 @@ func (s StandardEngine) OnConnect(session *model.RunningSession) {
 	startSession(session)
 
 	connack := packet.Connack(false, packet.CONNECT_OK, session.GetProtocolVersion())
-	session.Router.Send(clientId, connack.ToByteSlice())
+	bs, err := connack.ToByteSlice()
+	if err != nil {
+		return
+	}
+	session.Router.Send(clientId, bs)
 }
 
 func doAuth(session *model.RunningSession) bool {
@@ -66,7 +70,11 @@ func checkConnectionTakeOver(session *model.RunningSession) bool {
 	}
 
 	pkt := packet.Connack(false, packet.SESSION_TAKEN_OVER, protocolVersion)
-	session.Router.Send(clientId, pkt.ToByteSlice())
+	bs, err := pkt.ToByteSlice()
+	if err != nil {
+		return false
+	}
+	session.Router.Send(clientId, bs)
 
 	session.Router.RemoveDestination(clientId)
 	return true

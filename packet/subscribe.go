@@ -5,13 +5,17 @@ import (
 	"time"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/format"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/topic"
 )
 
 func (p *Packet) subscribeReq(session *model.RunningSession) int {
 	// variable header
-	i := 2 // 2 bytes for packet identifier
+	i := 0
+	packetIdentifier, _ := format.Read2BytesInt(p.remainingBytes, i)
+	p.packetIdentifier = packetIdentifier
+	i = i + 2
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
@@ -24,7 +28,7 @@ func (p *Packet) subscribeReq(session *model.RunningSession) int {
 	j := 0
 	p.Subscriptions = []model.Subscription{}
 	for {
-		sl := Read2BytesInt(p.remainingBytes, i)
+		sl, _ := format.Read2BytesInt(p.remainingBytes, i)
 		i = i + 2
 		s := string(p.remainingBytes[i : i+sl])
 		sub := model.Subscription{

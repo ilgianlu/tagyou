@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"log/slog"
+
 	"github.com/ilgianlu/tagyou/conf"
 	"github.com/ilgianlu/tagyou/model"
 	"github.com/ilgianlu/tagyou/packet"
@@ -11,6 +13,7 @@ func (s StandardEngine) OnSubscribe(session *model.RunningSession, p model.Packe
 	reasonCodes := []uint8{}
 	for _, subscription := range p.GetSubscriptions() {
 		rCode := clientSubscription(session, subscription)
+		slog.Debug("[ENGINE] new subscription", "result", rCode)
 		reasonCodes = append(reasonCodes, rCode)
 	}
 	clientSubscribed(session, p.PacketIdentifier(), reasonCodes)
@@ -18,7 +21,12 @@ func (s StandardEngine) OnSubscribe(session *model.RunningSession, p model.Packe
 
 func clientSubscribed(session *model.RunningSession, packetIdentifier int, reasonCodes []uint8) {
 	toSend := packet.Suback(packetIdentifier, reasonCodes, session.ProtocolVersion)
-	session.Router.Send(session.ClientId, toSend.ToByteSlice())
+	bs, err := toSend.ToByteSlice()
+	if err != nil {
+		slog.Warn("[ENGINE] error encoding suback", "err", err)
+		return
+	}
+	session.Router.Send(session.ClientId, bs)
 }
 
 func clientSubscription(session *model.RunningSession, subscription model.Subscription) uint8 {

@@ -55,28 +55,38 @@ func handleTCPConnection(conn net.Conn, connections model.Connections) {
 	// the size of the channel is equivalent to:
 	// 0 -> store client messages queue on the socket cache of the Operating System
 	// 1 - Infinite -> store "some" client messages queue on channel (application) memory, rest on OS
-	// events := make(chan *packet.Packet, 5)
-	events := make(chan *packet.Packet)
-	go rangePackets(&session, events)
-	defer disconnectClient(&session, events)
+	// packets := make(chan *packet.Packet, 5)
+	packets := make(chan *packet.Packet)
+	go rangePackets(&session, packets)
+	defer disconnectClient(&session, packets)
 
-	scanner := bufio.NewScanner(conn)
-	scanner.Split(packetSplit(&session))
+	for {
+		p := packet.Packet{}
 
-	for scanner.Scan() {
-		err := scanner.Err()
+		reader := bufio.NewReader(conn)
+		err := p.ReadHeader(reader)
 		if err != nil {
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				e.OnSocketUpButSilent(&session)
-			}
-		}
-
-		b := scanner.Bytes()
-		p, err := packet.PacketParse(&session, b)
-		if err != nil {
+			slog.Debug("[MQTT] error reading header byte", "client-id", session.GetClientId(), "err", err)
 			return
 		}
 
+		err = p.ReadRemainingLength(reader)
+		if err != nil {
+			slog.Debug("[MQTT] error reading remaining length bytes", "client-id", session.GetClientId(), "err", err)
+			return
+		}
+
+		err = p.ReadRemainingBytes(reader)
+		if err != nil {
+			slog.Debug("[MQTT] error reading remaining bytes", "client-id", session.GetClientId(), "err", err)
+			return
+		}
+
+		errCode := p.ParseRemainingBytes(&session)
+		if errCode != 0 {
+			slog.Debug("[MQTT] error parsing remaining bytes", "client-id", session.GetClientId())
+			return
+		}
 		clientID := session.ClientId
 		keepAlive := session.KeepAlive
 
@@ -86,28 +96,7 @@ func handleTCPConnection(conn net.Conn, connections model.Connections) {
 			slog.Error("[MQTT] cannot set read deadline", "err", derr)
 		}
 
-		events <- &p
-	}
-}
-
-func packetSplit(session *model.RunningSession) func(b []byte, atEOF bool) (int, []byte, error) {
-	return func(b []byte, atEOF bool) (advance int, token []byte, err error) {
-		if len(b) == 0 && atEOF {
-			wasConnected := session.Engine.OnSocketDownClosed(session)
-			if wasConnected {
-				return 0, nil, nil
-			}
-			return 0, b, bufio.ErrFinalToken
-		}
-		pb, err := packet.ReadFromByteSlice(b)
-		if err != nil {
-			if !atEOF {
-				return 0, nil, nil
-			}
-			slog.Debug("[MQTT] error reading bytes - session", "client-id", session.GetClientId(), "err", err.Error())
-			return 0, pb, bufio.ErrFinalToken
-		}
-		return len(pb), pb, nil
+		packets <- &p
 	}
 }
 

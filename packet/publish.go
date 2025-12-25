@@ -5,24 +5,26 @@ import (
 	"math/rand"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/format"
 )
 
 func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packetIdentifier int, payload []byte) Packet {
 	var p Packet
-	p.header = uint8(PACKET_TYPE_PUBLISH) << 4
-	p.header = p.header | qos<<1
+	h := uint8(PACKET_TYPE_PUBLISH) << 4
+	h = h | qos<<1
+	p.header = header(h)
 	if retain {
 		p.header = p.header | 1
 	}
 	// variable header
 	// write topic length
-	p.remainingBytes = Write2BytesInt(len(topic))
+	p.remainingBytes = format.Write2BytesInt(len(topic))
 	// write topic string
 	p.PublishTopic = topic
 	p.remainingBytes = append(p.remainingBytes, []byte(topic)...)
 	// write packet identifier only if qos > 0
 	if qos != 0 {
-		p.remainingBytes = append(p.remainingBytes, Write2BytesInt(packetIdentifier)...)
+		p.remainingBytes = append(p.remainingBytes, format.Write2BytesInt(packetIdentifier)...)
 	}
 	if protocolVersion >= conf.MQTT_V5 {
 		p.remainingBytes = append(p.remainingBytes, p.encodeProperties()...)
@@ -36,12 +38,14 @@ func Publish(protocolVersion uint8, qos uint8, retain bool, topic string, packet
 
 func (p *Packet) publishReq(protocolVersion uint8) int {
 	i := 0
-	tl := Read2BytesInt(p.remainingBytes, i)
+	tl, _ := format.Read2BytesInt(p.remainingBytes, i)
 	i = i + 2
 	// variable header
 	p.PublishTopic = string(p.remainingBytes[i : i+tl])
 	i = i + tl
-	if p.QoS() > 0 {
+	if p.header.QoS() > 0 {
+		packetIdentifier, _ := format.Read2BytesInt(p.remainingBytes, i)
+		p.packetIdentifier = packetIdentifier
 		i = i + 2 // + 2 for packet identifier
 	}
 	if protocolVersion >= conf.MQTT_V5 {

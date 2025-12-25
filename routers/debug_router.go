@@ -71,13 +71,17 @@ func (s DebugRouter) SendRetain(protocolVersion uint8, subscription model.Subscr
 	}
 	for _, r := range retains {
 		p := packet.Publish(protocolVersion, subscription.Qos, true, r.Topic, packet.NewPacketIdentifier(), r.ApplicationMessage)
-		s.Send(subscription.ClientId, p.ToByteSlice())
+		pBytes, err := p.ToByteSlice()
+		if err != nil {
+			continue
+		}
+		s.Send(subscription.ClientId, pBytes)
 	}
 }
 
 func (s DebugRouter) sendDebug(senderId string, topic string, p model.Packet) {
 	filename := conf.DebugDataFilepath(senderId)
-	debugFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	debugFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		slog.Error("error writing to debug file", "err", err, "filename", filename)
 		return
@@ -121,7 +125,11 @@ func (s DebugRouter) forwardSend(topic string, sub model.Subscription, p model.P
 	if qos == conf.QOS0 {
 		// prepare publish packet qos 0 no packet identifier
 		p := packet.Publish(sub.ProtocolVersion, conf.QOS0, p.Retain(), topic, 0, p.ApplicationMessage())
-		s.Send(sub.ClientId, p.ToByteSlice())
+		bs, err := p.ToByteSlice()
+		if err != nil {
+			return
+		}
+		s.Send(sub.ClientId, bs)
 	} else if qos == conf.QOS1 {
 		// prepare publish packet qos 1 (if sub permit) new packet identifier
 		p := packet.Publish(sub.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
@@ -135,7 +143,11 @@ func (s DebugRouter) forwardSend(topic string, sub model.Subscription, p model.P
 			CreatedAt:          time.Now().Unix(),
 		}
 		persistence.RetryRepository.InsertOne(r)
-		s.Send(r.ClientId, p.ToByteSlice())
+		bs, err := p.ToByteSlice()
+		if err != nil {
+			return
+		}
+		s.Send(r.ClientId, bs)
 	} else if qos == 2 {
 		// prepare publish packet qos 2 (if sub permit) new packet identifier
 		p := packet.Publish(sub.ProtocolVersion, qos, p.Retain(), topic, packet.NewPacketIdentifier(), p.ApplicationMessage())
@@ -149,6 +161,10 @@ func (s DebugRouter) forwardSend(topic string, sub model.Subscription, p model.P
 			CreatedAt:          time.Now().Unix(),
 		}
 		persistence.RetryRepository.InsertOne(r)
-		s.Send(r.ClientId, p.ToByteSlice())
+		bs, err := p.ToByteSlice()
+		if err != nil {
+			return
+		}
+		s.Send(r.ClientId, bs)
 	}
 }

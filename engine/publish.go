@@ -38,7 +38,11 @@ func (s StandardEngine) OnPublish(session *model.RunningSession, p model.Packet)
 
 func sendAck(session *model.RunningSession, packetIdentifier int, reasonCode uint8) {
 	puback := packet.Puback(packetIdentifier, reasonCode, session.ProtocolVersion)
-	session.Router.Send(session.ClientId, puback.ToByteSlice())
+	bs, err := puback.ToByteSlice()
+	if err != nil {
+		return
+	}
+	session.Router.Send(session.ClientId, bs)
 }
 
 func sendPubrec(session *model.RunningSession, p model.Packet, reasonCode uint8) {
@@ -56,5 +60,9 @@ func sendPubrec(session *model.RunningSession, p model.Packet, reasonCode uint8)
 	persistence.RetryRepository.InsertOne(r)
 
 	pubrec := packet.Pubrec(p.PacketIdentifier(), reasonCode, protocolVersion)
-	session.Router.Send(clientId, pubrec.ToByteSlice())
+	bs, err := pubrec.ToByteSlice()
+	if err != nil {
+		return
+	}
+	session.Router.Send(clientId, bs)
 }

@@ -1,9 +1,12 @@
 package packet
 
 import (
+	"bufio"
+	"bytes"
 	"testing"
 
 	"github.com/ilgianlu/tagyou/conf"
+	"github.com/ilgianlu/tagyou/model"
 )
 
 func TestPublish(t *testing.T) {
@@ -19,8 +22,8 @@ func TestPublish(t *testing.T) {
 	if p.remainingLength != len(p.remainingBytes) {
 		t.Errorf("Publish expected remaingLength %d, received %d", len(p.remainingBytes), p.remainingLength)
 	}
-	if p.QoS() != 1 {
-		t.Errorf("Publish expected qos 1, received %d", p.QoS())
+	if p.header.QoS() != 1 {
+		t.Errorf("Publish expected qos 1, received %d", p.header.QoS())
 	}
 	if len(p.ApplicationMessage()) != 6 {
 		t.Errorf("application message expected %v, received %v", []byte{0, 1, 2, 3, 4, 5}, p.ApplicationMessage())
@@ -29,9 +32,14 @@ func TestPublish(t *testing.T) {
 
 func TestParsePublish(t *testing.T) {
 	// (0x30) publish packet to topic '/topic/0/messages' payload 'published 0'
-	buf := []byte{0x30, 0x1e, 0x00, 0x11, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x30, 0x2f, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x73, 0x68, 0x65, 0x64, 0x20, 0x30}
+	buf := bytes.NewReader([]byte{0x30, 0x1e, 0x00, 0x11, 0x2f, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x2f, 0x30, 0x2f, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x73, 0x68, 0x65, 0x64, 0x20, 0x30})
 
-	p, _ := Start(buf)
+	session := model.RunningSession{}
+	p := Packet{}
+	err := p.Parse(bufio.NewReader(buf), &session)
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
 
 	if p.header != 0x30 {
 		t.Errorf("expecting publish header %d, received %d", 0x30, p.header)
@@ -46,8 +54,8 @@ func TestParsePublish(t *testing.T) {
 		t.Errorf("expecting result 0, received %d", res)
 	}
 
-	if p.PacketType() != PACKET_TYPE_PUBLISH {
-		t.Errorf("expecting packet type %d, received %d", PACKET_TYPE_PUBLISH, p.PacketType())
+	if p.header.PacketType() != PACKET_TYPE_PUBLISH {
+		t.Errorf("expecting packet type %d, received %d", PACKET_TYPE_PUBLISH, p.header.PacketType())
 	}
 
 	if p.PublishTopic != "/topic/0/messages" {

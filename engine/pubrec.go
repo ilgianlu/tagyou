@@ -11,7 +11,11 @@ import (
 func (s StandardEngine) OnClientPubrec(session *model.RunningSession, p model.Packet) {
 	sendPubrel := func(retry model.Retry) {
 		toSend := packet.Pubrel(retry.PacketIdentifier, retry.ReasonCode, session.ProtocolVersion)
-		session.Router.Send(retry.ClientId, toSend.ToByteSlice())
+		bs, err := toSend.ToByteSlice()
+		if err != nil {
+			return
+		}
+		session.Router.Send(retry.ClientId, bs)
 	}
 
 	onExpectedPubrec := func(retry model.Retry) {
