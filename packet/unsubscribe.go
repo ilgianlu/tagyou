@@ -10,6 +10,8 @@ import (
 )
 
 func (p *Packet) unsubscribeReq(session *model.RunningSession) int {
+	packetIdentifier, _ := format.Read2BytesInt(p.remainingBytes, 0)
+	p.packetIdentifier = packetIdentifier
 	i := 2 // 2 bytes for packet identifier
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)

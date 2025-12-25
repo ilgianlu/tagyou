@@ -19,3 +19,8 @@ func Unsuback(packetIdentifier int, ReasonCodes []uint8, protocolVersion uint8) 
 	p.remainingLength = len(p.remainingBytes)
 	return p
 }
+
+func (p *Packet) unsubackReq() int {
+	// this mqtt server is not able to unsubscribe
+	return 99
+}

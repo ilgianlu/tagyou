@@ -1,4 +1,4 @@
-// package packet definition of mqtt packet
+// Package packet definition of mqtt packet
 package packet
 
 import (
@@ -181,6 +181,10 @@ func (p *Packet) ParseRemainingBytes(session *model.RunningSession) int {
 		return p.unsubscribeReq(session)
 	case PACKET_TYPE_PINGREQ:
 		return p.pingReq()
+	case PACKET_TYPE_UNSUBACK:
+		return p.unsubackReq()
+	case PACKET_TYPE_SUBACK:
+		return p.subackReq()
 	default:
 		slog.Warn("[MQTT] unknown packet type", "packet-type", p.PacketType())
 		return MALFORMED_PACKET

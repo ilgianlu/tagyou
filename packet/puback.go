@@ -23,6 +23,8 @@ func Puback(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Packe
 }
 
 func (p *Packet) pubackReq(protocolVersion uint8) int {
+	packetIdentifier, _ := format.Read2BytesInt(p.remainingBytes, 0)
+	p.packetIdentifier = packetIdentifier
 	i := 2 // expect packet identifier in first 2 bytes
 	if i < len(p.remainingBytes) {
 		p.ReasonCode = p.remainingBytes[i]

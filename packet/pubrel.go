@@ -23,6 +23,8 @@ func Pubrel(packetIdentifier int, ReasonCode uint8, protocolVersion uint8) Packe
 }
 
 func (p *Packet) pubrelReq(protocolVersion uint8) int {
+	packetIdentifier, _ := format.Read2BytesInt(p.remainingBytes, 0)
+	p.packetIdentifier = packetIdentifier
 	i := 2 // 2 bytes for packet identifier
 	if i < len(p.remainingBytes) {
 		p.ReasonCode = p.remainingBytes[i]
