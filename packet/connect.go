@@ -23,14 +23,14 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 		return 1
 	}
 	i = i + 2
-	slog.Debug("protocolName", "bytes-read", pl, "protocol-name", string(p.remainingBytes[i:i+pl]))
+	slog.Debug("[PACKET] protocolName", "bytes-read", pl, "protocol-name", string(p.remainingBytes[i:i+pl]))
 	i = i + pl
 	v := p.remainingBytes[i]
-	slog.Debug("protocolVersion", "protocol-version", v)
+	slog.Debug("[PACKET] protocolVersion", "protocol-version", v)
 	session.ProtocolVersion = v
 	i++
 	if int(v) < conf.MINIMUM_SUPPORTED_PROTOCOL {
-		slog.Error("unsupported protocol version", "protocol-version", v)
+		slog.Error("[PACKET] unsupported protocol version", "protocol-version", v)
 		return UNSUPPORTED_PROTOCOL_VERSION
 	}
 	session.ConnectFlags = p.remainingBytes[i]
@@ -40,12 +40,12 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 	if err != nil {
 		return 1
 	}
-	slog.Debug("keepAlive", "keep-alive", session.KeepAlive)
+	slog.Debug("[PACKET] keepAlive", "keep-alive", session.KeepAlive)
 	i = i + 2
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		pl, err := p.parseProperties(i)
 		if err != 0 {
-			slog.Error("err reading properties", "err", err)
+			slog.Error("[PACKET] err reading properties", "err", err)
 			return err
 		}
 		i = i + pl
@@ -65,7 +65,7 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 		if session.ProtocolVersion >= conf.MQTT_V5 {
 			pl, err := p.parseWillProperties(i)
 			if err != 0 {
-				slog.Error("err reading properties", "err", err)
+				slog.Error("[PACKET] err reading properties", "err", err)
 				return err
 			}
 			i = i + pl
@@ -85,7 +85,7 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 		}
 		i = i + 2
 		session.WillMessage = p.remainingBytes[i : i+wml]
-		slog.Debug("will topic with message", "will-topic", session.WillTopic, "will-message", session.WillMessage[:wml])
+		slog.Debug("[PACKET] will topic with message", "will-topic", session.WillTopic, "will-message", session.WillMessage[:wml])
 		i = i + wml
 	}
 	if session.HaveUser() {
@@ -104,7 +104,7 @@ func (p *Packet) connectReq(session *model.RunningSession) int {
 		}
 		i = i + 2
 		session.Password = string(p.remainingBytes[i : i+pwdl])
-		slog.Debug("user logging in", "username", session.Username)
+		slog.Debug("[PACKET] user logging in", "username", session.Username)
 	}
 	if session.ProtocolVersion >= conf.MQTT_V5 {
 		session.ExpiryInterval = p.SessionExpiryInterval()

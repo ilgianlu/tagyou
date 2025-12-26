@@ -33,12 +33,12 @@ func NewDefault(mode string, connections model.Connections) model.Router {
 
 func ByClientId(clientId string, connections model.Connections) model.Router {
 	if strings.Contains(conf.DEBUG_CLIENTS, clientId) {
-		slog.Debug("router selection", "sender", clientId, "mode", "debug")
+		slog.Debug("[ROUTERS] router selection", "sender", clientId, "mode", "debug")
 		return NewDebug(connections)
 	} else if strings.Contains(conf.SIMPLE_CLIENTS, clientId) {
-		slog.Debug("router selection", "sender", clientId, "mode", "simple")
+		slog.Debug("[ROUTERS] router selection", "sender", clientId, "mode", "simple")
 		return NewSimple(connections)
 	}
-	slog.Debug("router selection", "sender", clientId, "mode", "standard")
+	slog.Debug("[ROUTERS] router selection", "sender", clientId, "mode", "standard")
 	return NewStandard(connections)
 }
