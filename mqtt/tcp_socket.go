@@ -66,6 +66,7 @@ func handleTCPConnection(conn net.Conn, connections model.Connections) {
 		reader := bufio.NewReader(conn)
 		err := p.ReadHeader(reader)
 		if err != nil {
+			e.OnSocketDownClosed(&session)
 			slog.Debug("[MQTT] error reading header byte", "client-id", session.GetClientId(), "err", err)
 			return
 		}
