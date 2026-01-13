@@ -1,12 +1,18 @@
 package conf
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 )
 
 func Loader() {
 	FORBID_ANONYMOUS_LOGIN = os.Getenv("FORBID_ANONYMOUS_LOGIN") != "false"
+	if FORBID_ANONYMOUS_LOGIN {
+		slog.Info("[MQTT] client must authenticate to connect")
+	} else {
+		slog.Info("[MQTT] unauthenticated clients can connect")
+	}
 	ACL_ON = os.Getenv("ACL_ON") == "true"
 	CLEAN_EXPIRED_SESSIONS = os.Getenv("CLEAN_EXPIRED_SESSIONS") != "false"
 	CLEAN_EXPIRED_RETRIES = os.Getenv("CLEAN_EXPIRED_RETRIES") != "false"

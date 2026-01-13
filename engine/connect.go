@@ -12,17 +12,17 @@ import (
 )
 
 func (s StandardEngine) OnConnect(session *model.RunningSession) {
-	clientId := session.GetClientId()
-	if conf.FORBID_ANONYMOUS_LOGIN && !session.FromLocalhost() {
+	clientID := session.GetClientId()
+	if conf.FORBID_ANONYMOUS_LOGIN {
 		if !doAuth(session) {
 			return
 		}
 	}
 	taken := checkConnectionTakeOver(session)
 	if taken {
-		slog.Debug("[MQTT] client reconnecting", "client-id", clientId)
+		slog.Debug("[MQTT] client reconnecting", "client-id", clientID)
 	}
-	session.Router.AddDestination(clientId, session.GetConn())
+	session.Router.AddDestination(clientID, session.GetConn())
 
 	startSession(session)
 
@@ -31,25 +31,25 @@ func (s StandardEngine) OnConnect(session *model.RunningSession) {
 	if err != nil {
 		return
 	}
-	session.Router.Send(clientId, bs)
+	session.Router.Send(clientID, bs)
 }
 
 func doAuth(session *model.RunningSession) bool {
-	clientId := session.ClientId
+	clientID := session.ClientId
 	username := session.Username
 	sessionPassword := session.Password
-	ok, pubAcl, subAcl := checkAuth(clientId, username, sessionPassword)
+	ok, pubACL, subACL := checkAuth(clientID, username, sessionPassword)
 	if !ok {
 		slog.Debug("[MQTT] wrong connect credentials")
 		return false
 	}
-	session.ApplyAcl(pubAcl, subAcl)
-	slog.Debug("[MQTT] auth ok, imported acls", "pub-acl", pubAcl, "sub-acl", subAcl)
+	session.ApplyAcl(pubACL, subACL)
+	slog.Debug("[MQTT] auth ok, imported acls", "pub-acl", pubACL, "sub-acl", subACL)
 	return true
 }
 
-func checkAuth(clientId string, username string, sessionPassword string) (bool, string, string) {
-	client, err := persistence.ClientRepository.GetByClientIdUsername(clientId, username)
+func checkAuth(clientID string, username string, sessionPassword string) (bool, string, string) {
+	client, err := persistence.ClientRepository.GetByClientIdUsername(clientID, username)
 	if err != nil {
 		slog.Debug("[MQTT] could not find user")
 		return false, "", ""
@@ -63,9 +63,9 @@ func checkAuth(clientId string, username string, sessionPassword string) (bool, 
 }
 
 func checkConnectionTakeOver(session *model.RunningSession) bool {
-	clientId := session.ClientId
+	clientID := session.ClientId
 	protocolVersion := session.ProtocolVersion
-	if !session.Router.DestinationExists(clientId) {
+	if !session.Router.DestinationExists(clientID) {
 		return false
 	}
 
@@ -74,39 +74,39 @@ func checkConnectionTakeOver(session *model.RunningSession) bool {
 	if err != nil {
 		return false
 	}
-	session.Router.Send(clientId, bs)
+	session.Router.Send(clientID, bs)
 
-	session.Router.RemoveDestination(clientId)
+	session.Router.RemoveDestination(clientID)
 	return true
 }
 
 func startSession(session *model.RunningSession) {
-	clientId := session.GetClientId()
-	session.Router = routers.ByClientId(clientId, session.Router.GetConns())
-	if prevSession, ok := persistence.SessionRepository.SessionExists(clientId); ok {
+	clientID := session.GetClientId()
+	session.Router = routers.ByClientId(clientID, session.Router.GetConns())
+	if prevSession, ok := persistence.SessionRepository.SessionExists(clientID); ok {
 		slog.Debug("[MQTT] check existing session", "last-seen", prevSession.GetLastSeen(), "clean-start", session.CleanStart(), "expired", prevSession.Expired(), "new-protocol-version", session.GetProtocolVersion(), "prev-protocol-version", prevSession.GetProtocolVersion())
 		if session.CleanStart() || prevSession.Expired() || session.GetProtocolVersion() != prevSession.GetProtocolVersion() {
-			slog.Debug("[MQTT] Cleaning previous session: Invalid or to clean", "client-id", clientId)
-			if err := persistence.SessionRepository.CleanSession(clientId); err != nil {
-				slog.Error("[MQTT] error removing previous session", "client-id", clientId, "err", err)
+			slog.Debug("[MQTT] Cleaning previous session: Invalid or to clean", "client-id", clientID)
+			if err := persistence.SessionRepository.CleanSession(clientID); err != nil {
+				slog.Error("[MQTT] error removing previous session", "client-id", clientID, "err", err)
 			}
 			session.SetConnected(true)
 			if id, err := persistence.SessionRepository.PersistSession(session); err != nil {
-				slog.Error("[MQTT] error persisting clean session", "client-id", clientId, "err", err)
+				slog.Error("[MQTT] error persisting clean session", "client-id", clientID, "err", err)
 			} else {
 				session.ApplySessionId(id)
 			}
 		} else {
-			slog.Debug("Updating previous session from running", "client-id", clientId)
+			slog.Debug("Updating previous session from running", "client-id", clientID)
 			session.ApplySessionId(prevSession.GetId())
 			session.SetConnected(true)
 			persistence.SessionRepository.UpdateSession(prevSession.GetId(), session)
 		}
 	} else {
-		slog.Debug("[MQTT] Starting new session from running", "client-id", clientId)
+		slog.Debug("[MQTT] Starting new session from running", "client-id", clientID)
 		session.SetConnected(true)
 		if id, err := persistence.SessionRepository.PersistSession(session); err != nil {
-			slog.Error("[MQTT] error persisting clean session", "client-id", clientId, "err", err)
+			slog.Error("[MQTT] error persisting clean session", "client-id", clientID, "err", err)
 		} else {
 			session.ApplySessionId(id)
 		}

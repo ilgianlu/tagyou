@@ -11,7 +11,7 @@ import (
 )
 
 func (s StandardEngine) OnPublish(session *model.RunningSession, p model.Packet) {
-	if conf.ACL_ON && !session.FromLocalhost() && !CheckAcl(p.GetPublishTopic(), session.PublishAcl) {
+	if conf.ACL_ON && !CheckAcl(p.GetPublishTopic(), session.PublishAcl) {
 		if p.QoS() == conf.QOS1 {
 			sendAck(session, p.PacketIdentifier(), packet.PUBACK_NOT_AUTHORIZED)
 		} else if p.QoS() == conf.QOS2 {

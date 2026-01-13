@@ -1,11 +1,8 @@
 package model
 
 import (
-	"strings"
 	"sync"
 	"time"
-
-	"github.com/ilgianlu/tagyou/conf"
 )
 
 type RunningSession struct {
@@ -58,10 +55,6 @@ func (s *RunningSession) HavePass() bool {
 
 func (s *RunningSession) HaveUser() bool {
 	return (s.ConnectFlags & 0x80) > 0
-}
-
-func (s *RunningSession) FromLocalhost() bool {
-	return strings.Index(s.Conn.RemoteAddr().String(), conf.LOCALHOST) == 0
 }
 
 func (s *RunningSession) GetClientId() string {

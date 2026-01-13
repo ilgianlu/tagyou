@@ -30,11 +30,10 @@ func clientSubscribed(session *model.RunningSession, packetIdentifier int, reaso
 }
 
 func clientSubscription(session *model.RunningSession, subscription model.Subscription) uint8 {
-	fromLocalhost := session.FromLocalhost()
 	subscribeAcl := session.SubscribeAcl
 	protocolVersion := session.ProtocolVersion
 	// check subscr qos, topic valid...
-	if conf.ACL_ON && !fromLocalhost && !CheckAcl(subscription.Topic, subscribeAcl) {
+	if conf.ACL_ON && !CheckAcl(subscription.Topic, subscribeAcl) {
 		return conf.SUB_TOPIC_FILTER_INVALID
 	}
 	// db.Create(&subscription)

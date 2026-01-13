@@ -20,5 +20,3 @@ var CLEAN_EXPIRED_RETRIES_INTERVAL int = 60
 
 // (secs) consider retry expired after RETRY_EXPIRATION secs
 var RETRY_EXPIRATION int = 60
-
-const LOCALHOST = "127.0.0.1"
