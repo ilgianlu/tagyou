@@ -13,10 +13,9 @@ import (
 
 func (s StandardEngine) OnConnect(session *model.RunningSession) {
 	clientID := session.GetClientId()
-	if conf.FORBID_ANONYMOUS_LOGIN {
-		if !doAuth(session) {
-			return
-		}
+	isAuth := doAuth(session)
+	if conf.FORBID_ANONYMOUS_LOGIN && !isAuth {
+		return
 	}
 	taken := checkConnectionTakeOver(session)
 	if taken {
@@ -37,7 +36,15 @@ func (s StandardEngine) OnConnect(session *model.RunningSession) {
 func doAuth(session *model.RunningSession) bool {
 	clientID := session.ClientId
 	username := session.Username
+	if username == "" {
+		slog.Debug("[MQTT] client did not pass any username")
+		return false
+	}
 	sessionPassword := session.Password
+	if sessionPassword == "" {
+		slog.Debug("[MQTT] client did not pass any password")
+		return false
+	}
 	ok, pubACL, subACL := checkAuth(clientID, username, sessionPassword)
 	if !ok {
 		slog.Debug("[MQTT] wrong connect credentials")
@@ -100,7 +107,7 @@ func startSession(session *model.RunningSession) {
 			slog.Debug("Updating previous session from running", "client-id", clientID)
 			session.ApplySessionId(prevSession.GetId())
 			session.SetConnected(true)
-			persistence.SessionRepository.UpdateSession(prevSession.GetId(), session)
+			_, _ = persistence.SessionRepository.UpdateSession(prevSession.GetId(), session)
 		}
 	} else {
 		slog.Debug("[MQTT] Starting new session from running", "client-id", clientID)

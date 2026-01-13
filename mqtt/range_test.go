@@ -6,7 +6,6 @@ import (
 	"context"
 	"database/sql"
 	"net"
-	"os"
 	"testing"
 	"time"
 
@@ -83,13 +82,13 @@ func TestConnectWhenClientIsAlreadyConnected(t *testing.T) {
 	}
 }
 
-func TestSuccessfullConnect(t *testing.T) {
+func TestSuccessfullAnonymousConnect(t *testing.T) {
 	ps := persistence.SqlPersistence{DbFile: "test.db3", InitDatabase: true}
 	_, err := ps.Init(false, false, []byte{})
 	if err != nil {
 		t.Errorf("did not expect any error opening test.db3")
 	}
-
+	conf.FORBID_ANONYMOUS_LOGIN = false
 	connections := model.SimpleConnections{
 		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
 	}
@@ -122,7 +121,6 @@ func TestSuccessfullConnect(t *testing.T) {
 }
 
 func TestSuccessfullReconnect(t *testing.T) {
-	os.Setenv("DEBUG", "1")
 	ps := persistence.SqlPersistence{DbFile: "test.db3", InitDatabase: true}
 	db, err := ps.Init(false, false, []byte{})
 	if err != nil {
@@ -138,6 +136,7 @@ func TestSuccessfullReconnect(t *testing.T) {
 		ProtocolVersion: sql.NullInt64{Int64: conf.MQTT_V3_11, Valid: true},
 	})
 
+	conf.FORBID_ANONYMOUS_LOGIN = false
 	connections := model.SimpleConnections{
 		Conns: make(map[string]model.TagyouConn, conf.ROUTER_STARTING_CAPACITY),
 	}
@@ -156,7 +155,7 @@ func TestSuccessfullReconnect(t *testing.T) {
 
 	buf := bytes.NewReader([]byte{16, 64, 0, 4, 77, 81, 84, 84, 4, 198, 0, 5, 0, 15, 109, 113, 116, 116, 106, 115, 95, 97, 97, 50, 51, 99, 56, 49, 53, 0, 5, 97, 47, 98, 47, 99, 0, 15, 119, 105, 108, 108, 32, 109, 101, 115, 115, 97, 103, 101, 46, 46, 46, 0, 4, 117, 115, 101, 114, 0, 5, 112, 108, 117, 116, 111})
 	p := packet.Packet{}
-	err = p.Parse(bufio.NewReader(buf), &session)
+	_ = p.Parse(bufio.NewReader(buf), &session)
 
 	managePacket(&session, &p)
 
