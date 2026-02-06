@@ -42,6 +42,10 @@ docker run -v tagyou_data:/db -e DB_PATH=/db ilgianlu/tagyou
 
 Look at included docker compose file for other often used configuration vars.
 
+### useful env vars
+
+FORBID_ANONYMOUS_LOGIN set to false at your own risk, tagyou will ignore devices authentication, every device can connect without mqtt credentials
+
 ## apis
 
 ### auth and calling
