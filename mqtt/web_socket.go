@@ -56,11 +56,35 @@ func AcceptWebsocket(connections model.Connections) func(http.ResponseWriter, *h
 		packets := make(chan *packet.Packet)
 		go rangePackets(&session, packets)
 
-		bytesFromWs := make(chan []byte)
-		defer close(bytesFromWs)
+		o := []byte{}
+		for {
+			msgType, msg, err := c.Read(context.Background())
+			if err != nil {
+				slog.Error("[WS] error reading message", "err", err)
+				return
+			}
 
-		go readFromWs(c, bytesFromWs)
-		handleMqtt(&session, bytesFromWs, packets)
+			slog.Debug("[WS] received message", "type", msgType.String(), "msg", string(msg))
+			o = append(o, msg...)
+
+			b, err := packet.ReadFromByteSlice(o)
+			if err != nil {
+				slog.Error("[WS] packet still incomplete")
+				continue
+			} else {
+				o = o[len(b):]
+			}
+			r := bytes.NewBuffer(b)
+			reader := bufio.NewReader(r)
+
+			p := packet.Packet{}
+			err = p.Parse(reader, &session)
+			if err != nil {
+				slog.Debug("[WS] error during packet parse", "err", err.Error())
+				return
+			}
+			packets <- &p
+		}
 	}
 }
 
@@ -101,42 +125,4 @@ func PostMessage(connections model.Connections) func(w http.ResponseWriter, r *h
 
 func payloadFromPayloadType(payload string) []byte {
 	return []byte(payload)
-}
-
-func readFromWs(c *websocket.Conn, bytesFromWs chan<- []byte) {
-	for {
-		msgType, msg, err := c.Read(context.Background())
-		if err != nil {
-			slog.Error("[WS] error reading message", "err", err)
-			return
-		}
-
-		slog.Debug("[WS] received message", "type", msgType.String(), "msg", string(msg))
-		bytesFromWs <- msg
-	}
-}
-
-func handleMqtt(session *model.RunningSession, bytesFromWs <-chan []byte, packets chan<- *packet.Packet) {
-	buf := []byte{}
-	for bytesRead := range bytesFromWs {
-		slog.Debug("[WS] received message", "msg-bytes", string(bytesRead))
-
-		if len(bytesRead) == 0 {
-			continue
-		}
-
-		buf = append(buf, bytesRead...)
-
-		bufReader := bytes.NewReader(buf)
-		reader := bufio.NewReader(bufReader)
-
-		p := packet.Packet{}
-		err := p.Parse(reader, session)
-		if err != nil {
-			slog.Debug("[WS] error during packet parse", "err", err.Error())
-			return
-		}
-
-		packets <- &p
-	}
 }
